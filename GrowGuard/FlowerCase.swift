@@ -8,7 +8,7 @@
 import Foundation
 import CoreBluetooth
 
-class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
+class FlowerCareManagerOld: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     private var centralManager: CBCentralManager!
     private var flowerCarePeripheral: CBPeripheral?
     private let flowerCareCharacteristicUUID = CBUUID(string: "0001")
