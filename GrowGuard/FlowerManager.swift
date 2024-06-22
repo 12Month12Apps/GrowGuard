@@ -79,9 +79,8 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     }
 
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-//        if peripheral.name == "Flower care" {
         if peripheral.identifier.uuidString == device?.uuid {
-            centralManager.stopScan()
+//            centralManager.stopScan()
             discoveredPeripheral = peripheral
             discoveredPeripheral?.delegate = self
             centralManager.connect(discoveredPeripheral!, options: nil)
@@ -185,6 +184,14 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 break
             }
         }
+    }
+
+    func reloadSensorData() {
+        guard let peripheral = discoveredPeripheral, let characteristic = realTimeSensorValuesCharacteristic else {
+            print("Peripheral or characteristic not available.")
+            return
+        }
+        peripheral.readValue(for: characteristic)
     }
 
     private func decodeDeviceName(data: Data) {

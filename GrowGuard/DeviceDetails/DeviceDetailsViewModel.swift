@@ -28,4 +28,7 @@ import Combine
         }
     }
     
+    func reloadSensor() {
+        ble.reloadSensorData()
+    }
 }

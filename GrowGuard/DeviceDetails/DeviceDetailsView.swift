@@ -22,8 +22,8 @@ struct DeviceDetailsView: View {
             Text("Added: ") + Text(viewModel.device.added, format: .dateTime)
             Text("Last Update: ") + Text(viewModel.device.lastUpdate, format: .dateTime)
             
-            Button("Delete") {
-                print("deleted me :(")
+            Button("Reload") {
+                viewModel.reloadSensor()
             }.buttonStyle(BorderedProminentButtonStyle())
             
             
@@ -31,6 +31,7 @@ struct DeviceDetailsView: View {
             Text(String(viewModel.sensorData?.temperature ?? 0))
             Text(String(viewModel.sensorData?.brightness ?? 0))
 
+            
         }.onAppear {
             self.viewModel.loadDetails()
         }
