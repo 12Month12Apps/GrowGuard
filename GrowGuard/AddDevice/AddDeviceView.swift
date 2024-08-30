@@ -10,9 +10,10 @@ import SwiftUI
 
 struct AddDeviceView: View {
     @State var viewModel: AddDeviceViewModel
+    @State var loading: Bool = false
 
-    init(allSavedDevices: [FlowerDevice]) {
-        self.viewModel = AddDeviceViewModel(allSavedDevices: allSavedDevices)
+    init(/*allSavedDevices: [FlowerDevice]*/) {
+        self.viewModel = AddDeviceViewModel(/*allSavedDevices: allSavedDevices*/)
     }
 
     var body: some View {
@@ -20,20 +21,27 @@ struct AddDeviceView: View {
             HStack {
                 Text(device.name ?? "error")
                 Spacer()
-                Image(systemName: "info.circle")
+                if viewModel.allSavedDevices.contains(where: { savedDevice in
+                    savedDevice.uuid == device.identifier.uuidString
+                }) {
+                    Image(systemName: "checkmark").foregroundColor(.green)
+                } else {
+                    Image(systemName: "info.circle")
+                }
             }
             .onTapGesture {
                 viewModel.tapOnDevice(peripheral: device)
             }
-            .background {
-                if viewModel.allSavedDevices.contains(where: { saved in
-                    device.identifier.uuidString == saved.uuid
-                }) {
-                    Color.red
-                }
-            }
+           
         }.onAppear {
-
+            Task {
+                viewModel.fetchSavedDevices()
+            }
+        }
+        .overlay {
+            if loading {
+                ProgressView()
+            }
         }
     }
 }

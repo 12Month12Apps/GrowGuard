@@ -11,17 +11,26 @@ import SwiftData
 class ContentViewModel: Observable {
     var allSavedDevices: [FlowerDevice] = []
 
-    @MainActor
-    func fetchSavedDevices() {
-        let fetchDescriptor = FetchDescriptor<FlowerDevice>()
-
-        do {
-            let result = try DataService.sharedModelContainer.mainContext.fetch(fetchDescriptor)
-            allSavedDevices = result
-        } catch{
-            print(error.localizedDescription)
-        }
+    init(allSavedDevices: [FlowerDevice] = []) {
+        self.allSavedDevices = allSavedDevices
+        
+//        Task {
+//            await self.fetchSavedDevices()
+//        }
     }
+    
+//    @MainActor
+//    func fetchSavedDevices() {
+//        let fetchDescriptor = FetchDescriptor<FlowerDevice>()
+//
+//        do {
+//            let result = try DataService.sharedModelContainer.mainContext.fetch(fetchDescriptor)
+//            allSavedDevices = result
+//            
+//        } catch{
+//            print(error.localizedDescription)
+//        }
+//    }
 }
 
 
@@ -31,13 +40,19 @@ struct ContentView: View {
     
     var body: some View {
         VStack {
-            if viewModel.allSavedDevices.count == 0 {
-                AddDeviceView(allSavedDevices: viewModel.allSavedDevices)
-            } else {
-                OverviewList(allSavedDevices: viewModel.allSavedDevices)
+            TabView {
+                OverviewList(/*allSavedDevices: viewModel.allSavedDevices*/)
+                    .tabItem {
+                        Label("Menu", systemImage: "list.dash")
+                    }
+                
+                AddDeviceView(/*allSavedDevices: */)
+                    .tabItem {
+                        Label("Add", systemImage: "list.dash")
+                    }
             }
         }.onAppear {
-            viewModel.fetchSavedDevices()
+//            viewModel.fetchSavedDevices()
         }
     }
 }

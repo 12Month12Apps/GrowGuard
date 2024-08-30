@@ -7,8 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		562629002C42E32700B5DB2A /* AppIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 562628FF2C42E32200B5DB2A /* AppIntent.swift */; };
 		565DEC402C159B93002D784A /* DeviceDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */; };
 		565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */; };
+		5667BD8A2C28925300D04382 /* SensorData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5667BD892C28924600D04382 /* SensorData.swift */; };
 		5684E2D82C0C8FCA005CD8B6 /* FlowerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2D72C0C8FCA005CD8B6 /* FlowerManager.swift */; };
 		5684E2DB2C0F81C0005CD8B6 /* AddDeviceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2DA2C0F81C0005CD8B6 /* AddDeviceView.swift */; };
 		5684E2DD2C0F81E7005CD8B6 /* AddDeviceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2DC2C0F81E7005CD8B6 /* AddDeviceViewModel.swift */; };
@@ -18,7 +20,7 @@
 		569B70ED2C10F221005B7BC9 /* DataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 569B70EC2C10F221005B7BC9 /* DataService.swift */; };
 		56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11182BDED05900887073 /* GrowGuardApp.swift */; };
 		56AF111B2BDED05900887073 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF111A2BDED05900887073 /* ContentView.swift */; };
-		56AF111D2BDED05900887073 /* Item.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF111C2BDED05900887073 /* Item.swift */; };
+		56AF111D2BDED05900887073 /* FlowerDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF111C2BDED05900887073 /* FlowerDevice.swift */; };
 		56AF111F2BDED05B00887073 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 56AF111E2BDED05B00887073 /* Assets.xcassets */; };
 		56AF11232BDED05B00887073 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 56AF11222BDED05B00887073 /* Preview Assets.xcassets */; };
 		56AF112D2BDED05B00887073 /* GrowGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF112C2BDED05B00887073 /* GrowGuardTests.swift */; };
@@ -45,8 +47,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		562628FF2C42E32200B5DB2A /* AppIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntent.swift; sourceTree = "<group>"; };
 		565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsView.swift; sourceTree = "<group>"; };
 		565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsViewModel.swift; sourceTree = "<group>"; };
+		5667BD892C28924600D04382 /* SensorData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorData.swift; sourceTree = "<group>"; };
 		5684E2D72C0C8FCA005CD8B6 /* FlowerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerManager.swift; sourceTree = "<group>"; };
 		5684E2DA2C0F81C0005CD8B6 /* AddDeviceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceView.swift; sourceTree = "<group>"; };
 		5684E2DC2C0F81E7005CD8B6 /* AddDeviceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceViewModel.swift; sourceTree = "<group>"; };
@@ -57,7 +61,7 @@
 		56AF11152BDED05900887073 /* GrowGuard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GrowGuard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		56AF11182BDED05900887073 /* GrowGuardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardApp.swift; sourceTree = "<group>"; };
 		56AF111A2BDED05900887073 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		56AF111C2BDED05900887073 /* Item.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Item.swift; sourceTree = "<group>"; };
+		56AF111C2BDED05900887073 /* FlowerDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerDevice.swift; sourceTree = "<group>"; };
 		56AF111E2BDED05B00887073 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		56AF11202BDED05B00887073 /* GrowGuard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GrowGuard.entitlements; sourceTree = "<group>"; };
 		56AF11222BDED05B00887073 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -126,7 +130,8 @@
 		5684E2E52C0FA303005CD8B6 /* Database */ = {
 			isa = PBXGroup;
 			children = (
-				56AF111C2BDED05900887073 /* Item.swift */,
+				5667BD892C28924600D04382 /* SensorData.swift */,
+				56AF111C2BDED05900887073 /* FlowerDevice.swift */,
 				569B70EC2C10F221005B7BC9 /* DataService.swift */,
 			);
 			path = Database;
@@ -155,6 +160,7 @@
 		56AF11172BDED05900887073 /* GrowGuard */ = {
 			isa = PBXGroup;
 			children = (
+				562628FF2C42E32200B5DB2A /* AppIntent.swift */,
 				565DEC3E2C159868002D784A /* DeviceDetails */,
 				5684E2E52C0FA303005CD8B6 /* Database */,
 				5684E2E02C0FA143005CD8B6 /* OverviewList */,
@@ -333,10 +339,12 @@
 				5684E2E42C0FA2FA005CD8B6 /* OverviewListViewModel.swift in Sources */,
 				5684E2D82C0C8FCA005CD8B6 /* FlowerManager.swift in Sources */,
 				569B70ED2C10F221005B7BC9 /* DataService.swift in Sources */,
+				5667BD8A2C28925300D04382 /* SensorData.swift in Sources */,
 				5684E2DD2C0F81E7005CD8B6 /* AddDeviceViewModel.swift in Sources */,
-				56AF111D2BDED05900887073 /* Item.swift in Sources */,
+				56AF111D2BDED05900887073 /* FlowerDevice.swift in Sources */,
 				5684E2E22C0FA2EE005CD8B6 /* OverviewList.swift in Sources */,
 				56AF11472BE2678900887073 /* FlowerCase.swift in Sources */,
+				562629002C42E32700B5DB2A /* AppIntent.swift in Sources */,
 				56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */,
 				565DEC402C159B93002D784A /* DeviceDetailsView.swift in Sources */,
 			);
@@ -503,6 +511,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = GrowGuard/Info.plist;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = test;
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = test;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -542,6 +552,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = GrowGuard/Info.plist;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = test;
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = test;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

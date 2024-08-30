@@ -14,14 +14,18 @@ import SwiftData
     var devices: [CBPeripheral] = []
     var addDevice:  CBPeripheral?
     var ble: AddDeviceBLE?
-    var allSavedDevices: [FlowerDevice]
+    var allSavedDevices: [FlowerDevice] = []
     
-    init(allSavedDevices: [FlowerDevice]) {
+    init(/*allSavedDevices: [FlowerDevice]*/) {
         self.devices = []
-        self.allSavedDevices = allSavedDevices
+//        self.allSavedDevices = allSavedDevices
         
         self.ble = AddDeviceBLE { peripheral in
             self.addToList(peripheral: peripheral)
+        }
+        
+        Task {
+            await fetchSavedDevices()
         }
     }
     
@@ -48,6 +52,24 @@ import SwiftData
                                        peripheral: peripheral)
             
             DataService.sharedModelContainer.mainContext.insert(newItem)
+            do {
+                try DataService.sharedModelContainer.mainContext.save()
+                self.fetchSavedDevices()
+            } catch {
+                print(error.localizedDescription)
+            }
+        }
+    }
+    
+    @MainActor
+    func fetchSavedDevices() {
+        let fetchDescriptor = FetchDescriptor<FlowerDevice>()
+
+        do {
+            let result = try DataService.sharedModelContainer.mainContext.fetch(fetchDescriptor)
+            allSavedDevices = result
+        } catch{
+            print(error.localizedDescription)
         }
     }
 }
