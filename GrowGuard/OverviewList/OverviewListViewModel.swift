@@ -12,8 +12,11 @@ import SwiftData
 @Observable class OverviewListViewModel {
     var allSavedDevices: [FlowerDevice] = []
 
-    init(allSavedDevices: [FlowerDevice]) {
-        self.allSavedDevices = allSavedDevices
+    init(/*allSavedDevices: [FlowerDevice]*/) {
+//        self.allSavedDevices = allSavedDevices
+        Task {
+            await fetchSavedDevices()
+        }
     }
     
     @MainActor

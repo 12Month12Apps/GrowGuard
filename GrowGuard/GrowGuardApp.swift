@@ -7,12 +7,14 @@
 
 import SwiftUI
 import SwiftData
+import AppIntents
 
 @main
 struct GrowGuardApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             FlowerDevice.self,
+            SensorData.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -28,5 +30,14 @@ struct GrowGuardApp: App {
             ContentView()
         }
         .modelContainer(sharedModelContainer)
+    }
+    
+    static var appShortcuts: [AppShortcut] {
+        [
+            AppShortcut(
+                intent: MyAppIntent(),
+                phrases: ["Do something with my app"]
+            )
+        ]
     }
 }
