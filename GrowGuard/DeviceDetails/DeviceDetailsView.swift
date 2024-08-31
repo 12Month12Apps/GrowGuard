@@ -5,7 +5,6 @@
 //  Created by Veit Progl on 09.06.24.
 //
 
-import Foundation
 import SwiftUI
 import Charts
 
@@ -18,102 +17,145 @@ struct SensorDataChart: View {
     @State private var barWidth = 10.0
     @State private var chartColor: Color = .red
     @State private var graphColor: Color = .cyan
+    @State private var currentWeekIndex = 0
 
     var body: some View {
         if isOverview {
-            chart
+            chart(for: currentWeekIndex)
         } else {
-//            Picker("Grouping Option", selection: $viewModel.groupingOption) {
-//                Text("Day").tag(Calendar.Component.day)
-//                Text("Week").tag(Calendar.Component.weekOfYear)
-//                Text("Month").tag(Calendar.Component.month)
-//            }
-//            .pickerStyle(SegmentedPickerStyle())
-//            .padding()
-            
-            Section(header: header) {
-                chart
+            Section {
+                VStack {
+                    header(for: currentWeekIndex)
+                    
+                    chart(for: currentWeekIndex)
+                        .frame(height: 250)
+                }
+                .onAppear {
+                    currentWeekIndex = numberOfWeeks - 1
+                }
             }
-//            .navigationBarTitle("Sensor Data", displayMode: .inline)
         }
     }
 
-    private var chart: some View {
-        let groupedData = data.groupedByDay()
-        
+    private var numberOfWeeks: Int {
+        let start = startOfWeek(for: data.first?.date ?? Date())
+        let end = startOfWeek(for: data.last?.date ?? Date())
+        let totalDays = Calendar.current.dateComponents([.day], from: start, to: end).day ?? 0
+        return max((totalDays / 7) + 1, 1)  // Ensure at least one week is shown
+    }
+
+    private func chart(for weekIndex: Int) -> some View {
+        let calendar = Calendar.current
+        let startDate = calendar.date(byAdding: .weekOfYear, value: weekIndex, to: startOfWeek(for: data.first?.date ?? Date()))!
+        let endDate = calendar.date(byAdding: .day, value: 6, to: startDate)!
+
+        let filteredData = data.filter { $0.date >= startDate && $0.date <= endDate }
+        let groupedData = filteredData.groupedByDay(by: \.moisture)
+
         return Chart(groupedData, id: \.date) { dataPoint in
             RectangleMark(
-                xStart: .value("Start", data.first?.date ?? Date(), unit: componet),
-                xEnd: .value("End", data.last?.date ?? Date(), unit: componet),
-               yStart: .value("Low", 40),
-               yEnd: .value("High", 60)
-           )
+                xStart: .value("Start", startDate, unit: componet),
+                xEnd: .value("End", endDate, unit: componet),
+                yStart: .value("Low", 40),
+                yEnd: .value("High", 60)
+            )
             .foregroundStyle(Color.gray.opacity(0.05))
-            
-            Plot {
-                BarMark(
-                    x: .value("Date", dataPoint.date, unit: componet),
-                    yStart: .value("Moisture Min", dataPoint.minMoisture),
-                    yEnd: .value("Moisture Max", dataPoint.maxMoisture),
-                    width: .fixed(isOverview ? 8 : barWidth)
-                )
-                .clipShape(Capsule())
-                .foregroundStyle(
-                                (dataPoint.maxMoisture - dataPoint.minMoisture > 10) ? Color.blue.gradient :
-                                ((dataPoint.minMoisture >= 40 && dataPoint.maxMoisture <= 60) ? Color.green.gradient : chartColor.gradient)
-                            )            }
-//            .accessibilityLabel(dataPoint.date, formatter: DateFormatter.short())
-            .accessibilityValue("\(dataPoint.minMoisture) to \(dataPoint.maxMoisture) %")
-            .accessibilityHidden(isOverview)
-            
+
+            BarMark(
+                x: .value("Date", dataPoint.date, unit: componet),
+                yStart: .value("Moisture Min", dataPoint.minValue),
+                yEnd: .value("Moisture Max", dataPoint.maxValue + 2),
+                width: .fixed(isOverview ? 8 : 10)
+            )
+            .clipShape(Capsule())
+            .foregroundStyle(chartColor.gradient)
+
             LineMark(
                 x: .value("Date", dataPoint.date, unit: componet),
-                y: .value("Moisture %", dataPoint.maxMoisture)
+                y: .value("Moisture %", dataPoint.maxValue)
             )
             .interpolationMethod(.cardinal)
-//            .lineStyle(StrokeStyle(lineWidth: lineWidth))
             .foregroundStyle(graphColor.gradient)
             .symbol(Circle().strokeBorder(lineWidth: barWidth))
-//            .symbolSize(showSymbols ? 60 : 0)
         }
         .chartXAxis {
-            AxisMarks(values: .stride(by: componet)) { _ in
+            AxisMarks(values: .stride(by: .day)) { _ in
                 AxisTick()
                 AxisGridLine()
-                if componet == .weekOfYear {
-                    AxisValueLabel(format: .dateTime.week())
-                } else if componet == .month {
-                    AxisValueLabel(format: .dateTime.month())
-                } else {
-                    AxisValueLabel(format: .dateTime.day().month())
+                AxisValueLabel(format: .dateTime.day().month())
+            }
+        }
+        .chartYAxis {
+            AxisMarks { value in
+                AxisTick()
+                AxisGridLine()
+                AxisValueLabel {
+                    if let intValue = value.as(Double.self) {
+                        Text("\(intValue, specifier: "%.0f")%")
+                    }
                 }
             }
         }
         .accessibilityChartDescriptor(self)
-        .chartYAxis {
-                AxisMarks { value in
-                    AxisTick()
-                    AxisGridLine()
-                    AxisValueLabel {
-                        if let intValue = value.as(Double.self) {
-                            Text("\(intValue, specifier: "%.0f")%")
-                        }
-                    }
-                }
-            }
-        .frame(height: isOverview ? 200 : 400)
     }
 
-    private var header: some View {
-        VStack(alignment: .leading) {
-            Text("Moisture Range")
-            Text("Sensor Data")
-                .font(.system(.title, design: .rounded))
-                .foregroundColor(.primary)
+    private func startOfWeek(for date: Date) -> Date {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2 // Monday
+        return calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date))!
+    }
+    
+    private func endOfWeek(for date: Date) -> Date {
+        let calendar = Calendar.current
+        return calendar.date(byAdding: .day, value: 6, to: startOfWeek(for: date))!
+    }
+
+    private func header(for weekIndex: Int) -> some View {
+        let calendar = Calendar.current
+        let startDate = calendar.date(byAdding: .weekOfYear, value: weekIndex, to: startOfWeek(for: data.first?.date ?? Date()))!
+        let endDate = calendar.date(byAdding: .day, value: 6, to: startDate)!
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .medium
+
+        return HStack {
+            if currentWeekIndex > 0 {
+                Button(action: {
+                    if currentWeekIndex > 0 {
+                        currentWeekIndex -= 1
+                    }
+                }) {
+                    Image(systemName: "arrowshape.backward.circle")
+                }
+                .buttonStyle(.bordered)
+            }
+            
+            Spacer()
+            
+            VStack() {
+                Text("Moisture Range")
+                    .font(.system(.title, design: .rounded))
+                    .foregroundColor(.primary)
+                Text("\(dateFormatter.string(from: startDate)) - \(dateFormatter.string(from: endDate))")
+            }
+            .fontWeight(.semibold)
+            
+            Spacer()
+            
+            if currentWeekIndex < numberOfWeeks - 1 {
+                Button(action: {
+                    if currentWeekIndex < numberOfWeeks - 1 {
+                        currentWeekIndex += 1
+                    }
+                }) {
+                    Image(systemName: "arrowshape.right.circle")
+                }
+                .buttonStyle(.borderedProminent)
+            }
         }
-        .fontWeight(.semibold)
     }
 }
+
 
 // MARK: - Accessibility
 
@@ -123,10 +165,10 @@ extension SensorDataChart: AXChartDescriptorRepresentable {
             DateFormatter.short().string(from: date)
         }
         
-        let groupedData = data.groupedByDay()
+        let groupedData = data.groupedByDay(by: \.moisture)
         
-        let min = groupedData.map(\.minMoisture).min() ?? 0
-        let max = groupedData.map(\.maxMoisture).max() ?? 0
+        let min = groupedData.map(\.minValue).min() ?? 0
+        let max = groupedData.map(\.maxValue).max() ?? 0
         
         let xAxis = AXCategoricalDataAxisDescriptor(
             title: "Date",
@@ -145,8 +187,8 @@ extension SensorDataChart: AXChartDescriptorRepresentable {
             isContinuous: false,
             dataPoints: groupedData.map {
                 .init(x: dateStringConverter($0.date),
-                      y: Double($0.maxMoisture),
-                      label: "\(dateStringConverter($0.date)): Min: \($0.minMoisture) %, Max: \($0.maxMoisture) %")
+                      y: Double($0.maxValue),
+                      label: "\(dateStringConverter($0.date)): Min: \($0.minValue) %, Max: \($0.maxValue) %")
             }
         )
 
@@ -182,7 +224,6 @@ struct DeviceDetailsView: View {
     var body: some View {
         List {
             TextField("Device Name", text: $viewModel.device.name)
-//            .font(.headline)
             Text("Added: ") + Text(viewModel.device.added, format: .dateTime)
             Text("Last Update: ") + Text(viewModel.device.lastUpdate, format: .dateTime)
             
@@ -200,30 +241,19 @@ struct DeviceDetailsView: View {
             self.viewModel.loadDetails()
         }
         .navigationTitle(viewModel.device.name)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(action: {
-                    viewModel.reloadSensor()
-
-                }, label: {
-                    Image(systemName: "arrow.clockwise")
-                        .animation(.smooth)
-                })
-            }
-        }
     }
 }
 
+
 extension Array where Element == SensorData {
-    func groupedByDay() -> [(date: Date, minMoisture: UInt8, maxMoisture: UInt8)] {
+    func groupedByDay<T: Comparable>(by keyPath: KeyPath<SensorData, T>) -> [(date: Date, minValue: T, maxValue: T)] {
         let calendar = Calendar.current
         let grouped = Dictionary(grouping: self) { calendar.startOfDay(for: $0.date) }
         
         return grouped.map { (date, dataPoints) in
-            let minMoisture = dataPoints.map { $0.moisture }.min() ?? 0
-            let maxMoisture = dataPoints.map { $0.moisture }.max() ?? 0
-            let adjustedMaxMoisture = minMoisture == maxMoisture ? minMoisture + 2 : maxMoisture
-            return (date, minMoisture, adjustedMaxMoisture)
+            let minValue = dataPoints.map { $0[keyPath: keyPath] }.min()!
+            let maxValue = dataPoints.map { $0[keyPath: keyPath] }.max()!
+            return (date, minValue, maxValue)
         }.sorted { $0.date < $1.date }
     }
 }
