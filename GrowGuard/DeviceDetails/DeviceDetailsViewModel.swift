@@ -12,7 +12,6 @@ import Combine
 @Observable class DeviceDetailsViewModel {
     let ble = FlowerCareManager.shared
     var device: FlowerDevice
-    var sensorData: SensorData?
     var subscription: AnyCancellable?
     var subscriptionHistory: AnyCancellable?
     var groupingOption: Calendar.Component = .day
@@ -21,9 +20,12 @@ import Combine
         self.device = device
         
         self.subscription = ble.sensorDataPublisher.sink { data in
-            self.sensorData = data
             self.device.sensorData.append(data)
             self.device.lastUpdate = Date()
+            
+            Task {
+                await self.saveDatabase()
+            }
         }
         
         self.subscriptionHistory = ble.historicalDataPublisher.sink { data in
@@ -40,8 +42,19 @@ import Combine
     }
     
     @MainActor
+    func saveDatabase() {
+        do {
+            _ = try DataService.sharedModelContainer.mainContext.save()
+        } catch{
+            print(error.localizedDescription)
+        }
+    }
+    
+    @MainActor
     func delete() {
         DataService.sharedModelContainer.mainContext.delete(device)
+        
+        saveDatabase()
     }
 
 }
