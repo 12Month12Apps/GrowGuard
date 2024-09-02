@@ -13,12 +13,12 @@ import SwiftData
 struct MyAppIntent: AppIntent {
     static var title: LocalizedStringResource = "Reload data for single device"
 
-    @Parameter(title: "Device Name:")
-    var name: String
+    @Parameter(title: "Device ID:")
+    var deviceId: String
     
     func perform() async throws -> some IntentResult {
         let ble = FlowerCareManager.shared
-        let matchingDevices = try await fetchDevices(withName: name)
+        let matchingDevices = try await fetchDevices(withId: deviceId)
 
         try await withThrowingTaskGroup(of: Void.self) { group in
             for device in matchingDevices {
@@ -56,9 +56,9 @@ struct MyAppIntent: AppIntent {
     }
 
     @MainActor
-    func fetchDevices(withName name: String) throws -> [FlowerDevice] {
+    func fetchDevices(withId uuid: String) throws -> [FlowerDevice] {
         let predicate = #Predicate { (device: FlowerDevice) in
-            device.name == name
+            device.uuid == uuid
         }
 
         let fetchDescriptor = FetchDescriptor<FlowerDevice>(predicate: predicate)

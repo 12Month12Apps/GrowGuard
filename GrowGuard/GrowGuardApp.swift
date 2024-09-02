@@ -16,7 +16,8 @@ struct GrowGuardApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             FlowerDevice.self,
-            SensorData.self
+            SensorData.self,
+            OptimalRange.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
