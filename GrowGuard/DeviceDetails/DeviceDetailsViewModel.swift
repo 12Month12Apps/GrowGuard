@@ -34,12 +34,12 @@ import Combine
     }
     
     func loadDetails() {
-        ble.startScanning(device: device)
+        ble.connectToKnownDevice(device: device)
     }
     
-    func reloadSensor() {
-        ble.reloadScanning()
-    }
+//    func reloadSensor() {
+//        ble.reloadScanning()
+//    }
     
     @MainActor
     func saveDatabase() {

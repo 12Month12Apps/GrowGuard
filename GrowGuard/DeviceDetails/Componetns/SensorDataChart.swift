@@ -23,6 +23,8 @@ struct SensorDataChart<T: Comparable & Numeric>: View {
     var title: String
     var dataType: String
     var selectedChartType: ChartType
+    var minRange: Int
+    var maxRange: Int
 
     @State private var barWidth = 10.0
     @State private var chartColor: Color = .red
@@ -84,10 +86,10 @@ struct SensorDataChart<T: Comparable & Numeric>: View {
                     RectangleMark(
                         xStart: .value("Start", startDate, unit: componet),
                         xEnd: .value("End", endDate, unit: componet),
-                        yStart: .value("Low", 40),
-                        yEnd: .value("High", 60)
+                        yStart: .value("Low", minRange),
+                        yEnd: .value("High", maxRange)
                     )
-                    .foregroundStyle(Color.gray.opacity(0.05))
+                    .foregroundStyle(Color.gray.opacity(0.1))
                     
                     if selectedChartType == .water {
                         BarMark(
