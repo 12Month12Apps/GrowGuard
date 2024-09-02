@@ -11,6 +11,8 @@ import AppIntents
 
 @main
 struct GrowGuardApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             FlowerDevice.self,

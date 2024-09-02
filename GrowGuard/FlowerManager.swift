@@ -82,6 +82,18 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         }
     }
     
+    func connectToKnownDevice(device: FlowerDevice) {
+        let peripherals = centralManager.retrievePeripherals(withIdentifiers: [UUID(uuidString: device.uuid)!])
+        if let peripheral = peripherals.first {
+            discoveredPeripheral = peripheral
+            centralManager.connect(peripheral, options: nil)
+            print("Connecting to known device...")
+        } else {
+            print("Known device not found, starting scan...")
+            startScanning(device: device) // example method call
+        }
+    }
+    
     func disconnect() {
         guard let centralManager = centralManager, let peripheral = discoveredPeripheral else { return }
 

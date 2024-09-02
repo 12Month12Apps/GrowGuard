@@ -18,6 +18,7 @@
 		5684E2E22C0FA2EE005CD8B6 /* OverviewList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2E12C0FA2EE005CD8B6 /* OverviewList.swift */; };
 		5684E2E42C0FA2FA005CD8B6 /* OverviewListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2E32C0FA2FA005CD8B6 /* OverviewListViewModel.swift */; };
 		568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568892072C832936000E8FAE /* SensorDataChart.swift */; };
+		5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5688920A2C84B4B9000E8FAE /* AppDelegate.swift */; };
 		569B70ED2C10F221005B7BC9 /* DataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 569B70EC2C10F221005B7BC9 /* DataService.swift */; };
 		56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11182BDED05900887073 /* GrowGuardApp.swift */; };
 		56AF111B2BDED05900887073 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF111A2BDED05900887073 /* ContentView.swift */; };
@@ -59,6 +60,7 @@
 		5684E2E12C0FA2EE005CD8B6 /* OverviewList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewList.swift; sourceTree = "<group>"; };
 		5684E2E32C0FA2FA005CD8B6 /* OverviewListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewListViewModel.swift; sourceTree = "<group>"; };
 		568892072C832936000E8FAE /* SensorDataChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataChart.swift; sourceTree = "<group>"; };
+		5688920A2C84B4B9000E8FAE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		569B70EC2C10F221005B7BC9 /* DataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataService.swift; sourceTree = "<group>"; };
 		56AF11152BDED05900887073 /* GrowGuard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GrowGuard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		56AF11182BDED05900887073 /* GrowGuardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardApp.swift; sourceTree = "<group>"; };
@@ -171,6 +173,7 @@
 		56AF11172BDED05900887073 /* GrowGuard */ = {
 			isa = PBXGroup;
 			children = (
+				5688920A2C84B4B9000E8FAE /* AppDelegate.swift */,
 				562628FF2C42E32200B5DB2A /* AppIntent.swift */,
 				565DEC3E2C159868002D784A /* DeviceDetails */,
 				5684E2E52C0FA303005CD8B6 /* Database */,
@@ -358,6 +361,7 @@
 				56AF11472BE2678900887073 /* FlowerCase.swift in Sources */,
 				562629002C42E32700B5DB2A /* AppIntent.swift in Sources */,
 				56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */,
+				5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */,
 				565DEC402C159B93002D784A /* DeviceDetailsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
