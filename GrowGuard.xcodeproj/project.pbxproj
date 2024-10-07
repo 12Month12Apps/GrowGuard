@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		562629002C42E32700B5DB2A /* AppIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 562628FF2C42E32200B5DB2A /* AppIntent.swift */; };
+		5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2AB2CB44DA000EED3D3 /* Extensions.swift */; };
 		565DEC402C159B93002D784A /* DeviceDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */; };
 		565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */; };
 		5667BD8A2C28925300D04382 /* SensorData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5667BD892C28924600D04382 /* SensorData.swift */; };
@@ -50,6 +51,7 @@
 
 /* Begin PBXFileReference section */
 		562628FF2C42E32200B5DB2A /* AppIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntent.swift; sourceTree = "<group>"; };
+		5654B2AB2CB44DA000EED3D3 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsView.swift; sourceTree = "<group>"; };
 		565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsViewModel.swift; sourceTree = "<group>"; };
 		5667BD892C28924600D04382 /* SensorData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorData.swift; sourceTree = "<group>"; };
@@ -173,6 +175,7 @@
 		56AF11172BDED05900887073 /* GrowGuard */ = {
 			isa = PBXGroup;
 			children = (
+				5654B2AB2CB44DA000EED3D3 /* Extensions.swift */,
 				5688920A2C84B4B9000E8FAE /* AppDelegate.swift */,
 				562628FF2C42E32200B5DB2A /* AppIntent.swift */,
 				565DEC3E2C159868002D784A /* DeviceDetails */,
@@ -347,6 +350,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5684E2DB2C0F81C0005CD8B6 /* AddDeviceView.swift in Sources */,
+				5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */,
 				565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */,
 				5684E2DF2C0F820D005CD8B6 /* AddDeviceBLE.swift in Sources */,
 				56AF111B2BDED05900887073 /* ContentView.swift in Sources */,
