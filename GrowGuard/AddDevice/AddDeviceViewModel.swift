@@ -16,9 +16,8 @@ import SwiftData
     var ble: AddDeviceBLE?
     var allSavedDevices: [FlowerDevice] = []
     
-    init(/*allSavedDevices: [FlowerDevice]*/) {
+    init() {
         self.devices = []
-//        self.allSavedDevices = allSavedDevices
         
         self.ble = AddDeviceBLE { peripheral in
             self.addToList(peripheral: peripheral)

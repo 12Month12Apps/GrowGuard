@@ -13,8 +13,7 @@ struct OverviewList: View {
     @State var showAddFlowerSheet = false
     @State var loading: Bool = false
 
-    init(/*allSavedDevices: [FlowerDevice]*/) {
-//        self.viewModel = OverviewListViewModel(allSavedDevices: allSavedDevices)
+    init() {
         self.viewModel = OverviewListViewModel()
     }
     
