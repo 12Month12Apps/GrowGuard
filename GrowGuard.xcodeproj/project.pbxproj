@@ -10,6 +10,7 @@
 		562629002C42E32700B5DB2A /* AppIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 562628FF2C42E32200B5DB2A /* AppIntent.swift */; };
 		5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2AB2CB44DA000EED3D3 /* Extensions.swift */; };
 		5654B2B92CB4575E00EED3D3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2B82CB4575C00EED3D3 /* SettingsView.swift */; };
+		5654B2BB2CB45C6E00EED3D3 /* SensorDataDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */; };
 		565DEC402C159B93002D784A /* DeviceDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */; };
 		565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */; };
 		5667BD8A2C28925300D04382 /* SensorData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5667BD892C28924600D04382 /* SensorData.swift */; };
@@ -29,7 +30,6 @@
 		56AF112D2BDED05B00887073 /* GrowGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF112C2BDED05B00887073 /* GrowGuardTests.swift */; };
 		56AF11372BDED05B00887073 /* GrowGuardUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11362BDED05B00887073 /* GrowGuardUITests.swift */; };
 		56AF11392BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11382BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift */; };
-		56AF11472BE2678900887073 /* FlowerCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11462BE2678900887073 /* FlowerCase.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,6 +53,7 @@
 		562628FF2C42E32200B5DB2A /* AppIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntent.swift; sourceTree = "<group>"; };
 		5654B2AB2CB44DA000EED3D3 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		5654B2B82CB4575C00EED3D3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataDecoderTests.swift; sourceTree = "<group>"; };
 		565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsView.swift; sourceTree = "<group>"; };
 		565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsViewModel.swift; sourceTree = "<group>"; };
 		5667BD892C28924600D04382 /* SensorData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorData.swift; sourceTree = "<group>"; };
@@ -77,7 +78,6 @@
 		56AF11362BDED05B00887073 /* GrowGuardUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardUITests.swift; sourceTree = "<group>"; };
 		56AF11382BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		56AF11452BE2492300887073 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		56AF11462BE2678900887073 /* FlowerCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerCase.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -202,7 +202,6 @@
 				56AF111E2BDED05B00887073 /* Assets.xcassets */,
 				56AF11202BDED05B00887073 /* GrowGuard.entitlements */,
 				56AF11212BDED05B00887073 /* Preview Content */,
-				56AF11462BE2678900887073 /* FlowerCase.swift */,
 			);
 			path = GrowGuard;
 			sourceTree = "<group>";
@@ -218,6 +217,7 @@
 		56AF112B2BDED05B00887073 /* GrowGuardTests */ = {
 			isa = PBXGroup;
 			children = (
+				5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */,
 				56AF112C2BDED05B00887073 /* GrowGuardTests.swift */,
 			);
 			path = GrowGuardTests;
@@ -377,7 +377,6 @@
 				5684E2DD2C0F81E7005CD8B6 /* AddDeviceViewModel.swift in Sources */,
 				56AF111D2BDED05900887073 /* FlowerDevice.swift in Sources */,
 				5684E2E22C0FA2EE005CD8B6 /* OverviewList.swift in Sources */,
-				56AF11472BE2678900887073 /* FlowerCase.swift in Sources */,
 				562629002C42E32700B5DB2A /* AppIntent.swift in Sources */,
 				56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */,
 				5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */,
@@ -390,6 +389,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5654B2BB2CB45C6E00EED3D3 /* SensorDataDecoderTests.swift in Sources */,
 				56AF112D2BDED05B00887073 /* GrowGuardTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
