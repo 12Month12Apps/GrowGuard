@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -12,7 +12,6 @@
 		565DEC402C159B93002D784A /* DeviceDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */; };
 		565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */; };
 		5667BD8A2C28925300D04382 /* SensorData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5667BD892C28924600D04382 /* SensorData.swift */; };
-		5684E2D82C0C8FCA005CD8B6 /* FlowerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2D72C0C8FCA005CD8B6 /* FlowerManager.swift */; };
 		5684E2DB2C0F81C0005CD8B6 /* AddDeviceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2DA2C0F81C0005CD8B6 /* AddDeviceView.swift */; };
 		5684E2DD2C0F81E7005CD8B6 /* AddDeviceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2DC2C0F81E7005CD8B6 /* AddDeviceViewModel.swift */; };
 		5684E2DF2C0F820D005CD8B6 /* AddDeviceBLE.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2DE2C0F820D005CD8B6 /* AddDeviceBLE.swift */; };
@@ -55,7 +54,6 @@
 		565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsView.swift; sourceTree = "<group>"; };
 		565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsViewModel.swift; sourceTree = "<group>"; };
 		5667BD892C28924600D04382 /* SensorData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorData.swift; sourceTree = "<group>"; };
-		5684E2D72C0C8FCA005CD8B6 /* FlowerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerManager.swift; sourceTree = "<group>"; };
 		5684E2DA2C0F81C0005CD8B6 /* AddDeviceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceView.swift; sourceTree = "<group>"; };
 		5684E2DC2C0F81E7005CD8B6 /* AddDeviceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceViewModel.swift; sourceTree = "<group>"; };
 		5684E2DE2C0F820D005CD8B6 /* AddDeviceBLE.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceBLE.swift; sourceTree = "<group>"; };
@@ -79,6 +77,10 @@
 		56AF11452BE2492300887073 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		56AF11462BE2678900887073 /* FlowerCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerCase.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		5654B2AD2CB450A100EED3D3 /* BLE */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = BLE; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		56AF11122BDED05900887073 /* Frameworks */ = {
@@ -175,6 +177,7 @@
 		56AF11172BDED05900887073 /* GrowGuard */ = {
 			isa = PBXGroup;
 			children = (
+				5654B2AD2CB450A100EED3D3 /* BLE */,
 				5654B2AB2CB44DA000EED3D3 /* Extensions.swift */,
 				5688920A2C84B4B9000E8FAE /* AppDelegate.swift */,
 				562628FF2C42E32200B5DB2A /* AppIntent.swift */,
@@ -189,7 +192,6 @@
 				56AF11202BDED05B00887073 /* GrowGuard.entitlements */,
 				56AF11212BDED05B00887073 /* Preview Content */,
 				56AF11462BE2678900887073 /* FlowerCase.swift */,
-				5684E2D72C0C8FCA005CD8B6 /* FlowerManager.swift */,
 			);
 			path = GrowGuard;
 			sourceTree = "<group>";
@@ -233,6 +235,9 @@
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5654B2AD2CB450A100EED3D3 /* BLE */,
 			);
 			name = GrowGuard;
 			productName = GrowGuard;
@@ -355,7 +360,6 @@
 				5684E2DF2C0F820D005CD8B6 /* AddDeviceBLE.swift in Sources */,
 				56AF111B2BDED05900887073 /* ContentView.swift in Sources */,
 				5684E2E42C0FA2FA005CD8B6 /* OverviewListViewModel.swift in Sources */,
-				5684E2D82C0C8FCA005CD8B6 /* FlowerManager.swift in Sources */,
 				569B70ED2C10F221005B7BC9 /* DataService.swift in Sources */,
 				5667BD8A2C28925300D04382 /* SensorData.swift in Sources */,
 				568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */,
