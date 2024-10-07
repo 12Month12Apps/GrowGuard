@@ -9,27 +9,6 @@ import Foundation
 import CoreBluetooth
 import Combine
 
-let flowerCareServiceUUID = CBUUID(string: "0000fe95-0000-1000-8000-00805f9b34fb")
-let dataServiceUUID = CBUUID(string: "00001204-0000-1000-8000-00805f9b34fb")
-let historyServiceUUID = CBUUID(string: "00001206-0000-1000-8000-00805f9b34fb")
-
-let deviceNameCharacteristicUUID = CBUUID(string: "00002a00-0000-1000-8000-00805f9b34fb")
-let realTimeSensorValuesCharacteristicUUID = CBUUID(string: "00001a01-0000-1000-8000-00805f9b34fb")
-let firmwareVersionCharacteristicUUID = CBUUID(string: "00001a02-0000-1000-8000-00805f9b34fb")
-let deviceModeChangeCharacteristicUUID = CBUUID(string: "00001a00-0000-1000-8000-00805f9b34fb")
-let historicalSensorValuesCharacteristicUUID = CBUUID(string: "00001a11-0000-1000-8000-00805f9b34fb")
-let deviceTimeCharacteristicUUID = CBUUID(string: "00001a12-0000-1000-8000-00805f9b34fb")
-let historyControlCharacteristicUUID = CBUUID(string: "00001a10-0000-1000-8000-00805f9b34fb")
-let entryCountCharacteristicUUID = CBUUID(string: "00001a13-0000-1000-8000-00805f9b34fb")
-
-struct HistoricalSensorData {
-    let timestamp: UInt32
-    let temperature: Double
-    let brightness: UInt32
-    let moisture: UInt8
-    let conductivity: UInt16
-}
-
 class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     var centralManager: CBCentralManager!
     var discoveredPeripheral: CBPeripheral?
@@ -47,7 +26,9 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     
     private let sensorDataSubject = PassthroughSubject<SensorData, Never>()
     private let historicalDataSubject = PassthroughSubject<HistoricalSensorData, Never>()
-    
+
+    private let decoder = SensorDataDecoder()
+
     var sensorDataPublisher: AnyPublisher<SensorData, Never> {
         return sensorDataSubject.eraseToAnyPublisher()
     }
@@ -237,118 +218,45 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     }
 
     private func decodeEntryCount(data: Data) {
-        guard data.count == 2 else {
-            print("Unexpected data length: \(data.count)")
-            return
-        }
+       if let count = decoder.decodeEntryCount(data: data) {
+           totalEntries = count
+           print("Total historical entries: \(totalEntries)")
 
-        totalEntries = Int(data.withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian)
-        print("Total historical entries: \(totalEntries)")
-
-        if totalEntries > 0 {
-            currentEntryIndex = 0
-            fetchHistoricalDataEntry(index: currentEntryIndex)
-        } else {
-            print("No historical entries available.")
-        }
-    }
+           if totalEntries > 0 {
+               currentEntryIndex = 0
+               fetchHistoricalDataEntry(index: currentEntryIndex)
+           } else {
+               print("No historical entries available.")
+           }
+       }
+   }
     
     private func decodeRealTimeSensorValues(data: Data) {
-        guard data.count == 16 else {
-            print("Unexpected data length: \(data.count)")
-            return
+        if let sensorData = decoder.decodeRealTimeSensorValues(data: data) {
+            sensorDataSubject.send(sensorData)
         }
-
-        let temperature = data.subdata(in: 0..<2).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian
-        let brightness = data.subdata(in: 3..<7).withUnsafeBytes { $0.load(as: UInt32.self) }.littleEndian
-        let moisture = data[7]
-        let conductivity = data.subdata(in: 8..<10).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian
-
-        let temperatureCelsius = Double(temperature) / 10.0
-
-        print("Temperature: \(temperatureCelsius) °C")
-        print("Brightness: \(brightness) lux")
-        print("Soil Moisture: \(moisture) %")
-        print("Soil Conductivity: \(conductivity) µS/cm")
-        
-        let sensorData = SensorData(
-            temperature: temperatureCelsius,
-            brightness: brightness,
-            moisture: moisture,
-            conductivity: conductivity, 
-            date: Date()
-        )
-        
-        sensorDataSubject.send(sensorData)
     }
 
     private func decodeFirmwareAndBattery(data: Data) {
-        guard data.count == 7 else {
-            print("Unexpected data length: \(data.count)")
-            return
-        }
-
-        let batteryLevel = data[0]
-        if let firmwareVersion = String(data: data[1..<7], encoding: .ascii) {
-            print("Battery Level: \(batteryLevel) %")
-            print("Firmware Version: \(firmwareVersion)")
-        } else {
-            print("Failed to decode firmware version.")
-        }
+        decoder.decodeFirmwareAndBattery(data: data)
     }
 
     private func decodeDeviceName(data: Data) {
-        if let deviceName = String(data: data, encoding: .ascii) {
-            print("Device Name: \(deviceName)")
-        } else {
-            print("Failed to decode device name.")
-        }
+        decoder.decodeDeviceName(data: data)
     }
 
     private func decodeDeviceTime(data: Data) {
-        guard data.count == 4 else {
-            print("Unexpected data length: \(data.count)")
-            return
-        }
-
-        let deviceTime = data.withUnsafeBytes { $0.load(as: UInt32.self) }.littleEndian
-        print("Device Time: \(deviceTime) seconds since device epoch")
+        decoder.decodeDeviceTime(data: data)
     }
 
     private func decodeHistoryData(data: Data) {
-        guard data.count == 16 else {
-            print("Unexpected data length: \(data.count)")
-            return
-        }
-
-        let timestamp = data.subdata(in: 0..<4).withUnsafeBytes { $0.load(as: UInt32.self) }.littleEndian
-        let temperature = data.subdata(in: 4..<6).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian
-        let brightness = data.subdata(in: 7..<11).withUnsafeBytes { $0.load(as: UInt32.self) }.littleEndian
-        let moisture = data[11]
-        let conductivity = data.subdata(in: 12..<14).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian
-
-        let temperatureCelsius = Double(temperature) / 10.0
-
-        print("Timestamp: \(timestamp) seconds since device epoch")
-        print("Temperature: \(temperatureCelsius) °C")
-        print("Brightness: \(brightness) lux")
-        print("Soil Moisture: \(moisture) %")
-        print("Soil Conductivity: \(conductivity) µS/cm")
-        
-        let historicalData = HistoricalSensorData(
-            timestamp: timestamp,
-            temperature: temperatureCelsius,
-            brightness: brightness,
-            moisture: moisture,
-            conductivity: conductivity
-        )
-        
-        historicalDataSubject.send(historicalData)
-        
-        // Fetch the next entry
-        currentEntryIndex += 1
-        if currentEntryIndex < totalEntries {
-            fetchHistoricalDataEntry(index: currentEntryIndex)
+        if let historicalData = decoder.decodeHistoricalSensorData(data: data) {
+            historicalDataSubject.send(historicalData)
+            // Fetch the next entry
+            currentEntryIndex += 1
+            if currentEntryIndex < totalEntries {
+                fetchHistoricalDataEntry(index: currentEntryIndex)
+            }
         }
     }
 
@@ -363,18 +271,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         discoveredPeripheral?.writeValue(commandData, for: historyControlCharacteristic, type: .withResponse)
     }
 
-//    private func fetchHistoricalDataEntry(index: Int) {
-//        guard let historyControlCharacteristic = historyControlCharacteristic else {
-//            print("History control characteristic not found.")
-//            return
-//        }
-//
-//        let indexLowByte = UInt8(index & 0xff)
-//        let indexHighByte = UInt8((index >> 8) & 0xff)
-//        let command: [UInt8] = [0xa1, indexLowByte, indexHighByte]
-//        let commandData = Data(command)
-//        discoveredPeripheral?.writeValue(commandData, for: historyControlCharacteristic, type: .withResponse)
-//    }
     private func fetchHistoricalDataEntry(index: Int) {
         let entryAddress = Data([0xa1, UInt8(index & 0xff), UInt8((index >> 8) & 0xff)])
         if let historyControlCharacteristic = historyControlCharacteristic {
