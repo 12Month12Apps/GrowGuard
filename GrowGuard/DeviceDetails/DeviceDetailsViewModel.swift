@@ -37,10 +37,6 @@ import Combine
         ble.connectToKnownDevice(device: device)
     }
     
-//    func reloadSensor() {
-//        ble.reloadScanning()
-//    }
-    
     @MainActor
     func saveDatabase() {
         do {
