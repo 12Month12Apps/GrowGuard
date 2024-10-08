@@ -51,4 +51,13 @@ final class FlowerDevice {
         self.sensorData = []
         self.optimalRange = OptimalRange(minTemperature: 0, minBrightness: 0, minMoisture: 0, minConductivity: 0, maxTemperature: 0, maxBrightness: 0, maxMoisture: 0, maxConductivity: 0)
     }
+    
+    init(name: String, uuid: String) {
+        self.added = Date()
+        self.lastUpdate = Date()
+        self.uuid = uuid
+        self.name = name
+        self.sensorData = []
+        self.optimalRange = OptimalRange(minTemperature: 0, minBrightness: 0, minMoisture: 0, minConductivity: 0, maxTemperature: 0, maxBrightness: 0, maxMoisture: 0, maxConductivity: 0)
+    }
 }

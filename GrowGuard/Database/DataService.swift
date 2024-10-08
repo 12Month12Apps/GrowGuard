@@ -13,7 +13,10 @@ class DataService {
         let schema = Schema([
             FlowerDevice.self
         ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        
+        let isRunningTests: Bool = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        
+        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: isRunningTests)
 
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])

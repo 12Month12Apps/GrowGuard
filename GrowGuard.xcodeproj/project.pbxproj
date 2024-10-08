@@ -11,6 +11,8 @@
 		5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2AB2CB44DA000EED3D3 /* Extensions.swift */; };
 		5654B2B92CB4575E00EED3D3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2B82CB4575C00EED3D3 /* SettingsView.swift */; };
 		5654B2BB2CB45C6E00EED3D3 /* SensorDataDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */; };
+		5654B2BD2CB46EE600EED3D3 /* OverviewListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2BC2CB46EDB00EED3D3 /* OverviewListViewModelTests.swift */; };
+		5654B2C12CB4739C00EED3D3 /* AddDeviceViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2C02CB4739400EED3D3 /* AddDeviceViewModelTests.swift */; };
 		565DEC402C159B93002D784A /* DeviceDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */; };
 		565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */; };
 		5667BD8A2C28925300D04382 /* SensorData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5667BD892C28924600D04382 /* SensorData.swift */; };
@@ -54,6 +56,8 @@
 		5654B2AB2CB44DA000EED3D3 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		5654B2B82CB4575C00EED3D3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataDecoderTests.swift; sourceTree = "<group>"; };
+		5654B2BC2CB46EDB00EED3D3 /* OverviewListViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewListViewModelTests.swift; sourceTree = "<group>"; };
+		5654B2C02CB4739400EED3D3 /* AddDeviceViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceViewModelTests.swift; sourceTree = "<group>"; };
 		565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsView.swift; sourceTree = "<group>"; };
 		565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsViewModel.swift; sourceTree = "<group>"; };
 		5667BD892C28924600D04382 /* SensorData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorData.swift; sourceTree = "<group>"; };
@@ -115,6 +119,23 @@
 				5654B2B82CB4575C00EED3D3 /* SettingsView.swift */,
 			);
 			path = Settings;
+			sourceTree = "<group>";
+		};
+		5654B2BE2CB46EEA00EED3D3 /* ViewModel */ = {
+			isa = PBXGroup;
+			children = (
+				5654B2C02CB4739400EED3D3 /* AddDeviceViewModelTests.swift */,
+				5654B2BC2CB46EDB00EED3D3 /* OverviewListViewModelTests.swift */,
+			);
+			path = ViewModel;
+			sourceTree = "<group>";
+		};
+		5654B2BF2CB46EF200EED3D3 /* BLE */ = {
+			isa = PBXGroup;
+			children = (
+				5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */,
+			);
+			path = BLE;
 			sourceTree = "<group>";
 		};
 		565DEC3E2C159868002D784A /* DeviceDetails */ = {
@@ -217,7 +238,8 @@
 		56AF112B2BDED05B00887073 /* GrowGuardTests */ = {
 			isa = PBXGroup;
 			children = (
-				5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */,
+				5654B2BF2CB46EF200EED3D3 /* BLE */,
+				5654B2BE2CB46EEA00EED3D3 /* ViewModel */,
 				56AF112C2BDED05B00887073 /* GrowGuardTests.swift */,
 			);
 			path = GrowGuardTests;
@@ -389,7 +411,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5654B2C12CB4739C00EED3D3 /* AddDeviceViewModelTests.swift in Sources */,
 				5654B2BB2CB45C6E00EED3D3 /* SensorDataDecoderTests.swift in Sources */,
+				5654B2BD2CB46EE600EED3D3 /* OverviewListViewModelTests.swift in Sources */,
 				56AF112D2BDED05B00887073 /* GrowGuardTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
