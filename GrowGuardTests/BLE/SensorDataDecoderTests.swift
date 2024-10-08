@@ -15,7 +15,6 @@ class SensorDataDecoderTests {
 
     @Test("Test decodeRealTimeSensorValues with received debug data")
     func testDecodeRealTimeSensorValuesWithDebugData() {
-        // Debug Data received from sensor (16 Bytes total)
         let data: Data = Data([
             239, 0,                 // Temperature raw value (to be decoded)
             3, 185, 0, 0,           // Brightness raw value (to be decoded)
@@ -26,13 +25,12 @@ class SensorDataDecoderTests {
         ])
 
         if let sensorData = decoder.decodeRealTimeSensorValues(data: data) {
-            // Based on your decoder logic, you can expect the following:
-            #expect(sensorData.temperature == 23.9)       // Decoded temperature (from 239)
-            #expect(sensorData.brightness == 185)    // Decoded brightness
-            #expect(sensorData.moisture == 51)            // Decoded moisture
-            #expect(sensorData.conductivity == 1019)     // Decoded conductivity
+            #expect(sensorData.temperature == 23.9)
+            #expect(sensorData.brightness == 185)
+            #expect(sensorData.moisture == 51)
+            #expect(sensorData.conductivity == 1019)
         } else {
-            #expect(false) // Test fails if decoding fails
+            #expect(false)
         }
     }
 
@@ -41,7 +39,7 @@ class SensorDataDecoderTests {
         // Invalid data length (only 1 byte, expected 16)
         let data: Data = Data([0x1A])
         let sensorData = decoder.decodeRealTimeSensorValues(data: data)
-        #expect(sensorData == nil) // Expect nil for invalid length
+        #expect(sensorData == nil)
     }
 
     //TODO: History Data still WIP
@@ -88,16 +86,16 @@ class SensorDataDecoderTests {
             0x50,                   // Battery (0x50 -> 80%)
             0x66, 0x72, 0x6F, 0x6D, 0x77, 0x61 // Firmware Version "fromwa"
         ])
-        decoder.decodeFirmwareAndBattery(data: data) // Output verification done manually via print statements
-        #expect(true) // Test passes if no errors occur
+        decoder.decodeFirmwareAndBattery(data: data)
+        #expect(true)
     }
 
     @Test("Test decodeDeviceName with valid data")
     func testDecodeDeviceName() {
         // Device Name (ASCII string)
         let data: Data = "TestDevice".data(using: .ascii)!
-        decoder.decodeDeviceName(data: data) // Output verification done manually via print statements
-        #expect(true) // Test passes if no errors occur
+        decoder.decodeDeviceName(data: data)
+        #expect(true)
     }
 
     @Test("Test decodeDeviceTime with valid data")
@@ -107,8 +105,8 @@ class SensorDataDecoderTests {
         let data: Data = Data([
             0x00, 0x00, 0x00, 0x01 // Time (0x00000001 -> 1 second)
         ])
-        decoder.decodeDeviceTime(data: data) // Output verification done manually via print statements
-        #expect(true) // Test passes if no errors occur
+        decoder.decodeDeviceTime(data: data)
+        #expect(true)
     }
 
     @Test("Test decodeEntryCount with valid data")
@@ -119,7 +117,7 @@ class SensorDataDecoderTests {
             0x00, 0x0005 // Entries (0x0005 -> 1280 entries)
         ])
         let entryCount = decoder.decodeEntryCount(data: data)
-        #expect(entryCount == 1280) // Expect 1280 entries
+        #expect(entryCount == 1280)
     }
 
     @Test("Test decodeEntryCount with invalid data length")
@@ -127,6 +125,6 @@ class SensorDataDecoderTests {
         // Invalid data length (only 1 byte, expected 2)
         let data: Data = Data([0x00])
         let entryCount = decoder.decodeEntryCount(data: data)
-        #expect(entryCount == nil) // Expect nil for invalid length
+        #expect(entryCount == nil)
     }
 }
