@@ -7,6 +7,9 @@
 
 import Testing
 
+
+// This is just for testing Swift Testing! Has Nothing to do with my app and is completly pointless!
+
 func calcN1(N: Int) -> Int {
     return N + 1
 }
