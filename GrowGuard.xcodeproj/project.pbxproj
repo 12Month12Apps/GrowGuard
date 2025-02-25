@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 70;
+	objectVersion = 56;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -32,6 +32,10 @@
 		56AF112D2BDED05B00887073 /* GrowGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF112C2BDED05B00887073 /* GrowGuardTests.swift */; };
 		56AF11372BDED05B00887073 /* GrowGuardUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11362BDED05B00887073 /* GrowGuardUITests.swift */; };
 		56AF11392BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11382BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift */; };
+		56B44CC32D6E7B3F00A6A75A /* FlowerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CBE2D6E7B3F00A6A75A /* FlowerManager.swift */; };
+		56B44CC42D6E7B3F00A6A75A /* HistoricalSensorData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */; };
+		56B44CC52D6E7B3F00A6A75A /* SensorDataDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */; };
+		56B44CC62D6E7B3F00A6A75A /* UUIDs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,11 +86,11 @@
 		56AF11362BDED05B00887073 /* GrowGuardUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardUITests.swift; sourceTree = "<group>"; };
 		56AF11382BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		56AF11452BE2492300887073 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		56B44CBE2D6E7B3F00A6A75A /* FlowerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerManager.swift; sourceTree = "<group>"; };
+		56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalSensorData.swift; sourceTree = "<group>"; };
+		56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataDecoder.swift; sourceTree = "<group>"; };
+		56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UUIDs.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
-
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		5654B2AD2CB450A100EED3D3 /* BLE */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = BLE; sourceTree = "<group>"; };
-/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		56AF11122BDED05900887073 /* Frameworks */ = {
@@ -209,7 +213,7 @@
 		56AF11172BDED05900887073 /* GrowGuard */ = {
 			isa = PBXGroup;
 			children = (
-				5654B2AD2CB450A100EED3D3 /* BLE */,
+				56B44CC22D6E7B3F00A6A75A /* BLE */,
 				5654B2AB2CB44DA000EED3D3 /* Extensions.swift */,
 				5688920A2C84B4B9000E8FAE /* AppDelegate.swift */,
 				562628FF2C42E32200B5DB2A /* AppIntent.swift */,
@@ -254,6 +258,17 @@
 			path = GrowGuardUITests;
 			sourceTree = "<group>";
 		};
+		56B44CC22D6E7B3F00A6A75A /* BLE */ = {
+			isa = PBXGroup;
+			children = (
+				56B44CBE2D6E7B3F00A6A75A /* FlowerManager.swift */,
+				56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */,
+				56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */,
+				56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */,
+			);
+			path = BLE;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -268,9 +283,6 @@
 			buildRules = (
 			);
 			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				5654B2AD2CB450A100EED3D3 /* BLE */,
 			);
 			name = GrowGuard;
 			productName = GrowGuard;
@@ -388,6 +400,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				5684E2DB2C0F81C0005CD8B6 /* AddDeviceView.swift in Sources */,
+				56B44CC32D6E7B3F00A6A75A /* FlowerManager.swift in Sources */,
+				56B44CC42D6E7B3F00A6A75A /* HistoricalSensorData.swift in Sources */,
+				56B44CC52D6E7B3F00A6A75A /* SensorDataDecoder.swift in Sources */,
+				56B44CC62D6E7B3F00A6A75A /* UUIDs.swift in Sources */,
 				5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */,
 				565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */,
 				5684E2DF2C0F820D005CD8B6 /* AddDeviceBLE.swift in Sources */,
