@@ -232,7 +232,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
    }
     
     private func decodeRealTimeSensorValues(data: Data) {
-        if let sensorData = decoder.decodeRealTimeSensorValues(data: data) {
+        if let sensorData = decoder.decodeRealTimeSensorValues(data: data, device: device) {
             sensorDataSubject.send(sensorData)
         }
     }

@@ -38,9 +38,9 @@ class OptimalRange {
 final class FlowerDevice {
     var added: Date
     var lastUpdate: Date
-    var uuid: String
+    @Attribute(.unique) var uuid: String
     var name: String
-    var sensorData: [SensorData]
+    @Relationship(deleteRule: .nullify, inverse: \SensorData.device) var sensorData: [SensorData]
     var optimalRange: OptimalRange
     
     init(added: Date, lastUpdate: Date, peripheral: CBPeripheral) {
