@@ -29,20 +29,8 @@ struct OverviewList: View {
                     }
                     .onDelete(perform: delete)
                 }
-//                Button("Add Flower") {
-//                    self.showAddFlowerSheet.toggle()
-//                }
             }.navigationTitle("Overview")
         }
-//        .sheet(isPresented: self.$showAddFlowerSheet) {
-//            VStack {
-//                Button("Close") {
-//                    self.showAddFlowerSheet.toggle()
-//                }               
-//                
-//                AddDeviceView(/*allSavedDevices: viewModel.allSavedDevices*/)
-//            }
-//        }
         .onAppear {
             self.loading = true
             Task {
