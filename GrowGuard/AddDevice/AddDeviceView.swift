@@ -17,7 +17,7 @@ struct AddDeviceView: View {
     }
 
     var body: some View {
-        List(viewModel.devices, id: \.name) { device in
+        List(viewModel.devices, id: \.identifier.uuidString) { device in
             HStack {
                 Text(device.name ?? "error")
                 Spacer()
