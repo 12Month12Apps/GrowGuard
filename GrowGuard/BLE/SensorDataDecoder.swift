@@ -9,7 +9,7 @@ import Foundation
 
 class SensorDataDecoder {
     
-    func decodeRealTimeSensorValues(data: Data) -> SensorData? {
+    func decodeRealTimeSensorValues(data: Data, device: FlowerDevice?) -> SensorData? {
         guard data.count == 16 else {
             print("Unexpected data length: \(data.count)")
             return nil
@@ -32,7 +32,8 @@ class SensorDataDecoder {
             brightness: brightness,
             moisture: moisture,
             conductivity: conductivity,
-            date: Date()
+            date: Date(),
+            device: device
         )
     }
 
