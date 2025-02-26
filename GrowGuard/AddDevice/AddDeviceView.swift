@@ -43,5 +43,6 @@ struct AddDeviceView: View {
                 ProgressView()
             }
         }
+        .navigationTitle("Add Device")
     }
 }
