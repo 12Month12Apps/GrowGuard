@@ -69,10 +69,8 @@ struct DeviceDetailsView: View {
                             minRange: Int(viewModel.device.optimalRange.minTemperature),
                             maxRange: Int(viewModel.device.optimalRange.maxTemperature))
             
-            Button {
+            Button("Delete", role: .destructive) {
                 viewModel.delete()
-            } label: {
-                Text("Delete")
             }
 
         }.onAppear {

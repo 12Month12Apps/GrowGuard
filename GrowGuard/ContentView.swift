@@ -43,12 +43,12 @@ struct ContentView: View {
             TabView {
                 OverviewList(/*allSavedDevices: viewModel.allSavedDevices*/)
                     .tabItem {
-                        Label("Menu", systemImage: "list.dash")
+                        Label("Menu", systemImage: "leaf")
                     }
                 
                 AddDeviceView(/*allSavedDevices: */)
                     .tabItem {
-                        Label("Add", systemImage: "list.dash")
+                        Label("Add", systemImage: "plus.app")
                     }
             }
         }.onAppear {
