@@ -15,17 +15,35 @@ class SensorDataDecoder {
             return nil
         }
 
-        let temperature = data.subdata(in: 0..<2).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian
+        // Ausführlicheres Debug-Logging
+        let hexString = data.map { String(format: "%02X", $0) }.joined()
+        print("Raw data (hex): \(hexString)")
+        print("Raw temperature bytes: [0]=\(data[0]) (hex: \(String(format: "%02X", data[0]))), [1]=\(data[1]) (hex: \(String(format: "%02X", data[1])))")
+        
+        // Verschiedene Interpretationen probieren
+        let tempLowByte = UInt16(data[0])
+        let tempHighByte = UInt16(data[1])
+        let temperatureRaw = tempLowByte + (tempHighByte << 8)
+        
+        // Alternative Interpretationen
+        let temperatureSigned = Double(Int16(bitPattern: UInt16(temperatureRaw))) / 10.0
+        let temperatureSwapped = Double(UInt16(data[1]) + (UInt16(data[0]) << 8)) / 10.0
+        let temperatureDirectBytes = Double(UInt16(littleEndian: data.withUnsafeBytes { $0.load(as: UInt16.self) })) / 10.0
+        
+        print("Temperature interpretations:")
+        print("- Standard: \(Double(temperatureRaw) / 10.0) °C")
+        print("- As signed: \(temperatureSigned) °C")
+        print("- Swapped: \(temperatureSwapped) °C")
+        print("- Direct bytes: \(temperatureDirectBytes) °C")
+        
+        // Rest des Codes unverändert...
         let brightness = data.subdata(in: 3..<7).withUnsafeBytes { $0.load(as: UInt32.self) }.littleEndian
         let moisture = data.subdata(in: 7..<8).withUnsafeBytes { $0.load(as: UInt8.self) }.littleEndian
         let conductivity = data.subdata(in: 8..<10).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian
-
-        let temperatureCelsius = Double(temperature) / 10.0
-
-        print("Temperature: \(temperatureCelsius) °C")
-        print("Brightness: \(brightness) lux")
-        print("Soil Moisture: \(moisture) %")
-        print("Soil Conductivity: \(conductivity) µS/cm")
+        
+        // Verwende die Interpretation, die am wahrscheinlichsten korrekt ist
+        // (für jetzt die Standardinterpretation, aber ändere dies basierend auf den Debug-Ausgaben)
+        let temperatureCelsius = Double(temperatureRaw) / 10.0
         
         return SensorData(
             temperature: temperatureCelsius,
