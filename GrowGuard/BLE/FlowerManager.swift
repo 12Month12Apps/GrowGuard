@@ -12,6 +12,7 @@ import Combine
 class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     var centralManager: CBCentralManager!
     var discoveredPeripheral: CBPeripheral?
+    var modeChangeCharacteristic: CBCharacteristic? // Neue Charakteristik für Mode Change (Handle 0x33)
     var realTimeSensorValuesCharacteristic: CBCharacteristic?
     var historyControlCharacteristic: CBCharacteristic?
     var historyDataCharacteristic: CBCharacteristic?
@@ -41,6 +42,11 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     }
     
     static var shared = FlowerCareManager()
+
+    // Neues Flag zur Vermeidung doppelter Anfragen
+    private var isRequestingData = false
+    private var requestTimeoutTimer: Timer?
+    private let requestTimeout = 10.0  // Timeout in Sekunden
 
     override init() {
         super.init()
@@ -131,9 +137,12 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        print("Connected to: \(peripheral.name ?? "Unknown")")
         peripheral.delegate = self
-        peripheral.discoverServices([dataServiceUUID, historyServiceUUID])
-        self.isConnected = true
+        peripheral.discoverServices(nil)
+        
+        // Wichtig: Vielleicht muss zuerst eine Authentifizierung erfolgen
+        // Manche Geräte benötigen einen speziellen Handshake
     }
 
     // MARK: - CBPeripheralDelegate Methods
@@ -157,6 +166,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
 //                    let modeChangeCommand: [UInt8] = [0xa0, 0x1f]
 //                    let modeChangeData = Data(modeChangeCommand)
 //                    peripheral.writeValue(modeChangeData, for: characteristic, type: .withResponse)
+                    modeChangeCharacteristic = characteristic
                     ledControlCharacteristic = characteristic
                     blinkLED()
                 case realTimeSensorValuesCharacteristicUUID:
@@ -181,6 +191,10 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     break
                 }
             }
+        }
+
+        if modeChangeCharacteristic != nil && realTimeSensorValuesCharacteristic != nil {
+            requestFreshSensorData()
         }
     }
     
@@ -210,20 +224,33 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
 
     func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
         if let error = error {
-            print("Error writing value: \(error.localizedDescription)")
+            print("Fehler beim Schreiben: \(error.localizedDescription)")
+            // Bei Fehler Flag zurücksetzen und ggf. neu versuchen
+            isRequestingData = false
+            requestTimeoutTimer?.invalidate()
             return
         }
 
-        if characteristic.uuid == historyControlCharacteristicUUID {
-            if currentEntryIndex < totalEntries {
-                fetchHistoricalDataEntry(index: currentEntryIndex)
+        if characteristic.uuid == deviceModeChangeCharacteristicUUID {
+            print("Mode-Change erfolgreich, warte kurz...")
+            
+            // Verzögerung hinzufügen
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                if let sensorChar = self.realTimeSensorValuesCharacteristic {
+                    print("Lese Sensordaten...")
+                    peripheral.readValue(for: sensorChar)
+                }
             }
         }
     }
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+        // Flag zurücksetzen, da die Anfrage abgeschlossen ist (erfolgreich oder nicht)
+        isRequestingData = false
+        requestTimeoutTimer?.invalidate()
+        
         guard error == nil else {
-            print("Error reading characteristic: \(error!.localizedDescription)")
+            print("Fehler beim Lesen: \(error!.localizedDescription)")
             return
         }
 
@@ -337,26 +364,60 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     private func handleInvalidData() {
         invalidDataRetryCount += 1
         if invalidDataRetryCount <= maxRetryAttempts {
-            print("Received invalid sensor data. Retrying... (Attempt \(invalidDataRetryCount)/\(maxRetryAttempts))")
-            // Request new sensor data
-            requestFreshSensorData()
+            print("Ungültige Sensordaten. Wiederhole... (Versuch \(invalidDataRetryCount)/\(maxRetryAttempts))")
+            // Kurze Verzögerung vor erneutem Versuch
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.requestFreshSensorData()
+            }
         } else {
-            print("Failed to get valid sensor data after \(maxRetryAttempts) attempts")
+            print("Konnte keine gültigen Daten nach \(maxRetryAttempts) Versuchen erhalten")
             invalidDataRetryCount = 0
         }
     }
     
     func requestFreshSensorData() {
-        guard let peripheral = discoveredPeripheral,
-              let characteristic = realTimeSensorValuesCharacteristic,
-              peripheral.state == .connected else {
-            print("Cannot request sensor data: device not ready")
+        // Verhindere parallele Anfragen
+        guard !isRequestingData else {
+            print("Datenabfrage bereits im Gange, überspringe...")
             return
         }
         
-        // Write the command to request real-time data (example command)
+        guard let peripheral = discoveredPeripheral,
+              let modeChar = modeChangeCharacteristic,
+              peripheral.state == .connected else {
+            print("Gerät nicht bereit für Datenabfrage")
+            return
+        }
+        
+        // Setze das Flag und starte den Timeout-Timer
+        isRequestingData = true
+        startRequestTimeoutTimer()
+        
+        print("Sende Mode-Change Befehl...")
         let command: [UInt8] = [0xA0, 0x1F]
-        let data = Data(command)
-        peripheral.writeValue(data, for: characteristic, type: .withResponse)
+        peripheral.writeValue(Data(command), for: modeChar, type: .withResponse)
+    }
+    
+    private func startRequestTimeoutTimer() {
+        // Breche vorherigen Timer ab, falls vorhanden
+        requestTimeoutTimer?.invalidate()
+        
+        // Starte neuen Timer
+        requestTimeoutTimer = Timer.scheduledTimer(withTimeInterval: requestTimeout, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+            if self.isRequestingData {
+                print("Timeout bei Sensorabfrage")
+                self.isRequestingData = false
+                self.invalidDataRetryCount += 1
+                
+                if self.invalidDataRetryCount <= self.maxRetryAttempts {
+                    print("Versuche erneut... (Versuch \(self.invalidDataRetryCount)/\(self.maxRetryAttempts))")
+                    self.requestFreshSensorData()
+                } else {
+                    print("Maximale Anzahl an Versuchen erreicht")
+                    self.invalidDataRetryCount = 0
+                }
+            }
+        }
     }
 }
