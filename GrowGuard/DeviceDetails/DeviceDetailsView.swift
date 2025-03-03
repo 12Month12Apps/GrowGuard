@@ -88,10 +88,6 @@ struct DeviceDetailsView: View {
                             selectedChartType: .bars,
                             minRange: Int(viewModel.device.optimalRange.minTemperature),
                             maxRange: Int(viewModel.device.optimalRange.maxTemperature))
-            
-            Button("Delete", role: .destructive) {
-                viewModel.delete()
-            }
 
         }.onAppear {
             self.viewModel.loadDetails()

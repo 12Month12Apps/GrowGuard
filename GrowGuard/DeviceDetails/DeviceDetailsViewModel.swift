@@ -49,12 +49,5 @@ import Combine
             print(error.localizedDescription)
         }
     }
-    
-    @MainActor
-    func delete() {
-        DataService.sharedModelContainer.mainContext.delete(device)
-        
-        saveDatabase()
-    }
 
 }
