@@ -36,6 +36,7 @@
 		56B44CC42D6E7B3F00A6A75A /* HistoricalSensorData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */; };
 		56B44CC52D6E7B3F00A6A75A /* SensorDataDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */; };
 		56B44CC62D6E7B3F00A6A75A /* UUIDs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */; };
+		56B44CCA2D724D7700A6A75A /* OnbordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC92D724D7200A6A75A /* OnbordingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -90,6 +91,7 @@
 		56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalSensorData.swift; sourceTree = "<group>"; };
 		56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataDecoder.swift; sourceTree = "<group>"; };
 		56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UUIDs.swift; sourceTree = "<group>"; };
+		56B44CC92D724D7200A6A75A /* OnbordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbordingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -213,6 +215,7 @@
 		56AF11172BDED05900887073 /* GrowGuard */ = {
 			isa = PBXGroup;
 			children = (
+				56B44CC92D724D7200A6A75A /* OnbordingView.swift */,
 				56B44CC22D6E7B3F00A6A75A /* BLE */,
 				5654B2AB2CB44DA000EED3D3 /* Extensions.swift */,
 				5688920A2C84B4B9000E8FAE /* AppDelegate.swift */,
@@ -402,6 +405,7 @@
 				5684E2DB2C0F81C0005CD8B6 /* AddDeviceView.swift in Sources */,
 				56B44CC32D6E7B3F00A6A75A /* FlowerManager.swift in Sources */,
 				56B44CC42D6E7B3F00A6A75A /* HistoricalSensorData.swift in Sources */,
+				56B44CCA2D724D7700A6A75A /* OnbordingView.swift in Sources */,
 				56B44CC52D6E7B3F00A6A75A /* SensorDataDecoder.swift in Sources */,
 				56B44CC62D6E7B3F00A6A75A /* UUIDs.swift in Sources */,
 				5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */,

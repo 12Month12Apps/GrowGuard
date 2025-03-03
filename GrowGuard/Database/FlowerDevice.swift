@@ -49,7 +49,7 @@ final class FlowerDevice {
         self.uuid = peripheral.identifier.uuidString
         self.name = peripheral.name ?? ""
         self.sensorData = []
-        self.optimalRange = OptimalRange(minTemperature: 0, minBrightness: 0, minMoisture: 0, minConductivity: 0, maxTemperature: 0, maxBrightness: 0, maxMoisture: 0, maxConductivity: 0)
+        self.optimalRange = OptimalRange(minTemperature: 0, minBrightness: 0, minMoisture: 70, minConductivity: 0, maxTemperature: 0, maxBrightness: 0, maxMoisture: 0, maxConductivity: 0)
     }
     
     init(name: String, uuid: String) {
@@ -58,6 +58,6 @@ final class FlowerDevice {
         self.uuid = uuid
         self.name = name
         self.sensorData = []
-        self.optimalRange = OptimalRange(minTemperature: 0, minBrightness: 0, minMoisture: 0, minConductivity: 0, maxTemperature: 0, maxBrightness: 0, maxMoisture: 0, maxConductivity: 0)
+        self.optimalRange = OptimalRange(minTemperature: 0, minBrightness: 0, minMoisture: 70, minConductivity: 0, maxTemperature: 0, maxBrightness: 0, maxMoisture: 0, maxConductivity: 0)
     }
 }

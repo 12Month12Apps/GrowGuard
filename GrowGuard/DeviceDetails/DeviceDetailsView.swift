@@ -11,7 +11,7 @@ struct DeviceDetailsView: View {
     @State var viewModel: DeviceDetailsViewModel
     @State var showSetting: Bool = false
     @State private var showCopyAlert = false
-    @State private var optimalRange: OptimalRange = OptimalRange(minTemperature: 0, minBrightness: 0, minMoisture: 0, minConductivity: 0, maxTemperature: 0, maxBrightness: 0, maxMoisture: 0, maxConductivity: 0)
+    @State private var optimalRange: OptimalRange = OptimalRange(minTemperature: 0, minBrightness: 0, minMoisture: 70, minConductivity: 0, maxTemperature: 0, maxBrightness: 0, maxMoisture: 0, maxConductivity: 0)
 
     init(device: FlowerDevice) {
         self.viewModel = DeviceDetailsViewModel(device: device)
