@@ -12,7 +12,7 @@ import AppIntents
 @main
 struct GrowGuardApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-
+    var showOnboarding = false
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             FlowerDevice.self,
@@ -30,7 +30,11 @@ struct GrowGuardApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if showOnboarding {
+                OnbordingView()
+            } else {
+                ContentView()
+            }
         }
         .modelContainer(sharedModelContainer)
     }
