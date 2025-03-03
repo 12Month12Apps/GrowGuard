@@ -37,6 +37,7 @@
 		56B44CC52D6E7B3F00A6A75A /* SensorDataDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */; };
 		56B44CC62D6E7B3F00A6A75A /* UUIDs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */; };
 		56B44CCA2D724D7700A6A75A /* OnbordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC92D724D7200A6A75A /* OnbordingView.swift */; };
+		56B44CCC2D725C2700A6A75A /* PlantMonitorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -92,6 +93,7 @@
 		56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataDecoder.swift; sourceTree = "<group>"; };
 		56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UUIDs.swift; sourceTree = "<group>"; };
 		56B44CC92D724D7200A6A75A /* OnbordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbordingView.swift; sourceTree = "<group>"; };
+		56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantMonitorService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -227,6 +229,7 @@
 				56AF11452BE2492300887073 /* Info.plist */,
 				56AF11182BDED05900887073 /* GrowGuardApp.swift */,
 				56AF111A2BDED05900887073 /* ContentView.swift */,
+				56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */,
 				56AF111E2BDED05B00887073 /* Assets.xcassets */,
 				56AF11202BDED05B00887073 /* GrowGuard.entitlements */,
 				56AF11212BDED05B00887073 /* Preview Content */,
@@ -415,6 +418,7 @@
 				5684E2E42C0FA2FA005CD8B6 /* OverviewListViewModel.swift in Sources */,
 				569B70ED2C10F221005B7BC9 /* DataService.swift in Sources */,
 				5667BD8A2C28925300D04382 /* SensorData.swift in Sources */,
+				56B44CCC2D725C2700A6A75A /* PlantMonitorService.swift in Sources */,
 				568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */,
 				5684E2DD2C0F81E7005CD8B6 /* AddDeviceViewModel.swift in Sources */,
 				56AF111D2BDED05900887073 /* FlowerDevice.swift in Sources */,

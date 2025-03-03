@@ -24,6 +24,8 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     private var device: FlowerDevice?
     private var totalEntries: Int = 0
     private var currentEntryIndex: Int = 0
+    private var invalidDataRetryCount = 0
+    private let maxRetryAttempts = 3
     
     private let sensorDataSubject = PassthroughSubject<SensorData, Never>()
     private let historicalDataSubject = PassthroughSubject<HistoricalSensorData, Never>()
@@ -227,7 +229,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         if let value = characteristic.value {
             switch characteristic.uuid {
             case realTimeSensorValuesCharacteristicUUID:
-                decodeRealTimeSensorValues(data: value)
+                processAndValidateSensorData(value)
             case firmwareVersionCharacteristicUUID:
                 decodeFirmwareAndBattery(data: value)
             case deviceNameCharacteristicUUID:
@@ -303,5 +305,55 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         if let historyControlCharacteristic = historyControlCharacteristic {
             discoveredPeripheral?.writeValue(entryAddress, for: historyControlCharacteristic, type: .withResponse)
         }
+    }
+    
+    // Add these new methods for validation
+    
+    private func processAndValidateSensorData(_ rawData: Data) {
+        guard let deviceUUID = discoveredPeripheral?.identifier.uuidString,
+              let device = self.device else { return }
+        
+        // Decode the raw data
+        if let decodedData = decoder.decodeRealTimeSensorValues(data: rawData, device: device) {
+            // Validate the sensor data
+            if let validatedData = PlantMonitorService.shared.validateSensorData(decodedData) {
+                // Reset retry counter on valid data
+                invalidDataRetryCount = 0
+                // Publish valid data
+                sensorDataSubject.send(validatedData)
+            } else {
+                // Data was invalid, retry if we haven't exceeded max attempts
+                handleInvalidData()
+            }
+        } else {
+            // Decoding failed, retry
+            handleInvalidData()
+        }
+    }
+    
+    private func handleInvalidData() {
+        invalidDataRetryCount += 1
+        if invalidDataRetryCount <= maxRetryAttempts {
+            print("Received invalid sensor data. Retrying... (Attempt \(invalidDataRetryCount)/\(maxRetryAttempts))")
+            // Request new sensor data
+            requestFreshSensorData()
+        } else {
+            print("Failed to get valid sensor data after \(maxRetryAttempts) attempts")
+            invalidDataRetryCount = 0
+        }
+    }
+    
+    func requestFreshSensorData() {
+        guard let peripheral = discoveredPeripheral,
+              let characteristic = realTimeSensorValuesCharacteristic,
+              peripheral.state == .connected else {
+            print("Cannot request sensor data: device not ready")
+            return
+        }
+        
+        // Write the command to request real-time data (example command)
+        let command: [UInt8] = [0xA0, 0x1F]
+        let data = Data(command)
+        peripheral.writeValue(data, for: characteristic, type: .withResponse)
     }
 }

@@ -15,6 +15,19 @@ import UserNotifications
 class AppDelegate: NSObject, UIApplicationDelegate {
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Add notification actions
+        let waterAction = UNNotificationAction(identifier: "WATER_ACTION", title: "Mark as Watered", options: .foreground)
+        let remindLaterAction = UNNotificationAction(identifier: "REMIND_LATER", title: "Remind Me Later", options: .foreground)
+        
+        let wateringCategory = UNNotificationCategory(
+            identifier: "WATERING_REMINDER",
+            actions: [waterAction, remindLaterAction],
+            intentIdentifiers: [],
+            options: .customDismissAction
+        )
+        
+        UNUserNotificationCenter.current().setNotificationCategories([wateringCategory])
+        
         // Registrierung der Hintergrundaufgabe
         BGTaskScheduler.shared.register(forTaskWithIdentifier: "pro.veit.GrowGuard.refresh", using: nil) { task in
             self.handleAppRefresh(task: task as! BGAppRefreshTask)
@@ -59,9 +72,17 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             let allSavedDevices = try? self.fetchSavedDevices()
             
             allSavedDevices?.forEach { device in
-                ble.disconnect()
-                Task {
-                    await self.scanAndCollectData(for: device, using: ble)
+                // Check if we already have recent data
+                if let latestData = device.sensorData.last,
+                   Date().timeIntervalSince(latestData.date) < 24 * 60 * 60 {
+                    // Check device status even if we don't fetch new data
+                    PlantMonitorService.shared.checkDeviceStatus(device: device)
+                } else {
+                    // Fetch new data if needed
+                    ble.disconnect()
+                    Task {
+                        await self.scanAndCollectData(for: device, using: ble)
+                    }
                 }
             }
             
@@ -98,10 +119,20 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         await withCheckedContinuation { continuation in
             var subscription: AnyCancellable?
 
-            ble.startScanning(device: device)
+            ble.connectToKnownDevice(device: device)
 
             subscription = ble.sensorDataPublisher.sink { data in
                 device.sensorData.append(data)
+                
+                // Check moisture level after adding new data
+                PlantMonitorService.shared.checkDeviceStatus(device: device)
+                
+                do {
+                    try DataService.sharedModelContainer.mainContext.save()
+                } catch {
+                    print(error.localizedDescription)
+                }
+                
                 subscription?.cancel()
                 continuation.resume()
             }
@@ -121,6 +152,56 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             if let error = error {
                 print("Failed to deliver notification: \(error.localizedDescription)")
             }
+        }
+    }
+}
+
+extension AppDelegate: UNUserNotificationCenterDelegate {
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        let identifier = response.notification.request.identifier
+        let deviceId = identifier.components(separatedBy: "-")[1]
+        
+        switch response.actionIdentifier {
+        case "WATER_ACTION":
+            // Mark plant as watered
+            Task {
+                if let device = try? await fetchDevices(withId: deviceId).first {
+                    // You could add a "lastWatered" property to FlowerDevice model
+                    // device.lastWatered = Date()
+                    try? DataService.sharedModelContainer.mainContext.save()
+                }
+            }
+        case "REMIND_LATER":
+            // Schedule a reminder for 1 hour later
+            if let device = try? fetchDevices(withId: deviceId).first {
+                let content = response.notification.request.content
+                
+                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 3600, repeats: false)
+                let request = UNNotificationRequest(identifier: "reminder-later-\(deviceId)", content: content, trigger: trigger)
+                
+                UNUserNotificationCenter.current().add(request)
+            }
+        default:
+            break
+        }
+        
+        completionHandler()
+    }
+    
+    @MainActor
+    func fetchDevices(withId uuid: String) throws -> [FlowerDevice] {
+        let predicate = #Predicate { (device: FlowerDevice) in
+            device.uuid == uuid
+        }
+
+        let fetchDescriptor = FetchDescriptor<FlowerDevice>(predicate: predicate)
+
+        do {
+            let result = try DataService.sharedModelContainer.mainContext.fetch(fetchDescriptor)
+            return result
+        } catch {
+            print(error.localizedDescription)
+            throw error
         }
     }
 }
