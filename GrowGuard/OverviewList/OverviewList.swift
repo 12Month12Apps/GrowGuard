@@ -29,7 +29,11 @@ struct OverviewList: View {
                     }
                     .onDelete(perform: delete)
                 }
-            }.navigationTitle("Overview")
+            }
+            .navigationTitle("Overview")
+            .toolbar {
+                EditButton()
+            }
         }
         .onAppear {
             self.loading = true
