@@ -91,7 +91,7 @@ struct SensorDataChart<T: Comparable & Numeric>: View {
                     )
                     .foregroundStyle(Color.gray.opacity(0.1))
                     
-                    if selectedChartType == .water {
+//                    if selectedChartType == .water {
 //                        BarMark(
 //                            x: .value("Date", dataPoint.date, unit: componet),
 //                            yStart: .value("\(title) Min", dataPoint.minValue),
@@ -111,14 +111,15 @@ struct SensorDataChart<T: Comparable & Numeric>: View {
                         
                         PointMark(x: .value("Date", dataPoint.date, unit: componet),
                                   y: .value("\(title) \(dataType)", dataPoint.maxValue))
-                    } else if selectedChartType == .bars {
-                        BarMark(
-                            x: .value("Date", dataPoint.date, unit: componet),
-                            y: .value(title, dataPoint.maxValue),
-                            width: .fixed(12)
-                        )
-                        .foregroundStyle(chartColor.gradient)
-                    }
+                            .foregroundStyle(chartColor.gradient)
+//                    } else if selectedChartType == .bars {
+//                        BarMark(
+//                            x: .value("Date", dataPoint.date, unit: componet),
+//                            y: .value(title, dataPoint.maxValue),
+//                            width: .fixed(12)
+//                        )
+//                        .foregroundStyle(chartColor.gradient)
+//                    }
                 }
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day)) { _ in
