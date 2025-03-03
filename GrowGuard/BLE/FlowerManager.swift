@@ -71,6 +71,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         if let peripheral = peripherals.first {
             discoveredPeripheral = peripheral
             centralManager.connect(peripheral, options: nil)
+            self.device = device
             print("Connecting to known device...")
         } else {
             print("Known device not found, starting scan...")
@@ -194,7 +195,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             // If connected, send the command
             if let ledControlCharacteristic = ledControlCharacteristic {
                 let blinkData = Data([0xfd, 0xff])
-                peripheral.writeValue(blinkData, for: ledControlCharacteristic, type: .withoutResponse)
+                peripheral.writeValue(blinkData, for: ledControlCharacteristic, type: .withResponse)
                 print("LED blink command sent")
             } else {
                 print("LED control characteristic not found")
