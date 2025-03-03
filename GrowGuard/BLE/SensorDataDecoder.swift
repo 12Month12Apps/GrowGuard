@@ -17,7 +17,7 @@ class SensorDataDecoder {
 
         let temperature = data.subdata(in: 0..<2).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian
         let brightness = data.subdata(in: 3..<7).withUnsafeBytes { $0.load(as: UInt32.self) }.littleEndian
-        let moisture = data[7]
+        let moisture = data.subdata(in: 7..<8).withUnsafeBytes { $0.load(as: UInt8.self) }.littleEndian
         let conductivity = data.subdata(in: 8..<10).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian
 
         let temperatureCelsius = Double(temperature) / 10.0
@@ -72,8 +72,8 @@ class SensorDataDecoder {
             return nil
         }
 
-        let batteryLevel = data[0]
-        if let firmwareVersion = String(data: data[1..<7], encoding: .ascii) {
+        let batteryLevel = data.subdata(in: 0..<1).withUnsafeBytes { $0.load(as: UInt8.self) }.littleEndian
+        if let firmwareVersion = String(data: data[2..<7], encoding: .ascii) {
             print("Battery Level: \(batteryLevel) %")
             print("Firmware Version: \(firmwareVersion)")
             return (batteryLevel, firmwareVersion)
