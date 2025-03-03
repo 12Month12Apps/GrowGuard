@@ -37,6 +37,10 @@ import Combine
         ble.connectToKnownDevice(device: device)
     }
     
+    func blinkLED() {
+        ble.blinkLED()
+    }
+    
     @MainActor
     func saveDatabase() {
         do {

@@ -17,6 +17,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     var historyDataCharacteristic: CBCharacteristic?
     var deviceTimeCharacteristic: CBCharacteristic?
     var entryCountCharacteristic: CBCharacteristic?
+    var ledControlCharacteristic: CBCharacteristic?
     var isConnected = false
     
     private var isScanning = false
@@ -150,9 +151,11 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             for characteristic in characteristics {
                 switch characteristic.uuid {
                 case deviceModeChangeCharacteristicUUID:
-                    let modeChangeCommand: [UInt8] = [0xa0, 0x1f]
-                    let modeChangeData = Data(modeChangeCommand)
-                    peripheral.writeValue(modeChangeData, for: characteristic, type: .withResponse)
+//                    let modeChangeCommand: [UInt8] = [0xa0, 0x1f]
+//                    let modeChangeData = Data(modeChangeCommand)
+//                    peripheral.writeValue(modeChangeData, for: characteristic, type: .withResponse)
+                    ledControlCharacteristic = characteristic
+                    blinkLED()
                 case realTimeSensorValuesCharacteristicUUID:
                     realTimeSensorValuesCharacteristic = characteristic
                     peripheral.readValue(for: characteristic)
@@ -175,6 +178,30 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     break
                 }
             }
+        }
+    }
+    
+    func blinkLED() {
+        guard let peripheral = discoveredPeripheral else {
+            print("Cannot blink LED: no peripheral found")
+            return
+        }
+        
+        // Check if already connected
+        if peripheral.state == .connected {
+            // If connected, send the command
+            if let ledControlCharacteristic = ledControlCharacteristic {
+                let blinkData = Data([0xfd, 0xff])
+                peripheral.writeValue(blinkData, for: ledControlCharacteristic, type: .withoutResponse)
+                print("LED blink command sent")
+            } else {
+                print("LED control characteristic not found")
+            }
+        } else {
+            // If not connected, connect first then blink
+            print("Device not connected. Connecting first...")
+            centralManager.connect(peripheral, options: nil)
+            // The blink command will be called after connecting in didConnect delegate
         }
     }
 

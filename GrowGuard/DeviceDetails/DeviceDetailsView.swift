@@ -38,6 +38,23 @@ struct DeviceDetailsView: View {
                     Alert(title: Text("Copied"), message: Text("ID copied to clipboard"), dismissButton: .default(Text("OK")))
                 }
             }
+            Button {
+                viewModel.blinkLED()
+            } label: {
+                Text("Blink LED")
+            }
+
+            if let nextWatering = PlantMonitorService.shared.predictNextWatering(for: viewModel.device) {
+                Section(header: Text("Prediction")) {
+                    HStack {
+                        Image(systemName: "calendar.badge.clock")
+                        Text("Next watering needed:")
+                        Spacer()
+                        Text(nextWatering, style: .relative)
+                            .foregroundColor(.blue)
+                    }
+                }
+            }
             
             SensorDataChart(isOverview: false,
                             componet: viewModel.groupingOption,
