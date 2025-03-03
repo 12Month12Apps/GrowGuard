@@ -155,7 +155,7 @@ class PlantMonitorService {
 //        }
 //        
 //        // Option 1: Return nil if any value was invalid
-       return isValid ? validatedData : nil
+        return isValid ? data : nil
 //        
 //        // Option 2: Return corrected values
         // return validatedData
