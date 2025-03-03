@@ -268,7 +268,9 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     }
 
     private func decodeFirmwareAndBattery(data: Data) {
-        decoder.decodeFirmwareAndBattery(data: data)
+        guard let (battery, firmware) = decoder.decodeFirmwareAndBattery(data: data) else { return }
+        device?.battery = Int(battery)
+        device?.firmware = firmware
     }
 
     private func decodeDeviceName(data: Data) {

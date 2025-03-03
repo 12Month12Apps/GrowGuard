@@ -66,18 +66,20 @@ class SensorDataDecoder {
         )
     }
 
-    func decodeFirmwareAndBattery(data: Data) {
+    func decodeFirmwareAndBattery(data: Data) -> (batteryLevel: UInt8, firmwareVersion: String)? {
         guard data.count == 7 else {
             print("Unexpected data length: \(data.count)")
-            return
+            return nil
         }
 
         let batteryLevel = data[0]
         if let firmwareVersion = String(data: data[1..<7], encoding: .ascii) {
             print("Battery Level: \(batteryLevel) %")
             print("Firmware Version: \(firmwareVersion)")
+            return (batteryLevel, firmwareVersion)
         } else {
             print("Failed to decode firmware version.")
+            return nil
         }
     }
 

@@ -18,7 +18,7 @@ struct OverviewList: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack {
                 List {
                     ForEach(viewModel.allSavedDevices) { device in
