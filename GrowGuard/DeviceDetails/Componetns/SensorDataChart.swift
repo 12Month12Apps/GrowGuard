@@ -92,22 +92,25 @@ struct SensorDataChart<T: Comparable & Numeric>: View {
                     .foregroundStyle(Color.gray.opacity(0.1))
                     
                     if selectedChartType == .water {
-                        BarMark(
-                            x: .value("Date", dataPoint.date, unit: componet),
-                            yStart: .value("\(title) Min", dataPoint.minValue),
-                            yEnd: .value("\(title) Max", dataPoint.maxValue + 2),
-                            width: .fixed(isOverview ? 8 : 10)
-                        )
-                        .clipShape(Capsule())
-                        .foregroundStyle(chartColor.gradient)
-
-                        LineMark(
-                            x: .value("Date", dataPoint.date, unit: componet),
-                            y: .value("\(title) \(dataType)", dataPoint.maxValue)
-                        )
-                        .interpolationMethod(.cardinal)
-                        .foregroundStyle(graphColor.gradient)
-                        .symbol(Circle().strokeBorder(lineWidth: barWidth))
+//                        BarMark(
+//                            x: .value("Date", dataPoint.date, unit: componet),
+//                            yStart: .value("\(title) Min", dataPoint.minValue),
+//                            yEnd: .value("\(title) Max", dataPoint.maxValue + 2),
+//                            width: .fixed(isOverview ? 8 : 10)
+//                        )
+//                        .clipShape(Capsule())
+//                        .foregroundStyle(chartColor.gradient)
+//
+//                        LineMark(
+//                            x: .value("Date", dataPoint.date, unit: componet),
+//                            y: .value("\(title) \(dataType)", dataPoint.maxValue)
+//                        )
+//                        .interpolationMethod(.cardinal)
+//                        .foregroundStyle(graphColor.gradient)
+//                        .symbol(Circle().strokeBorder(lineWidth: barWidth))
+                        
+                        PointMark(x: .value("Date", dataPoint.date, unit: componet),
+                                  y: .value("\(title) \(dataType)", dataPoint.maxValue))
                     } else if selectedChartType == .bars {
                         BarMark(
                             x: .value("Date", dataPoint.date, unit: componet),
