@@ -42,6 +42,8 @@ final class FlowerDevice {
     var name: String
     @Relationship(deleteRule: .nullify, inverse: \SensorData.device) var sensorData: [SensorData]
     var optimalRange: OptimalRange
+    var battery: Int = 0
+    var firmware: String = ""
     
     init(added: Date, lastUpdate: Date, peripheral: CBPeripheral) {
         self.added = added

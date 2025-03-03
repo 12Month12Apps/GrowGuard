@@ -22,6 +22,9 @@ struct DeviceDetailsView: View {
             TextField("Device Name", text: $viewModel.device.name)
             Text("Added: ") + Text(viewModel.device.added, format: .dateTime)
             Text("Last Update: ") + Text(viewModel.device.lastUpdate, format: .dateTime)
+            Text("Battery: ") + Text(viewModel.device.battery, format: .percent)
+            Text("Firmware: ") + Text(viewModel.device.firmware)
+
             HStack {
                 Text("ID: ") + Text(viewModel.device.uuid)
                 
