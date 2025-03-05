@@ -38,6 +38,7 @@
 		56B44CC62D6E7B3F00A6A75A /* UUIDs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */; };
 		56B44CCA2D724D7700A6A75A /* OnbordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC92D724D7200A6A75A /* OnbordingView.swift */; };
 		56B44CCC2D725C2700A6A75A /* PlantMonitorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */; };
+		56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CCD2D78E8EB00A6A75A /* print.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -94,6 +95,7 @@
 		56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UUIDs.swift; sourceTree = "<group>"; };
 		56B44CC92D724D7200A6A75A /* OnbordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbordingView.swift; sourceTree = "<group>"; };
 		56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantMonitorService.swift; sourceTree = "<group>"; };
+		56B44CCD2D78E8EB00A6A75A /* print.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = print.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -217,6 +219,7 @@
 		56AF11172BDED05900887073 /* GrowGuard */ = {
 			isa = PBXGroup;
 			children = (
+				56B44CCD2D78E8EB00A6A75A /* print.swift */,
 				56B44CC92D724D7200A6A75A /* OnbordingView.swift */,
 				56B44CC22D6E7B3F00A6A75A /* BLE */,
 				5654B2AB2CB44DA000EED3D3 /* Extensions.swift */,
@@ -424,6 +427,7 @@
 				56AF111D2BDED05900887073 /* FlowerDevice.swift in Sources */,
 				5684E2E22C0FA2EE005CD8B6 /* OverviewList.swift in Sources */,
 				562629002C42E32700B5DB2A /* AppIntent.swift in Sources */,
+				56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */,
 				56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */,
 				5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */,
 				5654B2B92CB4575E00EED3D3 /* SettingsView.swift in Sources */,
@@ -587,10 +591,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = GrowGuard/GrowGuard.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"GrowGuard/Preview Content\"";
-				DEVELOPMENT_TEAM = 7RPD69GC7T;
+				DEVELOPMENT_TEAM = G2PVUY2GRG;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -612,7 +617,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.GrowGuard;
+				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.company.GrowGuard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
@@ -628,10 +633,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = GrowGuard/GrowGuard.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"GrowGuard/Preview Content\"";
-				DEVELOPMENT_TEAM = 7RPD69GC7T;
+				DEVELOPMENT_TEAM = G2PVUY2GRG;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -653,7 +659,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.GrowGuard;
+				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.company.GrowGuard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
@@ -670,12 +676,12 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7RPD69GC7T;
+				DEVELOPMENT_TEAM = G2PVUY2GRG;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.GrowGuardTests;
+				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.company.GrowGuardTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
@@ -693,12 +699,12 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7RPD69GC7T;
+				DEVELOPMENT_TEAM = G2PVUY2GRG;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.GrowGuardTests;
+				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.company.GrowGuardTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
@@ -715,12 +721,12 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7RPD69GC7T;
+				DEVELOPMENT_TEAM = G2PVUY2GRG;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.GrowGuardUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.company.GrowGuardUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
@@ -737,12 +743,12 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7RPD69GC7T;
+				DEVELOPMENT_TEAM = G2PVUY2GRG;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.GrowGuardUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.company.GrowGuardUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
