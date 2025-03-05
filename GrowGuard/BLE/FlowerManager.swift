@@ -168,7 +168,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
 //                    peripheral.writeValue(modeChangeData, for: characteristic, type: .withResponse)
                     modeChangeCharacteristic = characteristic
                     ledControlCharacteristic = characteristic
-                    blinkLED()
                 case realTimeSensorValuesCharacteristicUUID:
                     realTimeSensorValuesCharacteristic = characteristic
                     peripheral.readValue(for: characteristic)
@@ -235,11 +234,9 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             print("Mode-Change erfolgreich, warte kurz...")
             
             // Verzögerung hinzufügen
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                if let sensorChar = self.realTimeSensorValuesCharacteristic {
-                    print("Lese Sensordaten...")
-                    peripheral.readValue(for: sensorChar)
-                }
+            if let sensorChar = self.realTimeSensorValuesCharacteristic {
+                print("Lese Sensordaten...")
+                peripheral.readValue(for: sensorChar)
             }
         }
     }

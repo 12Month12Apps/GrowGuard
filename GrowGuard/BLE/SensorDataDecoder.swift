@@ -24,26 +24,11 @@ class SensorDataDecoder {
         let tempLowByte = UInt16(data[0])
         let tempHighByte = UInt16(data[1])
         let temperatureRaw = tempLowByte + (tempHighByte << 8)
-        
-        // Alternative Interpretationen
-        let temperatureSigned = Double(Int16(bitPattern: UInt16(temperatureRaw))) / 10.0
-        let temperatureSwapped = Double(UInt16(data[1]) + (UInt16(data[0]) << 8)) / 10.0
-        let temperatureDirectBytes = Double(UInt16(littleEndian: data.withUnsafeBytes { $0.load(as: UInt16.self) })) / 10.0
-        
-        print("Temperature interpretations:")
-        print("- Standard: \(Double(temperatureRaw) / 10.0) °C")
-        print("- As signed: \(temperatureSigned) °C")
-        print("- Swapped: \(temperatureSwapped) °C")
-        print("- Direct bytes: \(temperatureDirectBytes) °C")
-        
-        // Rest des Codes unverändert...
+        let temperatureCelsius = Double(temperatureRaw) / 10.0
+
         let brightness = data.subdata(in: 3..<7).withUnsafeBytes { $0.load(as: UInt32.self) }.littleEndian
         let moisture = data.subdata(in: 7..<8).withUnsafeBytes { $0.load(as: UInt8.self) }.littleEndian
         let conductivity = data.subdata(in: 8..<10).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian
-        
-        // Verwende die Interpretation, die am wahrscheinlichsten korrekt ist
-        // (für jetzt die Standardinterpretation, aber ändere dies basierend auf den Debug-Ausgaben)
-        let temperatureCelsius = Double(temperatureRaw) / 10.0
         
         return SensorData(
             temperature: temperatureCelsius,
