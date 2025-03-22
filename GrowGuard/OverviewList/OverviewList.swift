@@ -18,22 +18,25 @@ struct OverviewList: View {
     }
     
     var body: some View {
-        NavigationStack {
-            VStack {
-                List {
-                    ForEach(viewModel.allSavedDevices) { device in
-                        NavigationLink(destination: DeviceDetailsView(device: device)) {
-                            Text(device.name ?? "error")
-                            Text(device.lastUpdate, format: .dateTime)
-                        }
+        VStack {
+            List {
+                ForEach(viewModel.allSavedDevices) { device in
+                    Button {
+                        // Add a new method to NavigationService
+                        NavigationService.shared.navigateToDeviceView(flowerDevice: device)
+                    } label: {
+                        Text(device.name ?? "error")
+                        Text(device.lastUpdate, format: .dateTime)
                     }
-                    .onDelete(perform: delete)
+                    .navigationLinkStyle()
+                    .contentShape(Rectangle())
                 }
+                .onDelete(perform: delete)
             }
-            .navigationTitle("Overview")
-            .toolbar {
-                EditButton()
-            }
+        }
+        .navigationTitle("Overview")
+        .toolbar {
+            EditButton()
         }
         .onAppear {
             self.loading = true

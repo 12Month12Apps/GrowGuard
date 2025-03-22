@@ -26,6 +26,7 @@
 		569B70ED2C10F221005B7BC9 /* DataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 569B70EC2C10F221005B7BC9 /* DataService.swift */; };
 		56A8C6EA2D8ECF37004021C0 /* AddDeviceDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6E92D8ECF31004021C0 /* AddDeviceDetails.swift */; };
 		56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6EC2D8EF1E5004021C0 /* Alert.swift */; };
+		56A8C6EF2D8F38CD004021C0 /* Button.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6EE2D8F38C9004021C0 /* Button.swift */; };
 		56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11182BDED05900887073 /* GrowGuardApp.swift */; };
 		56AF111B2BDED05900887073 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF111A2BDED05900887073 /* ContentView.swift */; };
 		56AF111D2BDED05900887073 /* FlowerDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF111C2BDED05900887073 /* FlowerDevice.swift */; };
@@ -80,6 +81,7 @@
 		569B70EC2C10F221005B7BC9 /* DataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataService.swift; sourceTree = "<group>"; };
 		56A8C6E92D8ECF31004021C0 /* AddDeviceDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceDetails.swift; sourceTree = "<group>"; };
 		56A8C6EC2D8EF1E5004021C0 /* Alert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alert.swift; sourceTree = "<group>"; };
+		56A8C6EE2D8F38C9004021C0 /* Button.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Button.swift; sourceTree = "<group>"; };
 		56AF11152BDED05900887073 /* GrowGuard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GrowGuard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		56AF11182BDED05900887073 /* GrowGuardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardApp.swift; sourceTree = "<group>"; };
 		56AF111A2BDED05900887073 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -212,6 +214,7 @@
 		56A8C6EB2D8EF1DD004021C0 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				56A8C6EE2D8F38C9004021C0 /* Button.swift */,
 				56A8C6EC2D8EF1E5004021C0 /* Alert.swift */,
 				5654B2AB2CB44DA000EED3D3 /* Extensions.swift */,
 			);
@@ -451,6 +454,7 @@
 				56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */,
 				5684E2E22C0FA2EE005CD8B6 /* OverviewList.swift in Sources */,
 				562629002C42E32700B5DB2A /* AppIntent.swift in Sources */,
+				56A8C6EF2D8F38CD004021C0 /* Button.swift in Sources */,
 				56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */,
 				56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */,
 				5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */,

@@ -15,12 +15,15 @@ import SwiftData
     var addDevice:  CBPeripheral?
     var ble: AddDeviceBLE?
     var allSavedDevices: [FlowerDevice] = []
+    var loading: Bool = false
     
     init() {
+        loading = true
         self.devices = []
         
         self.ble = AddDeviceBLE { peripheral in
             self.addToList(peripheral: peripheral)
+            self.loading = false
         }
         
         Task {

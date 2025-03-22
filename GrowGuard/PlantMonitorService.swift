@@ -116,7 +116,7 @@ class PlantMonitorService {
     }
 
     // Add this method to your PlantMonitorService
-    func validateSensorData(_ data: SensorData) -> SensorData? {
+    func validateSensorData(_ data: SensorDataTemp) -> SensorData? {
         var isValid = true
         var validatedData = data
         
@@ -155,8 +155,19 @@ class PlantMonitorService {
 //        }
 //        
 //        // Option 1: Return nil if any value was invalid
-        return isValid ? data : nil
-//        
+        print(validatedData.moisture, validatedData.brightness, validatedData.temperature)
+        if isValid {
+            let data = SensorData(temperature: validatedData.temperature,
+                                  brightness: validatedData.brightness,
+                                  moisture: validatedData.moisture,
+                                  conductivity: validatedData.conductivity,
+                                  date: validatedData.date,
+                                  device: validatedData.device)
+            return data
+        } else {
+            return nil
+        }
+//
 //        // Option 2: Return corrected values
         // return validatedData
     }

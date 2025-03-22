@@ -17,10 +17,10 @@ struct AddDeviceView: View {
     }
 
     var body: some View {
-        NavigationView {
+        VStack {
             List(viewModel.devices, id: \.identifier.uuidString) { device in
-                NavigationLink {
-                    AddDeviceDetails(viewModel: AddDeviceDetailsViewModel(device: device))
+                Button {
+                    NavigationService.shared.navigateToDeviceDetails(device: device)
                 } label: {
                     HStack {
                         Text(device.name ?? "error")
@@ -34,19 +34,19 @@ struct AddDeviceView: View {
                         }
                     }
                 }
-                
-                
-            }.onAppear {
-                Task {
-                    viewModel.fetchSavedDevices()
-                }
+                .navigationLinkStyle()
+                .contentShape(Rectangle())
             }
-            .overlay {
-                if loading {
-                    ProgressView()
-                }
+        }.onAppear {
+            Task {
+                viewModel.fetchSavedDevices()
             }
-            .navigationTitle("Add Device")
         }
+        .overlay {
+            if viewModel.loading {
+                ProgressView().foregroundStyle(.red)
+            }
+        }
+        .navigationTitle("Add Device")
     }
 }

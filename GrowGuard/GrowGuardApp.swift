@@ -35,7 +35,7 @@ struct GrowGuardApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                ContentView()
+                MainNavigationView()
             }
         }
         .modelContainer(sharedModelContainer)

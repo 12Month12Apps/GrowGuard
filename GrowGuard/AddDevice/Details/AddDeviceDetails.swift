@@ -9,6 +9,59 @@ import SwiftUI
 import CoreBluetooth
 import SwiftData
 
+import SwiftUI
+import CoreBluetooth
+
+// Defines all possible navigation destinations in the app
+enum NavigationDestination: Hashable {
+    case deviceDetails(CBPeripheral)
+    case deviceList
+    case home
+    case deviceView(FlowerDevice) // Add this new case
+}
+
+@Observable class NavigationService {
+    static let shared = NavigationService()
+    
+    var path = NavigationPath()
+    var selectedTab: NavigationTabs = .overview
+    
+    private init() {}
+    
+    // Navigation destination methods
+    func navigateToDeviceDetails(device: CBPeripheral) {
+        path.append(NavigationDestination.deviceDetails(device))
+    }
+    
+    func navigateToDeviceList() {
+        path.append(NavigationDestination.deviceList)
+    }
+    
+    func navigateToHome() {
+        path.append(NavigationDestination.home)
+    }
+    
+    func popToRoot() {
+        path = NavigationPath()
+    }
+    
+    func pop() {
+        if !path.isEmpty {
+            path.removeLast()
+        }
+    }
+    
+    func navigateToDeviceView(flowerDevice: FlowerDevice) {
+        path.append(NavigationDestination.deviceView(flowerDevice))
+    }
+    
+    // Tab selection methods
+    func switchToTab(_ tab: NavigationTabs) {
+        popToRoot()
+        selectedTab = tab
+    }
+}
+
 @Observable class AddDeviceDetailsViewModel {
     var device:  CBPeripheral
     var allSavedDevices: [FlowerDevice] = []
@@ -38,7 +91,7 @@ import SwiftData
             DataService.sharedModelContainer.mainContext.insert(flower)
             
             if allSavedDevices.contains(where: { device in
-                device.name == self.device.name
+                device.name == self.flower.name
             }) {
                 self.alertView = Alert(title: Text("Info"),
                                        message: Text("The Device name already exists, please pick an unquie one"))
@@ -52,6 +105,8 @@ import SwiftData
                 self.showAlert = true
             }
         }
+        NavigationService.shared.switchToTab(.overview)
+        NavigationService.shared.navigateToDeviceDetails(device: device)
     }
     
     @MainActor
