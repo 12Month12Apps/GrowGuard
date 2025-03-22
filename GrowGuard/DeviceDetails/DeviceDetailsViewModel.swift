@@ -19,6 +19,8 @@ import Combine
     init(device: FlowerDevice) {
         self.device = device
         
+        PlantMonitorService.shared.checkDeviceStatus(device: device)
+        
         self.subscription = ble.sensorDataPublisher.sink { data in
             self.device.sensorData.append(data)
             self.device.lastUpdate = Date()
