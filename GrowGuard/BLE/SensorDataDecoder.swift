@@ -9,7 +9,7 @@ import Foundation
 
 class SensorDataDecoder {
     
-    func decodeRealTimeSensorValues(data: Data, device: FlowerDevice?) -> SensorData? {
+    func decodeRealTimeSensorValues(data: Data, device: FlowerDevice?) -> SensorDataTemp? {
         guard data.count == 16 else {
             print("Unexpected data length: \(data.count)")
             return nil
@@ -30,7 +30,7 @@ class SensorDataDecoder {
         let moisture = data.subdata(in: 7..<8).withUnsafeBytes { $0.load(as: UInt8.self) }.littleEndian
         let conductivity = data.subdata(in: 8..<10).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian
         
-        return SensorData(
+        return SensorDataTemp(
             temperature: temperatureCelsius,
             brightness: brightness,
             moisture: moisture,
