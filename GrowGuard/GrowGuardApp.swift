@@ -9,10 +9,14 @@ import SwiftUI
 import SwiftData
 import AppIntents
 
+enum UserDefaultsKeys: String {
+    case showOnboarding = "veit.pro.showOnboarding"
+}
+
 @main
 struct GrowGuardApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    var showOnboarding = false
+    
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             FlowerDevice.self,
@@ -30,13 +34,12 @@ struct GrowGuardApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if showOnboarding {
-                OnbordingView()
-            } else {
+            Group {
                 ContentView()
             }
         }
         .modelContainer(sharedModelContainer)
+        
     }
     
     static var appShortcuts: [AppShortcut] {

@@ -68,5 +68,6 @@ struct SettingsView: View {
                         .keyboardType(.decimalPad)
                 }
             }
-        }    }
+        }
+    }
 }

@@ -24,6 +24,8 @@
 		568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568892072C832936000E8FAE /* SensorDataChart.swift */; };
 		5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5688920A2C84B4B9000E8FAE /* AppDelegate.swift */; };
 		569B70ED2C10F221005B7BC9 /* DataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 569B70EC2C10F221005B7BC9 /* DataService.swift */; };
+		56A8C6EA2D8ECF37004021C0 /* AddDeviceDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6E92D8ECF31004021C0 /* AddDeviceDetails.swift */; };
+		56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6EC2D8EF1E5004021C0 /* Alert.swift */; };
 		56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11182BDED05900887073 /* GrowGuardApp.swift */; };
 		56AF111B2BDED05900887073 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF111A2BDED05900887073 /* ContentView.swift */; };
 		56AF111D2BDED05900887073 /* FlowerDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF111C2BDED05900887073 /* FlowerDevice.swift */; };
@@ -77,6 +79,8 @@
 		568892072C832936000E8FAE /* SensorDataChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataChart.swift; sourceTree = "<group>"; };
 		5688920A2C84B4B9000E8FAE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		569B70EC2C10F221005B7BC9 /* DataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataService.swift; sourceTree = "<group>"; };
+		56A8C6E92D8ECF31004021C0 /* AddDeviceDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceDetails.swift; sourceTree = "<group>"; };
+		56A8C6EC2D8EF1E5004021C0 /* Alert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alert.swift; sourceTree = "<group>"; };
 		56AF11152BDED05900887073 /* GrowGuard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GrowGuard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		56AF11182BDED05900887073 /* GrowGuardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardApp.swift; sourceTree = "<group>"; };
 		56AF111A2BDED05900887073 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -164,6 +168,7 @@
 		5684E2D92C0C9054005CD8B6 /* AddDevice */ = {
 			isa = PBXGroup;
 			children = (
+				56A8C6E82D8ECF2C004021C0 /* Details */,
 				5684E2DA2C0F81C0005CD8B6 /* AddDeviceView.swift */,
 				5684E2DC2C0F81E7005CD8B6 /* AddDeviceViewModel.swift */,
 				5684E2DE2C0F820D005CD8B6 /* AddDeviceBLE.swift */,
@@ -198,6 +203,23 @@
 			path = Componetns;
 			sourceTree = "<group>";
 		};
+		56A8C6E82D8ECF2C004021C0 /* Details */ = {
+			isa = PBXGroup;
+			children = (
+				56A8C6E92D8ECF31004021C0 /* AddDeviceDetails.swift */,
+			);
+			path = Details;
+			sourceTree = "<group>";
+		};
+		56A8C6EB2D8EF1DD004021C0 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				56A8C6EC2D8EF1E5004021C0 /* Alert.swift */,
+				5654B2AB2CB44DA000EED3D3 /* Extensions.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
 		56AF110C2BDED05900887073 = {
 			isa = PBXGroup;
 			children = (
@@ -221,11 +243,11 @@
 		56AF11172BDED05900887073 /* GrowGuard */ = {
 			isa = PBXGroup;
 			children = (
+				56A8C6EB2D8EF1DD004021C0 /* Extensions */,
 				56B44CD12D7901C800A6A75A /* flower.db */,
 				56B44CCD2D78E8EB00A6A75A /* print.swift */,
 				56B44CC92D724D7200A6A75A /* OnbordingView.swift */,
 				56B44CC22D6E7B3F00A6A75A /* BLE */,
-				5654B2AB2CB44DA000EED3D3 /* Extensions.swift */,
 				5688920A2C84B4B9000E8FAE /* AppDelegate.swift */,
 				562628FF2C42E32200B5DB2A /* AppIntent.swift */,
 				565DEC3E2C159868002D784A /* DeviceDetails */,
@@ -419,6 +441,7 @@
 				56B44CC52D6E7B3F00A6A75A /* SensorDataDecoder.swift in Sources */,
 				56B44CC62D6E7B3F00A6A75A /* UUIDs.swift in Sources */,
 				5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */,
+				56A8C6EA2D8ECF37004021C0 /* AddDeviceDetails.swift in Sources */,
 				565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */,
 				5684E2DF2C0F820D005CD8B6 /* AddDeviceBLE.swift in Sources */,
 				56AF111B2BDED05900887073 /* ContentView.swift in Sources */,
@@ -429,6 +452,7 @@
 				568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */,
 				5684E2DD2C0F81E7005CD8B6 /* AddDeviceViewModel.swift in Sources */,
 				56AF111D2BDED05900887073 /* FlowerDevice.swift in Sources */,
+				56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */,
 				5684E2E22C0FA2EE005CD8B6 /* OverviewList.swift in Sources */,
 				562629002C42E32700B5DB2A /* AppIntent.swift in Sources */,
 				56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */,
@@ -616,7 +640,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -658,7 +682,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;

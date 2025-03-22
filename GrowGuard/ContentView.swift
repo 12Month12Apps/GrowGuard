@@ -33,26 +33,35 @@ class ContentViewModel: Observable {
 //    }
 }
 
+enum NavigationTabs {
+    case overview
+    case addDevice
+}
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @State var viewModel = ContentViewModel()
-    
+    @State var showOnboarding = true
+    @State var selectedTab : NavigationTabs = .overview
+
     var body: some View {
         VStack {
-            TabView {
-                OverviewList(/*allSavedDevices: viewModel.allSavedDevices*/)
-                    .tabItem {
-                        Label("Menu", systemImage: "leaf")
+            if showOnboarding {
+                OnbordingView(selectedTab: $selectedTab, showOnboarding: $showOnboarding)
+            } else {
+                TabView(selection: $selectedTab) {
+                    Tab("Menu", systemImage: "leaf", value: .overview) {
+                        OverviewList(/*allSavedDevices: viewModel.allSavedDevices*/)
                     }
-                
-                AddDeviceView(/*allSavedDevices: */)
-                    .tabItem {
-                        Label("Add", systemImage: "plus.app")
+                    
+                    Tab("Add", systemImage: "plus.app", value: .addDevice) {
+                        AddDeviceView(/*allSavedDevices: */)
                     }
+                }
             }
         }.onAppear {
-//            viewModel.fetchSavedDevices()
+            let defaults = UserDefaults.standard
+            showOnboarding = !defaults.bool(forKey: UserDefaultsKeys.showOnboarding.rawValue)
         }
     }
 }

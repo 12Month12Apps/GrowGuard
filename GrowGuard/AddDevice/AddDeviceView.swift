@@ -17,32 +17,36 @@ struct AddDeviceView: View {
     }
 
     var body: some View {
-        List(viewModel.devices, id: \.identifier.uuidString) { device in
-            HStack {
-                Text(device.name ?? "error")
-                Spacer()
-                if viewModel.allSavedDevices.contains(where: { savedDevice in
-                    savedDevice.uuid == device.identifier.uuidString
-                }) {
-                    Image(systemName: "checkmark").foregroundColor(.green)
-                } else {
-                    Image(systemName: "info.circle")
+        NavigationView {
+            List(viewModel.devices, id: \.identifier.uuidString) { device in
+                NavigationLink {
+                    AddDeviceDetails(viewModel: AddDeviceDetailsViewModel(device: device))
+                } label: {
+                    HStack {
+                        Text(device.name ?? "error")
+                        Spacer()
+                        if viewModel.allSavedDevices.contains(where: { savedDevice in
+                            savedDevice.uuid == device.identifier.uuidString
+                        }) {
+                            Image(systemName: "checkmark").foregroundColor(.green)
+                        } else {
+                            Image(systemName: "info.circle")
+                        }
+                    }
+                }
+                
+                
+            }.onAppear {
+                Task {
+                    viewModel.fetchSavedDevices()
                 }
             }
-            .onTapGesture {
-                viewModel.tapOnDevice(peripheral: device)
+            .overlay {
+                if loading {
+                    ProgressView()
+                }
             }
-           
-        }.onAppear {
-            Task {
-                viewModel.fetchSavedDevices()
-            }
+            .navigationTitle("Add Device")
         }
-        .overlay {
-            if loading {
-                ProgressView()
-            }
-        }
-        .navigationTitle("Add Device")
     }
 }
