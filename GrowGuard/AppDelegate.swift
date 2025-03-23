@@ -120,6 +120,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             var subscription: AnyCancellable?
 
             ble.connectToKnownDevice(device: device)
+            ble.requestLiveData()
 
             subscription = ble.sensorDataPublisher.sink { data in
                 device.sensorData.append(data)

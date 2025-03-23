@@ -39,7 +39,8 @@ struct MyAppIntent: AppIntent {
             var subscription: AnyCancellable?
 
             ble.connectToKnownDevice(device: device)
-
+            ble.requestLiveData()
+            
             subscription = ble.sensorDataPublisher.sink { data in
                 device.sensorData.append(data)
                 
