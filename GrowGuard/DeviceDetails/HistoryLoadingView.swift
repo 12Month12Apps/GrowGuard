@@ -67,6 +67,8 @@ struct HistoryLoadingView: View {
                         .font(.subheadline)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
+                        .lineLimit(5)
+                        .frame(maxWidth: .infinity)
                     
                     Button("Close") {
                         presentationMode.wrappedValue.dismiss()

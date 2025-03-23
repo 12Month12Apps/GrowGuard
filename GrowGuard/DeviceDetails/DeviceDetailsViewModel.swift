@@ -31,7 +31,22 @@ import Combine
         }
         
         self.subscriptionHistory = ble.historicalDataPublisher.sink { data in
-            print(data.brightness)
+//            print(data.brightness)
+            
+            if !self.device.sensorData.contains(where: {
+                $0.date == data.date &&
+                $0.temperature == data.temperature &&
+                $0.brightness == data.brightness &&
+                $0.moisture == data.moisture &&
+                $0.conductivity == data.conductivity
+            }) {
+                guard let sensorData = PlantMonitorService.shared.validateHistoricSensorData(data, device: device) else { return }
+                
+                self.device.sensorData.append(sensorData)
+                Task {
+                    await self.saveDatabase()
+                }
+            }
         }
     }
     
@@ -61,34 +76,40 @@ import Combine
         ble.requestHistoricalData()
 
         // Subscribe to historical data
-        let cancellable = FlowerCareManager.shared.historicalDataPublisher
-            .sink { [weak self] historicalData in
-                guard let self = self else { return }
-                
-                // Convert historical data to SensorData and add to device
-                let sensorData = SensorData(
-                    temperature: historicalData.temperature,
-                    brightness: historicalData.brightness,
-                    moisture: historicalData.moisture,
-                    conductivity: historicalData.conductivity,
-                    date: Date(timeIntervalSince1970: Double(historicalData.timestamp)),
-                    device: self.device
-                )
-                
-                // Add data to the device (avoiding duplicates)
-                if !self.device.sensorData.contains(where: { $0.date == sensorData.date }) {
-                    self.device.sensorData.append(sensorData)
-                    self.saveDatabase()
-                }
-            }
+//        let cancellable = FlowerCareManager.shared.historicalDataPublisher
+//            .sink { [weak self] historicalData in
+//                guard let self = self else { return }
+//                
+//                // Convert historical data to SensorData and add to device
+//                let sensorData = SensorData(
+//                    temperature: historicalData.temperature,
+//                    brightness: historicalData.brightness,
+//                    moisture: historicalData.moisture,
+//                    conductivity: historicalData.conductivity,
+//                    date: historicalData.date,
+//                    device: self.device
+//                )
+//                
+//                // Add data to the device (avoiding duplicates)
+//                if !self.device.sensorData.contains(where: {
+//                    $0.date == sensorData.date &&
+//                    $0.temperature == sensorData.temperature &&
+//                    $0.brightness == sensorData.brightness &&
+//                    $0.moisture == sensorData.moisture &&
+//                    $0.conductivity == sensorData.conductivity
+//                }) {
+//                    self.device.sensorData.append(sensorData)
+//                    self.saveDatabase()
+//                }
+//            }
         
         // Store cancellable reference if needed
         // self.cancellables.insert(cancellable)
         
-        // Start the fetch process
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            FlowerCareManager.shared.fetchEntryCount()
-        }
+//        // Start the fetch process
+//        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+//            FlowerCareManager.shared.fetchEntryCount()
+//        }
     }
 
 }

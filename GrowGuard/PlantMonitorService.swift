@@ -142,19 +142,7 @@ class PlantMonitorService {
            isValid = false
            validatedData.brightness = UInt32(max(validBrightnessRange.lowerBound, min(Int(data.brightness), validBrightnessRange.upperBound)))
        }
-       
-//        // Advanced: Check for sudden jumps from previous readings
-//        if let lastReading = getLastReading(for: data.deviceUUID) {
-//            let maxTemperatureJump = 10.0 // 10 degrees max change between readings
-//            if abs(data.temperature - lastReading.temperature) > maxTemperatureJump {
-//                isValid = false
-//                // Either reject or smooth the value
-//            }
-//            
-//            // Similar checks for other sensors
-//        }
-//        
-//        // Option 1: Return nil if any value was invalid
+        
         print(validatedData.moisture, validatedData.brightness, validatedData.temperature)
         if isValid {
             let data = SensorData(temperature: validatedData.temperature,
@@ -167,9 +155,48 @@ class PlantMonitorService {
         } else {
             return nil
         }
-//
-//        // Option 2: Return corrected values
-        // return validatedData
+    }
+    
+    // Add this method to your PlantMonitorService
+    func validateHistoricSensorData(_ data: HistoricalSensorData, device: FlowerDevice?) -> SensorData? {
+        var isValid = true
+        var validatedData = data
+        
+       // Define reasonable sensor ranges
+       let validMoistureRange = 0...100
+       let validTemperatureRange = -10...60
+       let validBrightnessRange = 0...100000
+       
+       // Check if values are in valid ranges
+       if !validMoistureRange.contains(Int(data.moisture)) {
+           isValid = false
+           // Option 1: Return nil to reject entirely
+           // Option 2: Clamp to valid range
+           validatedData.moisture = UInt8(max(validMoistureRange.lowerBound, min(Int(data.moisture), validMoistureRange.upperBound)))
+       }
+       
+       if !validTemperatureRange.contains(Int(data.temperature)) {
+           isValid = false
+           validatedData.temperature = Double(max(validTemperatureRange.lowerBound, min(Int(data.temperature), validTemperatureRange.upperBound)))
+       }
+       
+       if !validBrightnessRange.contains(Int(data.brightness)) {
+           isValid = false
+           validatedData.brightness = UInt32(max(validBrightnessRange.lowerBound, min(Int(data.brightness), validBrightnessRange.upperBound)))
+       }
+        
+        print(validatedData.moisture, validatedData.brightness, validatedData.temperature)
+        if isValid {
+            let data = SensorData(temperature: validatedData.temperature,
+                                  brightness: validatedData.brightness,
+                                  moisture: validatedData.moisture,
+                                  conductivity: validatedData.conductivity,
+                                  date: validatedData.date,
+                                  device: device)
+            return data
+        } else {
+            return nil
+        }
     }
     
     private func scheduleWateringReminder(for device: FlowerDevice) {

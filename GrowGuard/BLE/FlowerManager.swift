@@ -504,7 +504,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 print("Failed to decode history entry \(currentEntryIndex)")
                 
                 // Error handling when decoding fails
-                loadingStateSubject.send(.error("Failed to decode history entry \(currentEntryIndex)"))
+                loadingStateSubject.send(.error("Failed to decode history entry \(currentEntryIndex), trying to skip this"))
                 // Try to recover from failed decoding by skipping to the next entry
                 let nextIndex = currentEntryIndex + 1
                 if (nextIndex < totalEntries) {

@@ -62,6 +62,8 @@ class SensorDataDecoder {
         
         // Extract timestamp (4 bytes)
         let timestamp = data.subdata(in: 0..<4).withUnsafeBytes { $0.load(as: UInt32.self) }.littleEndian
+        if secondsSinceBoot < timestamp { return nil }
+        
         let now = Date()
         let dateTime = now.addingTimeInterval(-Double(secondsSinceBoot - timestamp))
         
