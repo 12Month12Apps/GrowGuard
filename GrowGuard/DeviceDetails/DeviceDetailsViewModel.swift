@@ -37,9 +37,11 @@ import Combine
     
     func loadDetails() {
         ble.connectToKnownDevice(device: device)
+        ble.requestLiveData()
     }
     
     func blinkLED() {
+        ble.connectToKnownDevice(device: device)
         ble.blinkLED()
     }
     
@@ -55,8 +57,9 @@ import Combine
     @MainActor
     func fetchHistoricalData() {
         // Connect to the device
-        FlowerCareManager.shared.connectToKnownDevice(device: device)
-        
+        ble.connectToKnownDevice(device: device)
+        ble.requestHistoricalData()
+
         // Subscribe to historical data
         let cancellable = FlowerCareManager.shared.historicalDataPublisher
             .sink { [weak self] historicalData in

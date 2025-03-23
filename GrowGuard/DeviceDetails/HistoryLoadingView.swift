@@ -84,10 +84,7 @@ struct HistoryLoadingView: View {
             setupSubscribers()
         }
         .onDisappear {
-            // Cancel loading if the sheet is dismissed directly (e.g., by swiping down)
-            if loadingState == .loading {
-                FlowerCareManager.shared.cancelHistoryDataLoading()
-            }
+            FlowerCareManager.shared.cancelHistoryDataLoading()
         }
     }
     

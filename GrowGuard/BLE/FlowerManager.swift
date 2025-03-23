@@ -71,6 +71,10 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         return loadingStateSubject.eraseToAnyPublisher()
     }
 
+    // Add these properties to your class
+    private var liveDataRequested = false
+    private var historicalDataRequested = false
+
     override init() {
         super.init()
         centralManager = CBCentralManager(delegate: self, queue: nil)
@@ -127,6 +131,10 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         totalEntries = 0
         currentEntryIndex = 0
         isConnected = false
+        
+        // Reset request flags
+        liveDataRequested = false
+        historicalDataRequested = false
     }
     
     func reloadScanning() {
@@ -209,21 +217,16 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             for characteristic in characteristics {
                 switch characteristic.uuid {
                 case deviceModeChangeCharacteristicUUID:
-//                    let modeChangeCommand: [UInt8] = [0xa0, 0x1f]
-//                    let modeChangeData = Data(modeChangeCommand)
-//                    peripheral.writeValue(modeChangeData, for: characteristic, type: .withResponse)
                     modeChangeCharacteristic = characteristic
                     ledControlCharacteristic = characteristic
                 case realTimeSensorValuesCharacteristicUUID:
                     realTimeSensorValuesCharacteristic = characteristic
-                    peripheral.readValue(for: characteristic)
                 case firmwareVersionCharacteristicUUID:
                     peripheral.readValue(for: characteristic)
                 case deviceNameCharacteristicUUID:
                     peripheral.readValue(for: characteristic)
                 case historyControlCharacteristicUUID:
                     historyControlCharacteristic = characteristic
-                    // Don't call fetchEntryCount() here - we'll handle it in proper sequence
                 case historicalSensorValuesCharacteristicUUID:
                     historyDataCharacteristic = characteristic
                 case deviceTimeCharacteristicUUID:
@@ -231,24 +234,25 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     peripheral.readValue(for: characteristic)
                 case entryCountCharacteristicUUID:
                     entryCountCharacteristic = characteristic
-                    peripheral.readValue(for: characteristic)
                 default:
                     break
                 }
             }
         }
 
-        // Check if we have all required characteristics for history data
-        if (historyControlCharacteristic != nil && 
-           historyDataCharacteristic != nil && 
-           deviceTimeCharacteristic != nil) {
-            // Start the history data flow
+        // Now only start operations if they were explicitly requested
+        if liveDataRequested && modeChangeCharacteristic != nil && realTimeSensorValuesCharacteristic != nil {
+            requestFreshSensorData()
+        }
+        
+        if historicalDataRequested && historyControlCharacteristic != nil && 
+           historyDataCharacteristic != nil && deviceTimeCharacteristic != nil {
             startHistoryDataFlow()
         }
         
-        // Keep your existing code for real-time data
-        if (modeChangeCharacteristic != nil && realTimeSensorValuesCharacteristic != nil) {
-            requestFreshSensorData()
+        // Mark connection as ready
+        if !isConnected {
+            isConnected = true
         }
     }
     
@@ -671,5 +675,40 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         // Reset counters
         totalEntries = 0
         currentEntryIndex = 0
+        
+        disconnect()
+    }
+
+    // Public method to request live sensor data
+    func requestLiveData() {
+        liveDataRequested = true
+        if isConnected && modeChangeCharacteristic != nil && realTimeSensorValuesCharacteristic != nil {
+            requestFreshSensorData()
+        } else if !isConnected {
+            // Connect first if not connected
+            if let device = device, let peripheral = discoveredPeripheral {
+                centralManager.connect(peripheral, options: nil)
+            }
+        }
+    }
+
+    // Public method to request historical data
+    func requestHistoricalData() {
+        historicalDataRequested = true
+        // Reset any previous loading state
+        loadingStateSubject.send(.idle)
+        totalEntries = 0
+        currentEntryIndex = 0
+        isCancelled = false
+        
+        if isConnected && historyControlCharacteristic != nil && 
+           historyDataCharacteristic != nil && deviceTimeCharacteristic != nil {
+            startHistoryDataFlow()
+        } else if !isConnected {
+            // Connect first if not connected
+            if let device = device, let peripheral = discoveredPeripheral {
+                centralManager.connect(peripheral, options: nil)
+            }
+        }
     }
 }
