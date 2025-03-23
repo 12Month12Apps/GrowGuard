@@ -52,4 +52,40 @@ import Combine
         }
     }
 
+    @MainActor
+    func fetchHistoricalData() {
+        // Connect to the device
+        FlowerCareManager.shared.connectToKnownDevice(device: device)
+        
+        // Subscribe to historical data
+        let cancellable = FlowerCareManager.shared.historicalDataPublisher
+            .sink { [weak self] historicalData in
+                guard let self = self else { return }
+                
+                // Convert historical data to SensorData and add to device
+                let sensorData = SensorData(
+                    temperature: historicalData.temperature,
+                    brightness: historicalData.brightness,
+                    moisture: historicalData.moisture,
+                    conductivity: historicalData.conductivity,
+                    date: Date(timeIntervalSince1970: Double(historicalData.timestamp)),
+                    device: self.device
+                )
+                
+                // Add data to the device (avoiding duplicates)
+                if !self.device.sensorData.contains(where: { $0.date == sensorData.date }) {
+                    self.device.sensorData.append(sensorData)
+                    self.saveDatabase()
+                }
+            }
+        
+        // Store cancellable reference if needed
+        // self.cancellables.insert(cancellable)
+        
+        // Start the fetch process
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            FlowerCareManager.shared.fetchEntryCount()
+        }
+    }
+
 }

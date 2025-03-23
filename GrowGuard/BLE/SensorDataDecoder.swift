@@ -9,6 +9,12 @@ import Foundation
 
 class SensorDataDecoder {
     
+    private var deviceBootTime: Date?
+
+    func setDeviceBootTime(_ bootTime: Date?) {
+        self.deviceBootTime = bootTime
+    }
+    
     func decodeRealTimeSensorValues(data: Data, device: FlowerDevice?) -> SensorDataTemp? {
         guard data.count == 16 else {
             print("Unexpected data length: \(data.count)")
@@ -41,32 +47,67 @@ class SensorDataDecoder {
     }
 
     func decodeHistoricalSensorData(data: Data) -> HistoricalSensorData? {
-        guard data.count == 16 else {
-            print("Unexpected data length: \(data.count)")
+        // Check if data is at least 13 bytes long (4+2+4+1+2)
+        guard data.count >= 13 else {
+            print("Historical data too short: \(data.count) bytes")
             return nil
         }
-
-        let timestamp = data.subdata(in: 0..<4).withUnsafeBytes { $0.load(as: UInt32.self) }.littleEndian
-        let temperature = data.subdata(in: 4..<6).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian
-        let brightness = data.subdata(in: 7..<11).withUnsafeBytes { $0.load(as: UInt32.self) }.littleEndian
-        let moisture = data[11]
-        let conductivity = data.subdata(in: 12..<14).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian
-
-        let temperatureCelsius = Double(temperature) / 10.0
-
-        print("Timestamp: \(timestamp) seconds since device epoch")
-        print("Temperature: \(temperatureCelsius) °C")
-        print("Brightness: \(brightness) lux")
-        print("Soil Moisture: \(moisture) %")
-        print("Soil Conductivity: \(conductivity) µS/cm")
+        
+        // Extract timestamp (4 bytes)
+        let timestamp = data.subdata(in: 0..<4).withUnsafeBytes { $0.load(as: UInt32.self) }
+        
+        // Extract temperature (2 bytes) and convert to Celsius
+        let temperatureRaw = data.subdata(in: 4..<6).withUnsafeBytes { $0.load(as: UInt16.self) }
+        let temperature = Double(temperatureRaw) / 10.0
+        
+        // Extract brightness (4 bytes)
+        let brightness = data.subdata(in: 6..<10).withUnsafeBytes { $0.load(as: UInt32.self) }
+        
+        // Extract moisture (1 byte)
+        let moisture = data[10]
+        
+        // Extract conductivity (2 bytes)
+        let conductivity = data.subdata(in: 11..<13).withUnsafeBytes { $0.load(as: UInt16.self) }
+        
+        print("Historic:", timestamp, moisture, temperature, conductivity)
         
         return HistoricalSensorData(
             timestamp: timestamp,
-            temperature: temperatureCelsius,
+            temperature: temperature,
             brightness: brightness,
             moisture: moisture,
             conductivity: conductivity
         )
+    }
+
+    // Add this to your SensorDataDecoder class
+    func decodeHistoryMetadata(data: Data) -> (entryCount: Int, additionalInfo: [String: Any])? {
+        guard data.count >= 16 else {
+            print("History metadata data too short")
+            return nil
+        }
+        
+        // Extract entry count (first 2 bytes, little-endian)
+        let entryCount = Int(data[0]) | (Int(data[1]) << 8)
+        
+        // Parse the remaining bytes - this is a best guess based on common patterns
+        // Bytes 2-5 and 6-9 could be timestamps or indexes
+        let timestamp1 = UInt32(data[2]) | (UInt32(data[3]) << 8) | (UInt32(data[4]) << 16) | (UInt32(data[5]) << 24)
+        let timestamp2 = UInt32(data[6]) | (UInt32(data[7]) << 8) | (UInt32(data[8]) << 16) | (UInt32(data[9]) << 24)
+        
+        // Bytes 10-13 might be another value
+        let value3 = UInt32(data[10]) | (UInt32(data[11]) << 8) | (UInt32(data[12]) << 16) | (UInt32(data[13]) << 24)
+        
+        // Create a dictionary with the parsed values
+        let additionalInfo: [String: Any] = [
+            "possibleTimestamp1": timestamp1,
+            "possibleTimestamp2": timestamp2,
+            "unknownValue": value3,
+            "rawData": data.map { String(format: "%02x", $0) }.joined()
+        ]
+        
+        print("History metadata: \(entryCount) entries, additional data: \(additionalInfo)")
+        return (entryCount, additionalInfo)
     }
 
     func decodeFirmwareAndBattery(data: Data) -> (batteryLevel: UInt8, firmwareVersion: String)? {

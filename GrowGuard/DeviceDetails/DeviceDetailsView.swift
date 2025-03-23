@@ -12,6 +12,7 @@ struct DeviceDetailsView: View {
     @State var showSetting: Bool = false
     @State private var showCopyAlert = false
     @State private var optimalRange: OptimalRange = OptimalRange(minTemperature: 0, minBrightness: 0, minMoisture: 70, minConductivity: 0, maxTemperature: 0, maxBrightness: 0, maxMoisture: 0, maxConductivity: 0)
+    @State private var showingLoadingScreen = false
 
     init(device: FlowerDevice) {
         self.viewModel = DeviceDetailsViewModel(device: device)
@@ -46,6 +47,17 @@ struct DeviceDetailsView: View {
             } label: {
                 Text("Blink LED")
             }
+
+            Button {
+                viewModel.fetchHistoricalData()
+                showingLoadingScreen = true
+            } label: {
+                HStack {
+                    Image(systemName: "clock.arrow.circlepath")
+                    Text("Fetch Historical Data")
+                }
+            }
+            .padding(.vertical, 8)
 
             if let nextWatering = PlantMonitorService.shared.predictNextWatering(for: viewModel.device) {
                 Section(header: Text("Prediction")) {
@@ -112,6 +124,9 @@ struct DeviceDetailsView: View {
             viewModel.saveDatabase()
         }) {
             SettingsView(optimalRange: $optimalRange)
+        }
+        .sheet(isPresented: $showingLoadingScreen) {
+            HistoryLoadingView()
         }
     }
 }
