@@ -238,7 +238,15 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             }
         }
 
-        // Only request real-time data on connection
+        // Check if we have all required characteristics for history data
+        if (historyControlCharacteristic != nil && 
+           historyDataCharacteristic != nil && 
+           deviceTimeCharacteristic != nil) {
+            // Start the history data flow
+            startHistoryDataFlow()
+        }
+        
+        // Keep your existing code for real-time data
         if (modeChangeCharacteristic != nil && realTimeSensorValuesCharacteristic != nil) {
             requestFreshSensorData()
         }
@@ -663,17 +671,5 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         // Reset counters
         totalEntries = 0
         currentEntryIndex = 0
-    }
-
-    // Add a public method to explicitly request history data when needed
-    func requestHistoricalData() {
-        if (historyControlCharacteristic != nil && 
-           historyDataCharacteristic != nil && 
-           deviceTimeCharacteristic != nil) {
-            startHistoryDataFlow()
-        } else {
-            print("Cannot load historical data: required characteristics not available")
-            loadingStateSubject.send(.error("Required BLE characteristics not available"))
-        }
     }
 }
