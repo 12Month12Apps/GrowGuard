@@ -424,7 +424,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         print("Estimated boot time: \(deviceBootTime?.description ?? "unknown")")
         
         // Pass this information to the decoder for timestamp calculations
-        decoder.setDeviceBootTime(deviceBootTime)
+        decoder.setDeviceBootTime(bootTime: deviceBootTime, secondsSinceBoot: secondsSinceBoot)
     }
 
     // Add this to your FlowerCareManager class

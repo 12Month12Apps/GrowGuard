@@ -13,4 +13,5 @@ struct HistoricalSensorData {
     let brightness: UInt32
     let moisture: UInt8
     let conductivity: UInt16
+    let date: Date
 }
