@@ -62,6 +62,25 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         case error(String)
     }
 
+    // Add these near your other enum definitions
+
+    // Connection quality enum
+    enum ConnectionQuality {
+        case unknown
+        case poor
+        case fair
+        case good
+        
+        var description: String {
+            switch self {
+            case .unknown: return "Unknown"
+            case .poor: return "Poor"
+            case .fair: return "Fair"
+            case .good: return "Good"
+            }
+        }
+    }
+
     // Public publishers
     var loadingProgressPublisher: AnyPublisher<(current: Int, total: Int), Never> {
         return loadingProgressSubject.eraseToAnyPublisher()
@@ -74,6 +93,14 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     // Add these properties to your class
     private var liveDataRequested = false
     private var historicalDataRequested = false
+
+    // Add these properties to your class
+    private let connectionQualitySubject = CurrentValueSubject<ConnectionQuality, Never>(.unknown)
+
+    // Public publisher
+    var connectionQualityPublisher: AnyPublisher<ConnectionQuality, Never> {
+        return connectionQualitySubject.eraseToAnyPublisher()
+    }
 
     override init() {
         super.init()
@@ -261,6 +288,9 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         print("Starting history data flow...")
         isCancelled = false  // Reset cancel flag when starting
         loadingStateSubject.send(.loading)
+        
+        // Start connection quality monitoring
+        startConnectionQualityMonitoring()
 
         // Step 1: Send 0xa00000 to switch to history mode
         guard let historyControlCharacteristic = historyControlCharacteristic else {
@@ -669,6 +699,9 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         print("Cancelling history data loading")
         isCancelled = true
         
+        // Stop connection monitoring
+        stopConnectionQualityMonitoring()
+        
         // Reset loading state
         loadingStateSubject.send(.idle)
         
@@ -710,5 +743,90 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 centralManager.connect(peripheral, options: nil)
             }
         }
+    }
+
+    // Add this method to your class
+
+    private func checkConnectionQuality(completion: @escaping (ConnectionQuality) -> Void) {
+        guard let peripheral = discoveredPeripheral, peripheral.state == .connected else {
+            connectionQualitySubject.send(.unknown)
+            completion(.unknown)
+            return
+        }
+        
+        peripheral.readRSSI()
+        
+        // We'll capture the first RSSI update after requesting it
+        rssiCheckCompletion = completion
+    }
+
+    private func evaluateConnectionQuality(rssi: NSNumber) -> ConnectionQuality {
+        let rssiValue = rssi.intValue
+        
+        // RSSI evaluation thresholds
+        // Generally:
+        // -50 to 0 dBm = Excellent
+        // -70 to -50 dBm = Good
+        // -80 to -70 dBm = Fair
+        // Less than -80 dBm = Poor
+        
+        if rssiValue >= -65 {
+            return .good
+        } else if rssiValue >= -80 {
+            return .fair
+        } else {
+            return .poor
+        }
+    }
+
+    // Property to store the completion handler
+    private var rssiCheckCompletion: ((ConnectionQuality) -> Void)?
+
+    // Add this method to your CBPeripheralDelegate implementations
+
+    func peripheral(_ peripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
+        let quality: ConnectionQuality
+        
+        if let error = error {
+            print("Failed to read RSSI: \(error.localizedDescription)")
+            quality = .unknown
+        } else {
+            quality = evaluateConnectionQuality(rssi: RSSI)
+            print("Current RSSI: \(RSSI) dBm - Connection quality: \(quality.description)")
+        }
+        
+        // Update the published value
+        connectionQualitySubject.send(quality)
+        
+        // Call the completion handler if it exists
+        if let completion = rssiCheckCompletion {
+            completion(quality)
+            rssiCheckCompletion = nil
+        }
+    }
+
+    // Add this method to monitor connection during history retrieval
+
+    private var connectionMonitorTimer: Timer?
+
+    private func startConnectionQualityMonitoring() {
+        stopConnectionQualityMonitoring()
+        
+        connectionMonitorTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            guard let self = self, 
+                  self.totalEntries > 0, 
+                  self.currentEntryIndex < self.totalEntries,
+                  !self.isCancelled else {
+                self?.stopConnectionQualityMonitoring()
+                return
+            }
+            
+            self.discoveredPeripheral?.readRSSI()
+        }
+    }
+
+    private func stopConnectionQualityMonitoring() {
+        connectionMonitorTimer?.invalidate()
+        connectionMonitorTimer = nil
     }
 }

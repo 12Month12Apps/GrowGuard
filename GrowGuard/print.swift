@@ -4,6 +4,7 @@
 //
 //  Created by veitprogl on 05.03.25.
 //
+import os
 
 public func print(_ object: Any...) {
     #if DEBUG
