@@ -28,6 +28,8 @@
 		56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6EC2D8EF1E5004021C0 /* Alert.swift */; };
 		56A8C6EF2D8F38CD004021C0 /* Button.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6EE2D8F38C9004021C0 /* Button.swift */; };
 		56A8C6F12D90095B004021C0 /* HistoryLoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6F02D900954004021C0 /* HistoryLoadingView.swift */; };
+		56A948F72DE3A4790010575F /* FlowerSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A948F62DE3A4710010575F /* FlowerSearch.swift */; };
+		56A948F92DE3A5370010575F /* SpeciesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A948F82DE3A5310010575F /* SpeciesModel.swift */; };
 		56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11182BDED05900887073 /* GrowGuardApp.swift */; };
 		56AF111B2BDED05900887073 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF111A2BDED05900887073 /* ContentView.swift */; };
 		56AF111D2BDED05900887073 /* FlowerDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF111C2BDED05900887073 /* FlowerDevice.swift */; };
@@ -43,6 +45,8 @@
 		56B44CCA2D724D7700A6A75A /* OnbordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC92D724D7200A6A75A /* OnbordingView.swift */; };
 		56B44CCC2D725C2700A6A75A /* PlantMonitorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */; };
 		56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CCD2D78E8EB00A6A75A /* print.swift */; };
+		56DC564A2DD9251C00041DBA /* flower.db in Resources */ = {isa = PBXBuildFile; fileRef = 56DC56492DD9251C00041DBA /* flower.db */; };
+		56DC564D2DD9256800041DBA /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 56DC564C2DD9256800041DBA /* GRDB */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -84,6 +88,8 @@
 		56A8C6EC2D8EF1E5004021C0 /* Alert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alert.swift; sourceTree = "<group>"; };
 		56A8C6EE2D8F38C9004021C0 /* Button.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Button.swift; sourceTree = "<group>"; };
 		56A8C6F02D900954004021C0 /* HistoryLoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryLoadingView.swift; sourceTree = "<group>"; };
+		56A948F62DE3A4710010575F /* FlowerSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerSearch.swift; sourceTree = "<group>"; };
+		56A948F82DE3A5310010575F /* SpeciesModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeciesModel.swift; sourceTree = "<group>"; };
 		56AF11152BDED05900887073 /* GrowGuard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GrowGuard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		56AF11182BDED05900887073 /* GrowGuardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardApp.swift; sourceTree = "<group>"; };
 		56AF111A2BDED05900887073 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -104,6 +110,7 @@
 		56B44CC92D724D7200A6A75A /* OnbordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbordingView.swift; sourceTree = "<group>"; };
 		56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantMonitorService.swift; sourceTree = "<group>"; };
 		56B44CCD2D78E8EB00A6A75A /* print.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = print.swift; sourceTree = "<group>"; };
+		56DC56492DD9251C00041DBA /* flower.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = flower.db; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -111,6 +118,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				56DC564D2DD9256800041DBA /* GRDB in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -191,9 +199,9 @@
 		5684E2E52C0FA303005CD8B6 /* Database */ = {
 			isa = PBXGroup;
 			children = (
-				5667BD892C28924600D04382 /* SensorData.swift */,
-				56AF111C2BDED05900887073 /* FlowerDevice.swift */,
-				569B70EC2C10F221005B7BC9 /* DataService.swift */,
+				56A948F52DE3A46A0010575F /* SQLlite */,
+				56A948F42DE3A4640010575F /* SwiftData */,
+				56A948F32DE3A45C0010575F /* Models */,
 			);
 			path = Database;
 			sourceTree = "<group>";
@@ -224,6 +232,32 @@
 			path = Extensions;
 			sourceTree = "<group>";
 		};
+		56A948F32DE3A45C0010575F /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				56A948F82DE3A5310010575F /* SpeciesModel.swift */,
+				5667BD892C28924600D04382 /* SensorData.swift */,
+				56AF111C2BDED05900887073 /* FlowerDevice.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		56A948F42DE3A4640010575F /* SwiftData */ = {
+			isa = PBXGroup;
+			children = (
+				569B70EC2C10F221005B7BC9 /* DataService.swift */,
+			);
+			path = SwiftData;
+			sourceTree = "<group>";
+		};
+		56A948F52DE3A46A0010575F /* SQLlite */ = {
+			isa = PBXGroup;
+			children = (
+				56A948F62DE3A4710010575F /* FlowerSearch.swift */,
+			);
+			path = SQLlite;
+			sourceTree = "<group>";
+		};
 		56AF110C2BDED05900887073 = {
 			isa = PBXGroup;
 			children = (
@@ -247,6 +281,7 @@
 		56AF11172BDED05900887073 /* GrowGuard */ = {
 			isa = PBXGroup;
 			children = (
+				56DC56492DD9251C00041DBA /* flower.db */,
 				56A8C6EB2D8EF1DD004021C0 /* Extensions */,
 				56B44CCD2D78E8EB00A6A75A /* print.swift */,
 				56B44CC92D724D7200A6A75A /* OnbordingView.swift */,
@@ -394,6 +429,9 @@
 				Base,
 			);
 			mainGroup = 56AF110C2BDED05900887073;
+			packageReferences = (
+				56DC564B2DD9256800041DBA /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+			);
 			productRefGroup = 56AF11162BDED05900887073 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -410,6 +448,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				56DC564A2DD9251C00041DBA /* flower.db in Resources */,
 				56AF11232BDED05B00887073 /* Preview Assets.xcassets in Resources */,
 				56AF111F2BDED05B00887073 /* Assets.xcassets in Resources */,
 			);
@@ -452,6 +491,7 @@
 				5667BD8A2C28925300D04382 /* SensorData.swift in Sources */,
 				56B44CCC2D725C2700A6A75A /* PlantMonitorService.swift in Sources */,
 				568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */,
+				56A948F92DE3A5370010575F /* SpeciesModel.swift in Sources */,
 				5684E2DD2C0F81E7005CD8B6 /* AddDeviceViewModel.swift in Sources */,
 				56AF111D2BDED05900887073 /* FlowerDevice.swift in Sources */,
 				56A8C6F12D90095B004021C0 /* HistoryLoadingView.swift in Sources */,
@@ -459,6 +499,7 @@
 				5684E2E22C0FA2EE005CD8B6 /* OverviewList.swift in Sources */,
 				562629002C42E32700B5DB2A /* AppIntent.swift in Sources */,
 				56A8C6EF2D8F38CD004021C0 /* Button.swift in Sources */,
+				56A948F72DE3A4790010575F /* FlowerSearch.swift in Sources */,
 				56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */,
 				56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */,
 				5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */,
@@ -831,6 +872,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		56DC564B2DD9256800041DBA /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		56DC564C2DD9256800041DBA /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 56DC564B2DD9256800041DBA /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 56AF110D2BDED05900887073 /* Project object */;
 }

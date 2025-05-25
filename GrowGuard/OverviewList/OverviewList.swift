@@ -25,7 +25,7 @@ struct OverviewList: View {
                         // Add a new method to NavigationService
                         NavigationService.shared.navigateToDeviceView(flowerDevice: device)
                     } label: {
-                        Text(device.name ?? "error")
+                        Text(device.name)
                         Text(device.lastUpdate, format: .dateTime)
                     }
                     .navigationLinkStyle()

@@ -43,7 +43,7 @@ struct SensorDataChart<T: Comparable & Numeric>: View {
         } else {
             Section {
                 VStack {
-                    header(for: currentWeekIndex)
+                    header(for: currentWeekIndex, current: groupedData.last?.maxValue ?? 0)
                     if groupedData.isEmpty {
                         Text("No data available")
                             .foregroundColor(.gray)
@@ -155,7 +155,7 @@ struct SensorDataChart<T: Comparable & Numeric>: View {
         return calendar.date(byAdding: .day, value: 6, to: startOfWeek(for: date))!
     }
 
-    private func header(for weekIndex: Int) -> some View {
+    private func header(for weekIndex: Int, current: Double) -> some View {
         let calendar = Calendar.current
         let startDate = calendar.date(byAdding: .weekOfYear, value: weekIndex, to: startOfWeek(for: groupedData.first?.date ?? Date()))!
         let endDate = calendar.date(byAdding: .day, value: 6, to: startDate)!
@@ -173,6 +173,9 @@ struct SensorDataChart<T: Comparable & Numeric>: View {
                     Image(systemName: "arrowshape.backward.circle")
                 }
                 .buttonStyle(.bordered)
+                .frame(width: 50)
+            } else {
+                Spacer().frame(width: 50)
             }
             
             Spacer()
@@ -182,6 +185,7 @@ struct SensorDataChart<T: Comparable & Numeric>: View {
                     .font(.system(.title, design: .rounded))
                     .foregroundColor(.primary)
                 Text("\(dateFormatter.string(from: startDate)) - \(dateFormatter.string(from: endDate))")
+                Text("Current Value: \(String(current))")
             }
             .fontWeight(.semibold)
             
@@ -196,6 +200,9 @@ struct SensorDataChart<T: Comparable & Numeric>: View {
                     Image(systemName: "arrowshape.right.circle")
                 }
                 .buttonStyle(.borderedProminent)
+                .frame(width: 50)
+            } else {
+                Spacer().frame(width: 50)
             }
         }
     }
