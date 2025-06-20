@@ -18,33 +18,45 @@ struct AddDeviceView: View {
 
     var body: some View {
         VStack {
-            List(viewModel.devices, id: \.identifier.uuidString) { device in
-                Button {
-                    NavigationService.shared.navigateToDeviceDetails(device: device)
-                } label: {
-                    HStack {
-                        Text(device.name ?? "error")
-                        Spacer()
-                        if viewModel.allSavedDevices.contains(where: { savedDevice in
-                            savedDevice.uuid == device.identifier.uuidString
-                        }) {
-                            Image(systemName: "checkmark").foregroundColor(.green)
-                        } else {
-                            Image(systemName: "info.circle")
-                        }
+            List() {
+                
+                Section() {
+                    Button {
+                        NavigationService.shared.navigateToAddDeviceWithoutSensor()
+                    } label: {
+                        Text("Add without Sensor")
                     }
                 }
-                .navigationLinkStyle()
-                .contentShape(Rectangle())
+                
+                Section(header: Text("Available Sensors")) {
+                    if viewModel.loading {
+                        ProgressView().foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    ForEach(viewModel.devices, id: \.identifier.uuidString) { device in
+                        Button {
+                            NavigationService.shared.navigateToDeviceDetails(device: device)
+                        } label: {
+                            HStack {
+                                Text(device.name ?? "error")
+                                Spacer()
+                                if viewModel.allSavedDevices.contains(where: { savedDevice in
+                                    savedDevice.uuid == device.identifier.uuidString
+                                }) {
+                                    Image(systemName: "checkmark").foregroundColor(.green)
+                                } else {
+                                    Image(systemName: "info.circle")
+                                }
+                            }
+                        }
+                        .navigationLinkStyle()
+                        .contentShape(Rectangle())
+                    }
+                }
             }
         }.onAppear {
             Task {
                 viewModel.fetchSavedDevices()
-            }
-        }
-        .overlay {
-            if viewModel.loading {
-                ProgressView().foregroundStyle(.red)
             }
         }
         .navigationTitle("Add Device")

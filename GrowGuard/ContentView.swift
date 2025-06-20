@@ -86,6 +86,11 @@ struct MainNavigationView: View {
                         ContentView()
                     case .deviceView(let device):
                         DeviceDetailsView(device: device)
+                    case .addDeviceWithoutSensor:
+                        AddWithoutSensor()
+                    case .deviceDetailsSpecies(let flower):
+                        let viewModel = AddDeviceDetailsViewModel(flower: flower)
+                        AddDeviceDetails(viewModel: viewModel)
                     }
                 }
         }

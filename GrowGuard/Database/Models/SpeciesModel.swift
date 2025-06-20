@@ -14,6 +14,9 @@ struct Species: Codable, FetchableRecord, PersistableRecord, Identifiable {
     var soilSalinity: String?
     var atmosphericHumidity: String?
     var imageUrl: String?
+    var family: String?
+    var maxMoisture: Int?
+    var minMoisture: Int?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -22,5 +25,12 @@ struct Species: Codable, FetchableRecord, PersistableRecord, Identifiable {
         case soilSalinity = "soil_salinity"
         case atmosphericHumidity = "atmospheric_humidity"
         case imageUrl = "image_url"
+        case family = "family"
+        case maxMoisture = "soil_moisture_max"
+        case minMoisture = "soil_moisture_min"
+    }
+    
+    enum Columns {
+        static let scientificName = Column("scientific_name")
     }
 }

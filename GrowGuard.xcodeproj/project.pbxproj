@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		56241CDE2DFD1E720012B18E /* CircularProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56241CDD2DFD1E6A0012B18E /* CircularProgress.swift */; };
+		56241CE12E03591C0012B18E /* FlowerPot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56241CE02E0359180012B18E /* FlowerPot.swift */; };
+		56241CE32E0488890012B18E /* FlowerDevice-V2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56241CE22E0488890012B18E /* FlowerDevice-V2.swift */; };
+		56241CE52E0490200012B18E /* SchemaLatest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56241CE42E04901D0012B18E /* SchemaLatest.swift */; };
 		562629002C42E32700B5DB2A /* AppIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 562628FF2C42E32200B5DB2A /* AppIntent.swift */; };
 		5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2AB2CB44DA000EED3D3 /* Extensions.swift */; };
 		5654B2B92CB4575E00EED3D3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2B82CB4575C00EED3D3 /* SettingsView.swift */; };
@@ -32,7 +36,7 @@
 		56A948F92DE3A5370010575F /* SpeciesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A948F82DE3A5310010575F /* SpeciesModel.swift */; };
 		56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11182BDED05900887073 /* GrowGuardApp.swift */; };
 		56AF111B2BDED05900887073 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF111A2BDED05900887073 /* ContentView.swift */; };
-		56AF111D2BDED05900887073 /* FlowerDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF111C2BDED05900887073 /* FlowerDevice.swift */; };
+		56AF111D2BDED05900887073 /* FlowerDevice-V1.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF111C2BDED05900887073 /* FlowerDevice-V1.swift */; };
 		56AF111F2BDED05B00887073 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 56AF111E2BDED05B00887073 /* Assets.xcassets */; };
 		56AF11232BDED05B00887073 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 56AF11222BDED05B00887073 /* Preview Assets.xcassets */; };
 		56AF112D2BDED05B00887073 /* GrowGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF112C2BDED05B00887073 /* GrowGuardTests.swift */; };
@@ -45,6 +49,8 @@
 		56B44CCA2D724D7700A6A75A /* OnbordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC92D724D7200A6A75A /* OnbordingView.swift */; };
 		56B44CCC2D725C2700A6A75A /* PlantMonitorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */; };
 		56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CCD2D78E8EB00A6A75A /* print.swift */; };
+		56BF5F9B2DFA5D7300D9B2AE /* AddWithoutSensor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BF5F9A2DFA5D6C00D9B2AE /* AddWithoutSensor.swift */; };
+		56BF5F9D2DFA5E9100D9B2AE /* AddWithoutSensorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */; };
 		56DC564A2DD9251C00041DBA /* flower.db in Resources */ = {isa = PBXBuildFile; fileRef = 56DC56492DD9251C00041DBA /* flower.db */; };
 		56DC564D2DD9256800041DBA /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 56DC564C2DD9256800041DBA /* GRDB */; };
 /* End PBXBuildFile section */
@@ -67,6 +73,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		56241CDD2DFD1E6A0012B18E /* CircularProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircularProgress.swift; sourceTree = "<group>"; };
+		56241CE02E0359180012B18E /* FlowerPot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerPot.swift; sourceTree = "<group>"; };
+		56241CE22E0488890012B18E /* FlowerDevice-V2.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "FlowerDevice-V2.swift"; sourceTree = "<group>"; };
+		56241CE42E04901D0012B18E /* SchemaLatest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaLatest.swift; sourceTree = "<group>"; };
 		562628FF2C42E32200B5DB2A /* AppIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntent.swift; sourceTree = "<group>"; };
 		5654B2AB2CB44DA000EED3D3 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		5654B2B82CB4575C00EED3D3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -93,7 +103,7 @@
 		56AF11152BDED05900887073 /* GrowGuard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GrowGuard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		56AF11182BDED05900887073 /* GrowGuardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardApp.swift; sourceTree = "<group>"; };
 		56AF111A2BDED05900887073 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		56AF111C2BDED05900887073 /* FlowerDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerDevice.swift; sourceTree = "<group>"; };
+		56AF111C2BDED05900887073 /* FlowerDevice-V1.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FlowerDevice-V1.swift"; sourceTree = "<group>"; };
 		56AF111E2BDED05B00887073 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		56AF11202BDED05B00887073 /* GrowGuard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GrowGuard.entitlements; sourceTree = "<group>"; };
 		56AF11222BDED05B00887073 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -110,6 +120,8 @@
 		56B44CC92D724D7200A6A75A /* OnbordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbordingView.swift; sourceTree = "<group>"; };
 		56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantMonitorService.swift; sourceTree = "<group>"; };
 		56B44CCD2D78E8EB00A6A75A /* print.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = print.swift; sourceTree = "<group>"; };
+		56BF5F9A2DFA5D6C00D9B2AE /* AddWithoutSensor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWithoutSensor.swift; sourceTree = "<group>"; };
+		56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWithoutSensorViewModel.swift; sourceTree = "<group>"; };
 		56DC56492DD9251C00041DBA /* flower.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = flower.db; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -139,6 +151,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		56241CDF2E03590C0012B18E /* Manuell Water */ = {
+			isa = PBXGroup;
+			children = (
+				56241CE02E0359180012B18E /* FlowerPot.swift */,
+			);
+			path = "Manuell Water";
+			sourceTree = "<group>";
+		};
 		5654B2B72CB4575700EED3D3 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
@@ -167,6 +187,7 @@
 		565DEC3E2C159868002D784A /* DeviceDetails */ = {
 			isa = PBXGroup;
 			children = (
+				56241CDF2E03590C0012B18E /* Manuell Water */,
 				56A8C6F02D900954004021C0 /* HistoryLoadingView.swift */,
 				5654B2B72CB4575700EED3D3 /* Settings */,
 				568892062C83292D000E8FAE /* Componetns */,
@@ -179,6 +200,7 @@
 		5684E2D92C0C9054005CD8B6 /* AddDevice */ = {
 			isa = PBXGroup;
 			children = (
+				56BF5F992DFA5D6100D9B2AE /* WithoutSensor */,
 				56A8C6E82D8ECF2C004021C0 /* Details */,
 				5684E2DA2C0F81C0005CD8B6 /* AddDeviceView.swift */,
 				5684E2DC2C0F81E7005CD8B6 /* AddDeviceViewModel.swift */,
@@ -235,9 +257,11 @@
 		56A948F32DE3A45C0010575F /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				56241CE42E04901D0012B18E /* SchemaLatest.swift */,
 				56A948F82DE3A5310010575F /* SpeciesModel.swift */,
 				5667BD892C28924600D04382 /* SensorData.swift */,
-				56AF111C2BDED05900887073 /* FlowerDevice.swift */,
+				56AF111C2BDED05900887073 /* FlowerDevice-V1.swift */,
+				56241CE22E0488890012B18E /* FlowerDevice-V2.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -281,6 +305,7 @@
 		56AF11172BDED05900887073 /* GrowGuard */ = {
 			isa = PBXGroup;
 			children = (
+				56241CDD2DFD1E6A0012B18E /* CircularProgress.swift */,
 				56DC56492DD9251C00041DBA /* flower.db */,
 				56A8C6EB2D8EF1DD004021C0 /* Extensions */,
 				56B44CCD2D78E8EB00A6A75A /* print.swift */,
@@ -339,6 +364,15 @@
 				56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */,
 			);
 			path = BLE;
+			sourceTree = "<group>";
+		};
+		56BF5F992DFA5D6100D9B2AE /* WithoutSensor */ = {
+			isa = PBXGroup;
+			children = (
+				56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */,
+				56BF5F9A2DFA5D6C00D9B2AE /* AddWithoutSensor.swift */,
+			);
+			path = WithoutSensor;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -477,6 +511,7 @@
 			files = (
 				5684E2DB2C0F81C0005CD8B6 /* AddDeviceView.swift in Sources */,
 				56B44CC32D6E7B3F00A6A75A /* FlowerManager.swift in Sources */,
+				56241CE12E03591C0012B18E /* FlowerPot.swift in Sources */,
 				56B44CC42D6E7B3F00A6A75A /* HistoricalSensorData.swift in Sources */,
 				56B44CCA2D724D7700A6A75A /* OnbordingView.swift in Sources */,
 				56B44CC52D6E7B3F00A6A75A /* SensorDataDecoder.swift in Sources */,
@@ -484,7 +519,10 @@
 				5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */,
 				56A8C6EA2D8ECF37004021C0 /* AddDeviceDetails.swift in Sources */,
 				565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */,
+				56241CE32E0488890012B18E /* FlowerDevice-V2.swift in Sources */,
+				56241CE52E0490200012B18E /* SchemaLatest.swift in Sources */,
 				5684E2DF2C0F820D005CD8B6 /* AddDeviceBLE.swift in Sources */,
+				56241CDE2DFD1E720012B18E /* CircularProgress.swift in Sources */,
 				56AF111B2BDED05900887073 /* ContentView.swift in Sources */,
 				5684E2E42C0FA2FA005CD8B6 /* OverviewListViewModel.swift in Sources */,
 				569B70ED2C10F221005B7BC9 /* DataService.swift in Sources */,
@@ -493,7 +531,7 @@
 				568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */,
 				56A948F92DE3A5370010575F /* SpeciesModel.swift in Sources */,
 				5684E2DD2C0F81E7005CD8B6 /* AddDeviceViewModel.swift in Sources */,
-				56AF111D2BDED05900887073 /* FlowerDevice.swift in Sources */,
+				56AF111D2BDED05900887073 /* FlowerDevice-V1.swift in Sources */,
 				56A8C6F12D90095B004021C0 /* HistoryLoadingView.swift in Sources */,
 				56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */,
 				5684E2E22C0FA2EE005CD8B6 /* OverviewList.swift in Sources */,
@@ -504,6 +542,8 @@
 				56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */,
 				5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */,
 				5654B2B92CB4575E00EED3D3 /* SettingsView.swift in Sources */,
+				56BF5F9D2DFA5E9100D9B2AE /* AddWithoutSensorViewModel.swift in Sources */,
+				56BF5F9B2DFA5D7300D9B2AE /* AddWithoutSensor.swift in Sources */,
 				565DEC402C159B93002D784A /* DeviceDetailsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -689,7 +729,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.company.GrowGuard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -731,7 +771,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.company.GrowGuard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;

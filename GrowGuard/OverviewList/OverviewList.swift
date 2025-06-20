@@ -12,6 +12,7 @@ struct OverviewList: View {
     @State var viewModel: OverviewListViewModel
     @State var showAddFlowerSheet = false
     @State var loading: Bool = false
+    @State var progress: Double = 0
 
     init() {
         self.viewModel = OverviewListViewModel()
@@ -20,18 +21,42 @@ struct OverviewList: View {
     var body: some View {
         VStack {
             List {
-                ForEach(viewModel.allSavedDevices) { device in
-                    Button {
-                        // Add a new method to NavigationService
-                        NavigationService.shared.navigateToDeviceView(flowerDevice: device)
-                    } label: {
-                        Text(device.name)
-                        Text(device.lastUpdate, format: .dateTime)
+                Section {
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            CircularProgressView(progress: progress, color: .red, icon: Image(systemName: "thermometer.variable"))
+                                .frame(width: 80, height: 80)
+                            Spacer()
+                            CircularProgressView(progress: progress, color: .green, icon: Image(systemName: "sun.max"))
+                                .frame(width: 80, height: 80)
+                            Spacer()
+                            CircularProgressView(progress: progress, color: .blue, icon: Image(systemName: "drop.fill"))
+                               .frame(width: 80, height: 80)
+                            Spacer()
+                        }
+                        Spacer()
+                        HStack {
+                            Slider(value: $progress, in: 0...1)
+                        }
                     }
-                    .navigationLinkStyle()
-                    .contentShape(Rectangle())
                 }
-                .onDelete(perform: delete)
+                
+                Section {
+                    ForEach(viewModel.allSavedDevices) { device in
+                        Button {
+                            // Add a new method to NavigationService
+                            NavigationService.shared.navigateToDeviceView(flowerDevice: device)
+                        } label: {
+                            Text(device.name)
+                            Text(device.lastUpdate, format: .dateTime)
+                        }
+                        .navigationLinkStyle()
+                        .contentShape(Rectangle())
+                    }
+                    .onDelete(perform: delete)
+                }
             }
         }
         .navigationTitle("Overview")

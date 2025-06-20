@@ -15,7 +15,9 @@ import CoreBluetooth
 // Defines all possible navigation destinations in the app
 enum NavigationDestination: Hashable {
     case deviceDetails(CBPeripheral)
+    case deviceDetailsSpecies(VMSpecies)
     case deviceList
+    case addDeviceWithoutSensor
     case home
     case deviceView(FlowerDevice) // Add this new case
 }
@@ -33,8 +35,16 @@ enum NavigationDestination: Hashable {
         path.append(NavigationDestination.deviceDetails(device))
     }
     
+    func navigateToDeviceDetails(flower: VMSpecies) {
+        path.append(NavigationDestination.deviceDetailsSpecies(flower))
+    }
+    
     func navigateToDeviceList() {
         path.append(NavigationDestination.deviceList)
+    }
+    
+    func navigateToAddDeviceWithoutSensor() {
+        path.append(NavigationDestination.addDeviceWithoutSensor)
     }
     
     func navigateToHome() {
@@ -63,7 +73,7 @@ enum NavigationDestination: Hashable {
 }
 
 @Observable class AddDeviceDetailsViewModel {
-    var device:  CBPeripheral
+    var device:  CBPeripheral?
     var allSavedDevices: [FlowerDevice] = []
     var alertView: Alert = .empty
     var showAlert = false
@@ -78,10 +88,17 @@ enum NavigationDestination: Hashable {
         }
     }
     
+    init(flower: VMSpecies) {
+        self.flower = FlowerDevice(name: flower.name, uuid: UUID().uuidString)
+        self.flower.isSensor = false
+        self.flower.optimalRange = OptimalRange(minTemperature: 0, minBrightness: 0, minMoisture: UInt8(flower.minMoisture ?? 0), minConductivity: 0, maxTemperature: 0, maxBrightness: 0, maxMoisture: UInt8(flower.maxMoisture ?? 0), maxConductivity: 0)
+
+    }
+    
     @MainActor
     func save() {
         let isSaved = allSavedDevices.contains(where: { device in
-            device.uuid == self.device.identifier.uuidString
+            device.uuid == self.device?.identifier.uuidString
         })
         if isSaved {
             self.alertView = Alert(title: Text("Info"),
@@ -106,7 +123,10 @@ enum NavigationDestination: Hashable {
             }
         }
         NavigationService.shared.switchToTab(.overview)
-        NavigationService.shared.navigateToDeviceDetails(device: device)
+        
+        if let device = device {
+            NavigationService.shared.navigateToDeviceDetails(device: device)
+        }
     }
     
     @MainActor
@@ -205,3 +225,4 @@ struct AddDeviceDetails:  View {
         }.alert(isPresented: $viewModel.showAlert, content: { viewModel.alertView })
     }
 }
+

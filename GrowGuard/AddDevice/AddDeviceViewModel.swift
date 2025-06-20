@@ -16,16 +16,28 @@ import SwiftData
     var ble: AddDeviceBLE?
     var allSavedDevices: [FlowerDevice] = []
     var loading: Bool = false
+    private var loadingTask: Task<Void, Never>? = nil
     
     init() {
         loading = true
         self.devices = []
-        
+
         self.ble = AddDeviceBLE { peripheral in
             self.addToList(peripheral: peripheral)
+            self.loadingTask?.cancel()
             self.loading = false
         }
-        
+
+        // Timeout-Task starten
+        self.loadingTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(10))
+            await MainActor.run {
+                if let self = self, self.devices.isEmpty {
+                    self.loading = false
+                }
+            }
+        }
+
         Task {
             await fetchSavedDevices()
         }
