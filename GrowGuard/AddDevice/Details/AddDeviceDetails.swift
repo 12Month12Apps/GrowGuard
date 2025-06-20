@@ -78,6 +78,19 @@ enum NavigationDestination: Hashable {
     var alertView: Alert = .empty
     var showAlert = false
     var flower: FlowerDevice
+    var searchedFlower: VMSpecies? {
+        didSet {
+            guard let searched = searchedFlower else { return }
+
+            flower.name = searched.name
+            if let minMoisture = searched.minMoisture {
+                flower.optimalRange.minMoisture = UInt8(minMoisture)
+            }
+            if let maxMoisture = searched.maxMoisture {
+                flower.optimalRange.maxMoisture = UInt8(maxMoisture)
+            }
+        }
+    }
 
     init(device: CBPeripheral) {
         self.device = device
@@ -92,7 +105,6 @@ enum NavigationDestination: Hashable {
         self.flower = FlowerDevice(name: flower.name, uuid: UUID().uuidString)
         self.flower.isSensor = false
         self.flower.optimalRange = OptimalRange(minTemperature: 0, minBrightness: 0, minMoisture: UInt8(flower.minMoisture ?? 0), minConductivity: 0, maxTemperature: 0, maxBrightness: 0, maxMoisture: UInt8(flower.maxMoisture ?? 0), maxConductivity: 0)
-
     }
     
     @MainActor
@@ -152,6 +164,13 @@ struct AddDeviceDetails:  View {
     var body: some View {
         VStack {
             Form {
+                
+                NavigationLink {
+                    AddWithoutSensor(flower: $viewModel.searchedFlower, searchMode: true)
+                } label: {
+                    Text("Search Flower")
+                }
+                
                 Section {
                     TextField("Device Name", text: $viewModel.flower.name)
                 }

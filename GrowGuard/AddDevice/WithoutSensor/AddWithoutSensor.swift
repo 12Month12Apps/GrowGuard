@@ -9,7 +9,10 @@ import SwiftUI
 import FoundationModels
 
 struct AddWithoutSensor: View {
+    @Environment(\.dismiss) var dismiss
     @State var viewModel = AddWithoutSensorViewModel()
+    @Binding var flower: VMSpecies?
+    var searchMode: Bool = false
     
     var body: some View {
         List {
@@ -45,7 +48,12 @@ struct AddWithoutSensor: View {
                         Text("Soil Moisture: \(flower.minMoisture ?? 0)% - \(flower.maxMoisture ?? 100)%")
                     }
                 }.onTapGesture {
-                    viewModel.navigateToFlowerDetail(flower: flower)
+                    if searchMode {
+                        self.flower = flower
+                        dismiss()
+                    } else {
+                        viewModel.navigateToFlowerDetail(flower: flower)
+                    }
                 }
             }
         }

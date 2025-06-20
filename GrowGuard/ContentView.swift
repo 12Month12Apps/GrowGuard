@@ -70,6 +70,7 @@ import SwiftUI
 
 struct MainNavigationView: View {
     @State private var navigationService = NavigationService.shared
+    @State private var flower: VMSpecies? = nil
     
     var body: some View {
         NavigationStack(path: $navigationService.path) {
@@ -87,7 +88,7 @@ struct MainNavigationView: View {
                     case .deviceView(let device):
                         DeviceDetailsView(device: device)
                     case .addDeviceWithoutSensor:
-                        AddWithoutSensor()
+                        AddWithoutSensor(flower: $flower)
                     case .deviceDetailsSpecies(let flower):
                         let viewModel = AddDeviceDetailsViewModel(flower: flower)
                         AddDeviceDetails(viewModel: viewModel)
