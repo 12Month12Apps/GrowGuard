@@ -95,7 +95,8 @@ enum NavigationDestination: Hashable {
     init(device: CBPeripheral) {
         self.device = device
         self.flower = FlowerDevice(added: Date(), lastUpdate: Date(), peripheral: device)
-        
+        self.flower.isSensor = true
+
         Task {
             await fetchSavedDevices()
         }
@@ -160,6 +161,12 @@ struct AddDeviceDetails:  View {
     }
     
     @State var viewModel: AddDeviceDetailsViewModel
+
+    var calculatedVolume: Double? {
+        guard viewModel.flower.potSize.width > 0, viewModel.flower.potSize.height > 0 else { return nil }
+        let radius = viewModel.flower.potSize.width
+        return Double.pi * pow(radius, 2) * viewModel.flower.potSize.height
+    }
     
     var body: some View {
         VStack {
@@ -173,6 +180,41 @@ struct AddDeviceDetails:  View {
                 
                 Section {
                     TextField("Device Name", text: $viewModel.flower.name)
+                }
+                
+                Section(header: Text("Flower Pot")) {
+                    HStack {
+                        Text("Pot radius (cm)")
+                        TextField("0", value: $viewModel.flower.potSize.width, format: .number)
+                            .keyboardType(.decimalPad)
+                    }
+                    
+                    HStack {
+                        Text("Pot height (cm)")
+                        TextField("0", value: $viewModel.flower.potSize.height, format: .number)
+                            .keyboardType(.decimalPad)
+                    }
+                    
+                    VStack {
+                        Text("Volume can be automaticily be calculated, but if you know yours please enter it here to be more precise")
+                            .font(.caption)
+                        HStack {
+                            Text("Pot volume")
+                            TextField("0", value: $viewModel.flower.potSize.volume, format: .number)
+                                .keyboardType(.decimalPad)
+                        }
+                        if let calculated = calculatedVolume {
+                            Text("Automatisch berechnetes Volumen: \(String(format: "%.1f", calculated)) cm³")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Button {
+                                viewModel.flower.potSize.volume = calculated
+                            } label: {
+                                Text("Accpet calculation")
+                            }
+
+                        }
+                    }
                 }
                 
                 Section(header: Text("Brigtness")) {
