@@ -9,8 +9,6 @@
 /* Begin PBXBuildFile section */
 		56241CDE2DFD1E720012B18E /* CircularProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56241CDD2DFD1E6A0012B18E /* CircularProgress.swift */; };
 		56241CE12E03591C0012B18E /* FlowerPot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56241CE02E0359180012B18E /* FlowerPot.swift */; };
-		56241CE32E0488890012B18E /* FlowerDevice-V2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56241CE22E0488890012B18E /* FlowerDevice-V2.swift */; };
-		56241CE52E0490200012B18E /* SchemaLatest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56241CE42E04901D0012B18E /* SchemaLatest.swift */; };
 		562629002C42E32700B5DB2A /* AppIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 562628FF2C42E32200B5DB2A /* AppIntent.swift */; };
 		5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2AB2CB44DA000EED3D3 /* Extensions.swift */; };
 		5654B2B92CB4575E00EED3D3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2B82CB4575C00EED3D3 /* SettingsView.swift */; };
@@ -27,6 +25,7 @@
 		5684E2E42C0FA2FA005CD8B6 /* OverviewListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2E32C0FA2FA005CD8B6 /* OverviewListViewModel.swift */; };
 		568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568892072C832936000E8FAE /* SensorDataChart.swift */; };
 		5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5688920A2C84B4B9000E8FAE /* AppDelegate.swift */; };
+		569417562E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 569417542E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld */; };
 		569B70ED2C10F221005B7BC9 /* DataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 569B70EC2C10F221005B7BC9 /* DataService.swift */; };
 		56A8C6EA2D8ECF37004021C0 /* AddDeviceDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6E92D8ECF31004021C0 /* AddDeviceDetails.swift */; };
 		56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6EC2D8EF1E5004021C0 /* Alert.swift */; };
@@ -36,7 +35,6 @@
 		56A948F92DE3A5370010575F /* SpeciesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A948F82DE3A5310010575F /* SpeciesModel.swift */; };
 		56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11182BDED05900887073 /* GrowGuardApp.swift */; };
 		56AF111B2BDED05900887073 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF111A2BDED05900887073 /* ContentView.swift */; };
-		56AF111D2BDED05900887073 /* FlowerDevice-V1.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF111C2BDED05900887073 /* FlowerDevice-V1.swift */; };
 		56AF111F2BDED05B00887073 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 56AF111E2BDED05B00887073 /* Assets.xcassets */; };
 		56AF11232BDED05B00887073 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 56AF11222BDED05B00887073 /* Preview Assets.xcassets */; };
 		56AF112D2BDED05B00887073 /* GrowGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF112C2BDED05B00887073 /* GrowGuardTests.swift */; };
@@ -75,8 +73,6 @@
 /* Begin PBXFileReference section */
 		56241CDD2DFD1E6A0012B18E /* CircularProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircularProgress.swift; sourceTree = "<group>"; };
 		56241CE02E0359180012B18E /* FlowerPot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerPot.swift; sourceTree = "<group>"; };
-		56241CE22E0488890012B18E /* FlowerDevice-V2.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "FlowerDevice-V2.swift"; sourceTree = "<group>"; };
-		56241CE42E04901D0012B18E /* SchemaLatest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaLatest.swift; sourceTree = "<group>"; };
 		562628FF2C42E32200B5DB2A /* AppIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntent.swift; sourceTree = "<group>"; };
 		5654B2AB2CB44DA000EED3D3 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		5654B2B82CB4575C00EED3D3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -93,6 +89,7 @@
 		5684E2E32C0FA2FA005CD8B6 /* OverviewListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewListViewModel.swift; sourceTree = "<group>"; };
 		568892072C832936000E8FAE /* SensorDataChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataChart.swift; sourceTree = "<group>"; };
 		5688920A2C84B4B9000E8FAE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		569417552E0DD9C000AE7586 /* CoreDataModels.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = CoreDataModels.xcdatamodel; sourceTree = "<group>"; };
 		569B70EC2C10F221005B7BC9 /* DataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataService.swift; sourceTree = "<group>"; };
 		56A8C6E92D8ECF31004021C0 /* AddDeviceDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceDetails.swift; sourceTree = "<group>"; };
 		56A8C6EC2D8EF1E5004021C0 /* Alert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alert.swift; sourceTree = "<group>"; };
@@ -103,7 +100,6 @@
 		56AF11152BDED05900887073 /* GrowGuard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GrowGuard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		56AF11182BDED05900887073 /* GrowGuardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardApp.swift; sourceTree = "<group>"; };
 		56AF111A2BDED05900887073 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		56AF111C2BDED05900887073 /* FlowerDevice-V1.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FlowerDevice-V1.swift"; sourceTree = "<group>"; };
 		56AF111E2BDED05B00887073 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		56AF11202BDED05B00887073 /* GrowGuard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GrowGuard.entitlements; sourceTree = "<group>"; };
 		56AF11222BDED05B00887073 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -224,6 +220,7 @@
 				56A948F52DE3A46A0010575F /* SQLlite */,
 				56A948F42DE3A4640010575F /* SwiftData */,
 				56A948F32DE3A45C0010575F /* Models */,
+				569417542E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld */,
 			);
 			path = Database;
 			sourceTree = "<group>";
@@ -257,11 +254,8 @@
 		56A948F32DE3A45C0010575F /* Models */ = {
 			isa = PBXGroup;
 			children = (
-				56241CE42E04901D0012B18E /* SchemaLatest.swift */,
 				56A948F82DE3A5310010575F /* SpeciesModel.swift */,
 				5667BD892C28924600D04382 /* SensorData.swift */,
-				56AF111C2BDED05900887073 /* FlowerDevice-V1.swift */,
-				56241CE22E0488890012B18E /* FlowerDevice-V2.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -512,6 +506,7 @@
 				5684E2DB2C0F81C0005CD8B6 /* AddDeviceView.swift in Sources */,
 				56B44CC32D6E7B3F00A6A75A /* FlowerManager.swift in Sources */,
 				56241CE12E03591C0012B18E /* FlowerPot.swift in Sources */,
+				569417562E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld in Sources */,
 				56B44CC42D6E7B3F00A6A75A /* HistoricalSensorData.swift in Sources */,
 				56B44CCA2D724D7700A6A75A /* OnbordingView.swift in Sources */,
 				56B44CC52D6E7B3F00A6A75A /* SensorDataDecoder.swift in Sources */,
@@ -519,8 +514,6 @@
 				5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */,
 				56A8C6EA2D8ECF37004021C0 /* AddDeviceDetails.swift in Sources */,
 				565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */,
-				56241CE32E0488890012B18E /* FlowerDevice-V2.swift in Sources */,
-				56241CE52E0490200012B18E /* SchemaLatest.swift in Sources */,
 				5684E2DF2C0F820D005CD8B6 /* AddDeviceBLE.swift in Sources */,
 				56241CDE2DFD1E720012B18E /* CircularProgress.swift in Sources */,
 				56AF111B2BDED05900887073 /* ContentView.swift in Sources */,
@@ -531,7 +524,6 @@
 				568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */,
 				56A948F92DE3A5370010575F /* SpeciesModel.swift in Sources */,
 				5684E2DD2C0F81E7005CD8B6 /* AddDeviceViewModel.swift in Sources */,
-				56AF111D2BDED05900887073 /* FlowerDevice-V1.swift in Sources */,
 				56A8C6F12D90095B004021C0 /* HistoryLoadingView.swift in Sources */,
 				56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */,
 				5684E2E22C0FA2EE005CD8B6 /* OverviewList.swift in Sources */,
@@ -931,6 +923,19 @@
 			productName = GRDB;
 		};
 /* End XCSwiftPackageProductDependency section */
+
+/* Begin XCVersionGroup section */
+		569417542E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				569417552E0DD9C000AE7586 /* CoreDataModels.xcdatamodel */,
+			);
+			currentVersion = 569417552E0DD9C000AE7586 /* CoreDataModels.xcdatamodel */;
+			path = CoreDataModels.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
 	};
 	rootObject = 56AF110D2BDED05900887073 /* Project object */;
 }

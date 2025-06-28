@@ -14,6 +14,8 @@ import UserNotifications
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     
+    
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Add notification actions
         let waterAction = UNNotificationAction(identifier: "WATER_ACTION", title: "Mark as Watered", options: .foreground)

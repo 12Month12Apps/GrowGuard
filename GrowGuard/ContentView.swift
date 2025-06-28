@@ -14,23 +14,23 @@ class ContentViewModel: Observable {
     init(allSavedDevices: [FlowerDevice] = []) {
         self.allSavedDevices = allSavedDevices
         
-//        Task {
-//            await self.fetchSavedDevices()
-//        }
+        Task {
+            await self.fetchSavedDevices()
+        }
     }
     
-//    @MainActor
-//    func fetchSavedDevices() {
-//        let fetchDescriptor = FetchDescriptor<FlowerDevice>()
-//
-//        do {
-//            let result = try DataService.sharedModelContainer.mainContext.fetch(fetchDescriptor)
-//            allSavedDevices = result
-//            
-//        } catch{
-//            print(error.localizedDescription)
-//        }
-//    }
+    @MainActor
+    func fetchSavedDevices() {
+        let fetchDescriptor = FetchDescriptor<FlowerDevice>()
+
+        do {
+            let result = try DataService.sharedModelContainer.mainContext.fetch(fetchDescriptor)
+            allSavedDevices = result
+            
+        } catch{
+            print(error.localizedDescription)
+        }
+    }
 }
 
 enum NavigationTabs {
