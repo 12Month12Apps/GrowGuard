@@ -1,40 +1,41 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="24233.11" systemVersion="25A5279m" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="24233.13" systemVersion="25A5295e" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
     <entity name="FlowerDevice" representedClassName="FlowerDevice" syncable="YES" codeGenerationType="class">
-        <attribute name="added" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="battery" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="firmware" optional="YES" attributeType="String"/>
-        <attribute name="isSensor" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
-        <attribute name="lastUpdate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="name" optional="YES" attributeType="String"/>
-        <attribute name="uuid" optional="YES" attributeType="String"/>
+        <attribute name="added" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="battery" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="firmware" attributeType="String" defaultValueString=""/>
+        <attribute name="isSensor" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="lastUpdate" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="name" attributeType="String"/>
+        <attribute name="peripheralID" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="uuid" attributeType="String"/>
         <relationship name="optimalRange" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="OptimalRange" inverseName="device" inverseEntity="OptimalRange"/>
         <relationship name="potSize" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="PotSize" inverseName="device" inverseEntity="PotSize"/>
         <relationship name="sensorData" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="SensorData" inverseName="device" inverseEntity="SensorData"/>
     </entity>
     <entity name="OptimalRange" representedClassName="OptimalRange" syncable="YES" codeGenerationType="class">
-        <attribute name="maxBrightness" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="maxConductivity" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="maxMoisture" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="maxTemperature" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
-        <attribute name="minBrightness" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="minConductivity" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="minMoisture" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="minTemperature" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="maxBrightness" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="maxConductivity" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="maxMoisture" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="maxTemperature" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="minBrightness" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="minConductivity" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="minMoisture" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="minTemperature" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <relationship name="device" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FlowerDevice" inverseName="optimalRange" inverseEntity="FlowerDevice"/>
     </entity>
     <entity name="PotSize" representedClassName="PotSize" syncable="YES" codeGenerationType="class">
-        <attribute name="height" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
-        <attribute name="volume" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
-        <attribute name="width" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="height" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="volume" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="width" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <relationship name="device" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FlowerDevice" inverseName="potSize" inverseEntity="FlowerDevice"/>
     </entity>
     <entity name="SensorData" representedClassName="SensorData" syncable="YES" codeGenerationType="class">
-        <attribute name="brightness" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="conductivity" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="moisture" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="temperaure" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="brightness" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="conductivity" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="date" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="moisture" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="temperature" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <relationship name="device" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FlowerDevice" inverseName="sensorData" inverseEntity="FlowerDevice"/>
     </entity>
 </model>

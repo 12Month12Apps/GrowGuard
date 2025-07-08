@@ -11,7 +11,7 @@ struct DeviceDetailsView: View {
     @State var viewModel: DeviceDetailsViewModel
     @State var showSetting: Bool = false
     @State private var showCopyAlert = false
-    @State private var optimalRange: OptimalRange = OptimalRange(minTemperature: 0, minBrightness: 0, minMoisture: 70, minConductivity: 0, maxTemperature: 0, maxBrightness: 0, maxMoisture: 0, maxConductivity: 0)
+    @State private var optimalRange: OptimalRange?
     @State private var showingLoadingScreen = false
     @State private var waterFill: CGFloat = 0.0
     @State private var waterFillProzentage: CGFloat = 0.0
@@ -26,8 +26,13 @@ struct DeviceDetailsView: View {
             Section {
                 HStack {
                     VStack(alignment: .leading) {
-                        TextField("Device Name", text: $viewModel.device.name).bold()
-                        Text("Last Update: ") + Text(viewModel.device.lastUpdate, format: .dateTime)
+                        TextField("Device Name", text: Binding(
+                            get: { viewModel.device.name ?? "" },
+                            set: { viewModel.device.name = $0 }
+                        ))
+                        if let lastUpdate = viewModel.device.lastUpdate {
+                            Text("Last Update: ") + Text(lastUpdate, format: .dateTime)
+                        }
                         
                         if viewModel.device.isSensor {
                             Button {
@@ -107,13 +112,16 @@ struct DeviceDetailsView: View {
             if viewModel.device.isSensor {
                 SensorDataChart(isOverview: false,
                                 componet: viewModel.groupingOption,
-                                data: $viewModel.device.sensorData,
+                                data: Binding<[SensorData]>(
+                                    get: { Array((viewModel.device.sensorData as? Set<SensorData>) ?? []) },
+                                    set: { viewModel.device.sensorData = NSSet(array: $0) }
+                                ),
                                 keyPath: \.brightness,
                                 title: "Brightness",
                                 dataType: "lux",
                                 selectedChartType: .bars,
-                                minRange: Int(viewModel.device.optimalRange.minBrightness),
-                                maxRange: Int(viewModel.device.optimalRange.maxBrightness))
+                                minRange: Int(viewModel.device.optimalRange?.minBrightness ?? 0),
+                                maxRange: Int(viewModel.device.optimalRange?.maxBrightness ?? 0))
                 
                 SensorDataChart(isOverview: false,
                                 componet: viewModel.groupingOption,
@@ -247,7 +255,7 @@ struct DeviceDetailsView: View {
                 }
             }
         }
-        .navigationTitle(viewModel.device.name)
+        .navigationTitle(viewModel.device.name ?? "")
         .sheet(isPresented: $showSetting, onDismiss: {
             viewModel.device.optimalRange = optimalRange
             viewModel.saveDatabase()

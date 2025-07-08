@@ -7,7 +7,7 @@
 
 import Foundation
 import SwiftUI
-import SwiftData
+import CoreData
 
 @Observable class OverviewListViewModel {
     var allSavedDevices: [FlowerDevice] = []
@@ -20,12 +20,11 @@ import SwiftData
     
     @MainActor
     func fetchSavedDevices() {
-        let fetchDescriptor = FetchDescriptor<FlowerDevice>()
-
+        let fetchRequest = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
         do {
-            let result = try DataService.sharedModelContainer.mainContext.fetch(fetchDescriptor)
+            let result = try DataService.shared.context.fetch(fetchRequest)
             allSavedDevices = result
-        } catch{
+        } catch {
             print(error.localizedDescription)
         }
     }

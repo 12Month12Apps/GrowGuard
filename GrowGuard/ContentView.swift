@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import CoreData
 
 class ContentViewModel: Observable {
     var allSavedDevices: [FlowerDevice] = []
@@ -21,16 +22,14 @@ class ContentViewModel: Observable {
     
     @MainActor
     func fetchSavedDevices() {
-        let fetchDescriptor = FetchDescriptor<FlowerDevice>()
-
-        do {
-            let result = try DataService.sharedModelContainer.mainContext.fetch(fetchDescriptor)
-            allSavedDevices = result
-            
-        } catch{
-            print(error.localizedDescription)
+            let fetchRequest = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
+            do {
+                let result = try DataService.shared.context.fetch(fetchRequest)
+                allSavedDevices = result
+            } catch {
+                print(error.localizedDescription)
+            }
         }
-    }
 }
 
 enum NavigationTabs {
@@ -100,5 +99,4 @@ struct MainNavigationView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: FlowerDevice.self, inMemory: true)
 }

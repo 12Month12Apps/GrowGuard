@@ -9,18 +9,18 @@ import Foundation
 import CoreBluetooth
 import Combine
 import NotificationCenter
+import CoreData
 
 class PlantMonitorService {
     static let shared = PlantMonitorService()
     
     // Calculate drying rate and predict next watering date
-    func predictNextWatering(for device: FlowerDevice) -> Date? {
-        // Need at least 3 data points for a reasonable prediction
-        guard device.sensorData.count >= 3 else { return nil }
-        
+    func predictNextWatering(for device: FlowerDevice) async throws -> Date? {
         // Sort by date to ensure chronological order
-        let sortedData = device.sensorData.sorted { $0.date < $1.date }
-        
+        let sortedData = try await fetchRecentSensorData(for: device, context: DataService.shared.context)
+        // Need at least 3 data points for a reasonable prediction
+        guard sortedData.count >= 3 else { return nil }
+
         // Get last 10 readings or whatever is available
         let recentReadings = Array(sortedData.suffix(min(10, sortedData.count)))
         
@@ -29,8 +29,8 @@ class PlantMonitorService {
         var previousReading: SensorData? = nil
         
         for reading in recentReadings {
-            if let previous = previousReading {
-                let timeDiffInDays = reading.date.timeIntervalSince(previous.date) / (24 * 60 * 60)
+            if let previous = previousReading, let prevDate = previous.date, let readingDate = reading.date {
+                let timeDiffInDays = readingDate.timeIntervalSince(prevDate) / (24 * 60 * 60)
                 let moistureDiff = Double(previous.moisture) - Double(reading.moisture)
                 
                 // Only consider readings where moisture decreased
@@ -52,7 +52,8 @@ class PlantMonitorService {
         // Predict days until minimum moisture threshold is reached
         if moistureLossRate > 0, let latestReading = recentReadings.last {
             let currentMoisture = Double(latestReading.moisture)
-            let minMoisture = Double(device.optimalRange.minMoisture)
+            guard let minMoistureInt = device.optimalRange?.minMoisture else { return nil }
+            let minMoisture = Double(minMoistureInt)
             let daysUntilWatering = (currentMoisture - minMoisture) / moistureLossRate
             
             // If prediction is reasonably in the future (not past or immediate)
@@ -65,23 +66,32 @@ class PlantMonitorService {
         return nil
     }
     
+    private func fetchRecentSensorData(for device: FlowerDevice, limit: Int = 10, context: NSManagedObjectContext) async throws -> [SensorData] {
+        let request: NSFetchRequest<SensorData> = SensorData.fetchRequest()
+        request.predicate = NSPredicate(format: "device == %@", device)
+        request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
+        request.fetchLimit = limit
+        return try context.fetch(request)
+    }
+    
     // Modify your existing checkDeviceStatus method to include prediction
-    func checkDeviceStatus(device: FlowerDevice) {
-        guard let latestData = device.sensorData.last else { return }
-        let minMoisture = device.optimalRange.minMoisture
+    func checkDeviceStatus(device: FlowerDevice) async throws {
+        let sortedData = try await fetchRecentSensorData(for: device, context: DataService.shared.context)
+        guard let latestData = sortedData.last else { return }
+        guard let minMoisture = device.optimalRange?.minMoisture else { return }
         
         // Check if moisture level is below minimum threshold
         if latestData.moisture < minMoisture {
             scheduleWateringReminder(for: device)
         } else {
             // Predict and schedule future notification if not urgent
-            schedulePreemptiveWateringReminder(for: device)
+            try await schedulePreemptiveWateringReminder(for: device)
         }
     }
     
     // New method to schedule predictive reminders
-    private func schedulePreemptiveWateringReminder(for device: FlowerDevice) {
-        guard let nextWateringDate = predictNextWatering(for: device) else { return }
+    private func schedulePreemptiveWateringReminder(for device: FlowerDevice) async throws {
+        guard let nextWateringDate = try await predictNextWatering(for: device) else { return }
         
         // Only schedule if prediction is within next week (avoid inaccurate long-term predictions)
         let oneWeekFromNow = Date(timeIntervalSinceNow: 7 * 24 * 60 * 60)
@@ -145,12 +155,13 @@ class PlantMonitorService {
         
         print(validatedData.moisture, validatedData.brightness, validatedData.temperature)
         if isValid {
-            let data = SensorData(temperature: validatedData.temperature,
-                                  brightness: validatedData.brightness,
-                                  moisture: validatedData.moisture,
-                                  conductivity: validatedData.conductivity,
-                                  date: validatedData.date,
-                                  device: validatedData.device)
+            let data = SensorData()
+            data.temperature = validatedData.temperature 
+            data.brightness = Int32(validatedData.brightness)
+            data.moisture = Int16(validatedData.moisture)
+            data.conductivity = Int16(validatedData.conductivity)
+            data.date = validatedData.date
+            data.device = validatedData.device
             return data
         } else {
             return nil

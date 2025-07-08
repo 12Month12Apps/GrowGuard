@@ -9,6 +9,7 @@ import AppIntents
 import Foundation
 import Combine
 import SwiftData
+import CoreData
 
 struct MyAppIntent: AppIntent {
     static var title: LocalizedStringResource = "Reload data for single device"
@@ -42,10 +43,11 @@ struct MyAppIntent: AppIntent {
             ble.requestLiveData()
             
             subscription = ble.sensorDataPublisher.sink { data in
-                device.sensorData.append(data)
+//                device.sensorData.append(data)
+                data.device = device
                 
                 do {
-                    try DataService.sharedModelContainer.mainContext.save()
+                    try DataService.shared.context.save()
                 } catch {
                     print(error.localizedDescription)
                 }
@@ -58,14 +60,10 @@ struct MyAppIntent: AppIntent {
 
     @MainActor
     func fetchDevices(withId uuid: String) throws -> [FlowerDevice] {
-        let predicate = #Predicate { (device: FlowerDevice) in
-            device.uuid == uuid
-        }
-
-        let fetchDescriptor = FetchDescriptor<FlowerDevice>(predicate: predicate)
-
+        let fetchRequest = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
+        fetchRequest.predicate = NSPredicate(format: "uuid == %@", uuid)
         do {
-            let result = try DataService.sharedModelContainer.mainContext.fetch(fetchDescriptor)
+            let result = try DataService.shared.context.fetch(fetchRequest)
             return result
         } catch {
             print(error.localizedDescription)
@@ -73,4 +71,3 @@ struct MyAppIntent: AppIntent {
         }
     }
 }
-

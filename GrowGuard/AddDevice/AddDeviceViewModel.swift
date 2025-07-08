@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import CoreBluetooth
 import SwiftData
+import CoreData
 
 @Observable class AddDeviceViewModel {
     var devices: [CBPeripheral] = []
@@ -61,13 +62,14 @@ import SwiftData
         
         if isSaved == false {
             self.addDevice = peripheral
-            let newItem = FlowerDevice(added: Date(),
-                                       lastUpdate: Date(),
-                                       peripheral: peripheral)
+            let newItem = FlowerDevice()
+            newItem.added = Date()
+            newItem.lastUpdate = Date()
+            newItem.peripheralID = peripheral.identifier
             
-            DataService.sharedModelContainer.mainContext.insert(newItem)
+            DataService.shared.persistentContainer.viewContext.insert(newItem)
             do {
-                try DataService.sharedModelContainer.mainContext.save()
+                try DataService.shared.persistentContainer.viewContext.save()
                 self.fetchSavedDevices()
             } catch {
                 print(error.localizedDescription)
@@ -77,10 +79,10 @@ import SwiftData
     
     @MainActor
     func fetchSavedDevices() {
-        let fetchDescriptor = FetchDescriptor<FlowerDevice>()
+        let fetchRequest = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
 
         do {
-            let result = try DataService.sharedModelContainer.mainContext.fetch(fetchDescriptor)
+            let result = try DataService.shared.persistentContainer.viewContext.fetch(fetchRequest)
             allSavedDevices = result
         } catch{
             print(error.localizedDescription)

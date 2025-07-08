@@ -171,7 +171,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                 if let device = try? await fetchDevices(withId: deviceId).first {
                     // You could add a "lastWatered" property to FlowerDevice model
                     // device.lastWatered = Date()
-                    try? DataService.sharedModelContainer.mainContext.save()
+                    try? DataService.shared.saveContext()
                 }
             }
         case "REMIND_LATER":
