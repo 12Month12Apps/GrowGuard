@@ -9,55 +9,55 @@ import SwiftUI
 import Foundation
 
 struct SettingsView: View {
-    @Binding var potSize: PotSize
+//    @Binding var potSize: PotSize
     @Binding var optimalRange: OptimalRange
     var isSensor = true
     @Environment(\.dismiss) private var dismiss
     
-    var calculatedVolume: Double? {
-        guard potSize.width > 0, potSize.height > 0 else { return nil }
-        let radius = potSize.width
-        return Double.pi * pow(radius, 2) * potSize.height
-    }
+//    var calculatedVolume: Double? {
+//        guard potSize.width > 0, potSize.height > 0 else { return nil }
+//        let radius = potSize.width
+//        return Double.pi * pow(radius, 2) * potSize.height
+//    }
     
     var body: some View {
         NavigationView {
             List {
                 
-                Section(header: Text("Flower Pot")) {
-                    HStack {
-                        Text("Pot radius (cm)")
-                        TextField("0", value: $potSize.width, format: .number)
-                            .keyboardType(.decimalPad)
-                    }
-                    
-                    HStack {
-                        Text("Pot height (cm)")
-                        TextField("0", value: $potSize.height, format: .number)
-                            .keyboardType(.decimalPad)
-                    }
-                    
-                    VStack {
-                        Text("Volume can be automaticily be calculated, but if you know yours please enter it here to be more precise")
-                            .font(.caption)
-                        HStack {
-                            Text("Pot volume")
-                            TextField("0", value: $potSize.volume, format: .number)
-                                .keyboardType(.decimalPad)
-                        }
-                        if let calculated = calculatedVolume {
-                            Text("Automatisch berechnetes Volumen: \(String(format: "%.1f", calculated)) cm³")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Button {
-                                potSize.volume = calculated
-                            } label: {
-                                Text("Accpet calculation")
-                            }
-
-                        }
-                    }
-                }
+//                Section(header: Text("Flower Pot")) {
+//                    HStack {
+//                        Text("Pot radius (cm)")
+//                        TextField("0", value: $potSize.width, format: .number)
+//                            .keyboardType(.decimalPad)
+//                    }
+//                    
+//                    HStack {
+//                        Text("Pot height (cm)")
+//                        TextField("0", value: $potSize.height, format: .number)
+//                            .keyboardType(.decimalPad)
+//                    }
+//                    
+//                    VStack {
+//                        Text("Volume can be automaticily be calculated, but if you know yours please enter it here to be more precise")
+//                            .font(.caption)
+//                        HStack {
+//                            Text("Pot volume")
+//                            TextField("0", value: $potSize.volume, format: .number)
+//                                .keyboardType(.decimalPad)
+//                        }
+//                        if let calculated = calculatedVolume {
+//                            Text("Automatisch berechnetes Volumen: \(String(format: "%.1f", calculated)) cm³")
+//                                .font(.caption)
+//                                .foregroundColor(.secondary)
+//                            Button {
+//                                potSize.volume = calculated
+//                            } label: {
+//                                Text("Accpet calculation")
+//                            }
+//
+//                        }
+//                    }
+//                }
                 
                 Section(header: Text("Moisture")) {
                     HStack {

@@ -157,63 +157,63 @@ struct DeviceDetailsView: View {
                     }
                 }
             } else {
-                Section {
-                    VStack {
-                        WaterFillPotView(fill: $waterFillProzentage)
-                        
-                        Divider()
-                        
-                        HStack(alignment: .center) {
-                            Button {
-//                                if round(waterFillProzentage * 10) / 10 > 0 {
-                                    waterFill -= 0.1
-                                    waterFillProzentage = round(waterFill / (viewModel.device.potSize.volume / 1000) * 100) / 100
-//                                }
-                            } label: {
-                                Image(systemName: "minus.circle")
-                            }
-                            .buttonStyle(.plain)
-                            
-                            Text("100ml")
-                            
-                            Button {
-//                                if round(waterFillProzentage * 10) / 10 < 1 {
-                                    waterFill += 0.1
-                                    waterFillProzentage = round(waterFill / (viewModel.device.potSize.volume / 1000) * 100) / 100
-                                    print(waterFill)
-//                                }
-                            } label: {
-                                Image(systemName: "plus.circle")
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .frame(maxWidth: .infinity)
-                        
-                        Divider()
-                        
-                        VStack {
-                            Text("Max pot volume: \(viewModel.device.potSize.volume / 1000, specifier: "%.1f")l")
-                                .frame(maxWidth: .infinity, alignment: .center)
-                            Text("Current fill volume: \(waterFill, specifier: "%.1f")l")
-                                .frame(maxWidth: .infinity, alignment: .center)
-                        }
-                        .frame(maxWidth: .infinity)
-                        
-                        Divider()
-                        
-                        VStack {
-                            Button("Save Water") {
-                                viewModel.device.sensorData.append(SensorData(temperature: 0,
-                                                                              brightness: 0,
-                                                                              moisture: UInt8(waterFillProzentage * 100),
-                                                                              conductivity: 0,
-                                                                              date: Date(),
-                                                                              device: viewModel.device))
-                                viewModel.saveDatabase()
-                            }
-                        }
-                    }
-                }
+//                Section {
+//                    VStack {
+//                        WaterFillPotView(fill: $waterFillProzentage)
+//                        
+//                        Divider()
+//                        
+//                        HStack(alignment: .center) {
+//                            Button {
+////                                if round(waterFillProzentage * 10) / 10 > 0 {
+//                                    waterFill -= 0.1
+//                                    waterFillProzentage = round(waterFill / (viewModel.device.potSize.volume / 1000) * 100) / 100
+////                                }
+//                            } label: {
+//                                Image(systemName: "minus.circle")
+//                            }
+//                            .buttonStyle(.plain)
+//                            
+//                            Text("100ml")
+//                            
+//                            Button {
+////                                if round(waterFillProzentage * 10) / 10 < 1 {
+//                                    waterFill += 0.1
+//                                    waterFillProzentage = round(waterFill / (viewModel.device.potSize.volume / 1000) * 100) / 100
+//                                    print(waterFill)
+////                                }
+//                            } label: {
+//                                Image(systemName: "plus.circle")
+//                            }
+//                            .buttonStyle(.plain)
+//                        }
+//                        .frame(maxWidth: .infinity)
+//                        
+//                        Divider()
+//                        
+//                        VStack {
+//                            Text("Max pot volume: \(viewModel.device.potSize.volume / 1000, specifier: "%.1f")l")
+//                                .frame(maxWidth: .infinity, alignment: .center)
+//                            Text("Current fill volume: \(waterFill, specifier: "%.1f")l")
+//                                .frame(maxWidth: .infinity, alignment: .center)
+//                        }
+//                        .frame(maxWidth: .infinity)
+//                        
+//                        Divider()
+//                        
+//                        VStack {
+//                            Button("Save Water") {
+//                                viewModel.device.sensorData.append(SensorData(temperature: 0,
+//                                                                              brightness: 0,
+//                                                                              moisture: UInt8(waterFillProzentage * 100),
+//                                                                              conductivity: 0,
+//                                                                              date: Date(),
+//                                                                              device: viewModel.device))
+//                                viewModel.saveDatabase()
+//                            }
+//                        }
+//                    }
+//                }
                 
                 if !viewModel.device.sensorData.isEmpty {
                     SensorDataChart(isOverview: false,
@@ -252,7 +252,7 @@ struct DeviceDetailsView: View {
             viewModel.device.optimalRange = optimalRange
             viewModel.saveDatabase()
         }) {
-            SettingsView(potSize: $viewModel.device.potSize, optimalRange: $optimalRange, isSensor: viewModel.device.isSensor)
+//            SettingsView(potSize: $viewModel.device.potSize, optimalRange: $optimalRange, isSensor: viewModel.device.isSensor)
         }
         .sheet(isPresented: $showingLoadingScreen) {
             HistoryLoadingView()

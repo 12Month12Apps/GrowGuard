@@ -1,4 +1,3 @@
-//
 //  SchemaLatest.swift
 //  GrowGuard
 //
@@ -24,6 +23,7 @@ enum MigrationPlan: SchemaMigrationPlan {
     
     static var stages: [MigrationStage] {
         [migrateV1toV2]
+//        []
     }
     
     // MARK: Migration Stages
@@ -31,16 +31,37 @@ enum MigrationPlan: SchemaMigrationPlan {
     static let migrateV1toV2 = MigrationStage.custom(
         fromVersion: SchemaV1.self,
         toVersion: SchemaV2.self,
-        willMigrate: nil,
-        didMigrate: { context in
-            let devices = try context.fetch(FetchDescriptor<SchemaV2.FlowerDevice>())
-            
-            for device in devices {
-                device.potSize = SchemaV2.PotSize(width: 0, height: 0, volume: 0, device: device)
+        willMigrate: { context in
+            // Alle FlowerDevices aus V1 abfragen
+            let oldDevices = try context.fetch(FetchDescriptor<SchemaV1.FlowerDevice>())
+            for old in oldDevices {
+                // Neues Device in V2 anlegen und Felder übertragen
+                let newDevice = SchemaV2.FlowerDevice(
+                    name: old.name,
+                    uuid: old.uuid
+                )
+                newDevice.added = old.added
+                newDevice.lastUpdate = old.lastUpdate
+                newDevice.sensorData = old.sensorData
+                newDevice.optimalRange = SchemaV2.OptimalRange(
+                    minTemperature: old.optimalRange.minTemperature,
+                    minBrightness: old.optimalRange.minBrightness,
+                    minMoisture: old.optimalRange.minMoisture,
+                    minConductivity: old.optimalRange.minConductivity,
+                    maxTemperature: old.optimalRange.maxTemperature,
+                    maxBrightness: old.optimalRange.maxBrightness,
+                    maxMoisture: old.optimalRange.maxMoisture,
+                    maxConductivity: old.optimalRange.maxConductivity
+                )
+                newDevice.battery = old.battery
+                newDevice.firmware = old.firmware
+                newDevice.isSensor = old.isSensor
+
+                // Neues Device speichern
+                context.insert(newDevice)
             }
-            
-            try context.save()
-        }
+        },
+        didMigrate: nil
     )
 }
 
@@ -62,3 +83,4 @@ enum RollbackMigrationPlan: SchemaMigrationPlan {
         didMigrate: nil
     )
 }
+

@@ -13,7 +13,7 @@ enum SchemaV2: VersionedSchema {
     static var versionIdentifier = Schema.Version(2, 0, 0)
     
     static var models: [any PersistentModel.Type] {
-        [OptimalRange.self, PotSize.self, FlowerDevice.self, PotSize.self]
+        [OptimalRange.self, PotSize.self, FlowerDevice.self]
     }
 }
 
@@ -68,7 +68,7 @@ extension SchemaV2 {
         var battery: Int = 0
         var firmware: String = ""
         var isSensor = false
-        var potSize: PotSize = PotSize(width: 0, height: 0, volume: 0, device: nil)
+        @Relationship(deleteRule: .nullify, inverse: \PotSize.device) var potSize: PotSize
         
         init(added: Date, lastUpdate: Date, peripheral: CBPeripheral) {
             self.added = added
@@ -77,6 +77,8 @@ extension SchemaV2 {
             self.name = peripheral.name ?? ""
             self.sensorData = []
             self.optimalRange = OptimalRange(minTemperature: 0, minBrightness: 0, minMoisture: 70, minConductivity: 0, maxTemperature: 0, maxBrightness: 0, maxMoisture: 0, maxConductivity: 0)
+            self.potSize = PotSize(width: 0, height: 0, volume: 0, device: nil)
+
         }
         
         init(name: String, uuid: String) {
@@ -86,6 +88,7 @@ extension SchemaV2 {
             self.name = name
             self.sensorData = []
             self.optimalRange = OptimalRange(minTemperature: 0, minBrightness: 0, minMoisture: 70, minConductivity: 0, maxTemperature: 0, maxBrightness: 0, maxMoisture: 0, maxConductivity: 0)
+            self.potSize = PotSize(width: 0, height: 0, volume: 0, device: nil)
         }
     }
 }
