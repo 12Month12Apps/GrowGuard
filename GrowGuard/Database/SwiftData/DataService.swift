@@ -6,7 +6,7 @@ class DataService {
     let persistentContainer: NSPersistentContainer
 
     private init() {
-        persistentContainer = NSPersistentContainer(name: "GrowGuard") // Der Name muss dem deiner .xcdatamodeld Datei entsprechen
+        persistentContainer = NSPersistentContainer(name: "CoreDataModels") // Der Name muss dem deiner .xcdatamodeld Datei entsprechen
         persistentContainer.loadPersistentStores { (storeDescription, error) in
             if let error = error as NSError? {
                 fatalError("Unresolved error \(error), \(error.userInfo)")

@@ -95,7 +95,8 @@ enum NavigationDestination: Hashable {
 
     init(device: CBPeripheral) {
         self.device = device
-        self.flower = FlowerDevice()
+        self.flower = FlowerDevice(context: DataService.shared.context)
+
         
         self.flower.added = Date()
         self.flower.lastUpdate = Date()
@@ -109,11 +110,11 @@ enum NavigationDestination: Hashable {
     }
     
     init(flower: VMSpecies) {
-        self.flower = FlowerDevice()
+        self.flower = FlowerDevice(context: DataService.shared.context)
         self.flower.name = flower.name
         self.flower.uuid = UUID().uuidString
         self.flower.isSensor = false
-        self.flower.optimalRange = OptimalRange()
+        self.flower.optimalRange = OptimalRange(context: DataService.shared.context)
         self.flower.optimalRange?.minTemperature = 0
         self.flower.optimalRange?.minBrightness = 0
         self.flower.optimalRange?.minMoisture = Int16(flower.minMoisture ?? 0)

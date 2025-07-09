@@ -155,8 +155,8 @@ class PlantMonitorService {
         
         print(validatedData.moisture, validatedData.brightness, validatedData.temperature)
         if isValid {
-            let data = SensorData()
-            data.temperature = validatedData.temperature 
+            let data = SensorData(context: DataService.shared.context)
+            data.temperature = validatedData.temperature
             data.brightness = Int32(validatedData.brightness)
             data.moisture = Int16(validatedData.moisture)
             data.conductivity = Int16(validatedData.conductivity)
@@ -198,7 +198,7 @@ class PlantMonitorService {
         
         print(validatedData.moisture, validatedData.brightness, validatedData.temperature)
         if isValid {
-            let data = SensorData()
+            let data = SensorData(context: DataService.shared.context)
             data.temperature = validatedData.temperature
             data.brightness = Int32(validatedData.brightness)
             data.moisture = Int16(validatedData.moisture)

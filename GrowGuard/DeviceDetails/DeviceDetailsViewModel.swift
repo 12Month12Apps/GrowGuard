@@ -8,6 +8,7 @@
 import Foundation
 import CoreBluetooth
 import Combine
+import CoreData
 
 @Observable class DeviceDetailsViewModel {
     let ble = FlowerCareManager.shared
@@ -19,30 +20,51 @@ import Combine
     init(device: FlowerDevice) {
         self.device = device
         
-        PlantMonitorService.shared.checkDeviceStatus(device: device)
-        
-        self.subscription = ble.sensorDataPublisher.sink { data in
-            self.device.sensorData.append(data)
-            self.device.lastUpdate = Date()
+        Task {
+            await try PlantMonitorService.shared.checkDeviceStatus(device: device)
             
-            Task {
-                await self.saveDatabase()
+            self.subscription = ble.sensorDataPublisher.sink { data in
+                let device = self.device
+                data.device = device
+                device.lastUpdate = Date()
+                
+                Task {
+                    await self.saveDatabase()
+                }
             }
         }
         
         self.subscriptionHistory = ble.historicalDataPublisher.sink { data in
 //            print(data.brightness)
             
-            if !self.device.sensorData.contains(where: {
+            // Query all SensorData entries for this device from Core Data
+            let sensorDataList: [SensorData]
+            do {
+                let fetchRequest = NSFetchRequest<SensorData>(entityName: "SensorData")
+                if let uuid = self.device.uuid {
+                    fetchRequest.predicate = NSPredicate(format: "device.uuid == %@", uuid)
+                } else {
+                    fetchRequest.predicate = NSPredicate(value: false)
+                }
+                sensorDataList = try DataService.shared.context.fetch(fetchRequest)
+            } catch {
+                print("Failed to fetch sensor data from database: \(error)")
+                sensorDataList = []
+            }
+            
+            let isDuplicate = sensorDataList.contains(where: {
                 $0.date == data.date &&
                 $0.temperature == data.temperature &&
                 $0.brightness == data.brightness &&
                 $0.moisture == data.moisture &&
                 $0.conductivity == data.conductivity
-            }) {
-                guard let sensorData = PlantMonitorService.shared.validateHistoricSensorData(data, device: device) else { return }
+            })
+            
+            if !isDuplicate {
+                let validatedData = PlantMonitorService.shared.validateHistoricSensorData(data, device: device)
+                guard let sensorData = validatedData else { return }
                 
-                self.device.sensorData.append(sensorData)
+                sensorData.device = device
                 Task {
                     await self.saveDatabase()
                 }
@@ -63,7 +85,8 @@ import Combine
     @MainActor
     func saveDatabase() {
         do {
-            _ = try DataService.sharedModelContainer.mainContext.save()
+            // FIXME: Ensure the correct model container instance name here. 'sharedModelContainer' may be incorrect.
+            _ = try DataService.shared.context.save()
         } catch{
             print(error.localizedDescription)
         }
@@ -79,7 +102,7 @@ import Combine
 //        let cancellable = FlowerCareManager.shared.historicalDataPublisher
 //            .sink { [weak self] historicalData in
 //                guard let self = self else { return }
-//                
+//
 //                // Convert historical data to SensorData and add to device
 //                let sensorData = SensorData(
 //                    temperature: historicalData.temperature,
@@ -89,7 +112,7 @@ import Combine
 //                    date: historicalData.date,
 //                    device: self.device
 //                )
-//                
+//
 //                // Add data to the device (avoiding duplicates)
 //                if !self.device.sensorData.contains(where: {
 //                    $0.date == sensorData.date &&

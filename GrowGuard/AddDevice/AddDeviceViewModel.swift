@@ -62,7 +62,7 @@ import CoreData
         
         if isSaved == false {
             self.addDevice = peripheral
-            let newItem = FlowerDevice()
+            let newItem = FlowerDevice(context: DataService.shared.context)
             newItem.added = Date()
             newItem.lastUpdate = Date()
             newItem.peripheralID = peripheral.identifier
