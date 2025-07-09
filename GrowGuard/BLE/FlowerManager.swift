@@ -127,7 +127,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     }
     
     func connectToKnownDevice(device: FlowerDevice) {
-        let peripherals = centralManager.retrievePeripherals(withIdentifiers: [UUID(uuidString: device.uuid)!])
+        let peripherals = centralManager.retrievePeripherals(withIdentifiers: [UUID(uuidString: device.uuid ?? "")!])
         if let peripheral = peripherals.first {
             discoveredPeripheral = peripheral
             centralManager.connect(peripheral, options: nil)
@@ -429,7 +429,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
 
     private func decodeFirmwareAndBattery(data: Data) {
         guard let (battery, firmware) = decoder.decodeFirmwareAndBattery(data: data) else { return }
-        device?.battery = Int(battery)
+        device?.battery = Int16(battery)
         device?.firmware = firmware
     }
 

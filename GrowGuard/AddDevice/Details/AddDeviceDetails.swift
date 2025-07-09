@@ -11,6 +11,7 @@ import SwiftData
 
 import SwiftUI
 import CoreBluetooth
+import CoreData
 
 // Defines all possible navigation destinations in the app
 enum NavigationDestination: Hashable {
@@ -84,17 +85,22 @@ enum NavigationDestination: Hashable {
 
             flower.name = searched.name
             if let minMoisture = searched.minMoisture {
-                flower.optimalRange.minMoisture = UInt8(minMoisture)
+                flower.optimalRange?.minMoisture = Int16(minMoisture)
             }
             if let maxMoisture = searched.maxMoisture {
-                flower.optimalRange.maxMoisture = UInt8(maxMoisture)
+                flower.optimalRange?.maxMoisture = Int16(maxMoisture)
             }
         }
     }
 
     init(device: CBPeripheral) {
         self.device = device
-        self.flower = FlowerDevice(added: Date(), lastUpdate: Date(), peripheral: device)
+        self.flower = FlowerDevice()
+        
+        self.flower.added = Date()
+        self.flower.lastUpdate = Date()
+        self.flower.peripheralID = device.identifier
+        
         self.flower.isSensor = true
 
         Task {
@@ -103,9 +109,19 @@ enum NavigationDestination: Hashable {
     }
     
     init(flower: VMSpecies) {
-        self.flower = FlowerDevice(name: flower.name, uuid: UUID().uuidString)
+        self.flower = FlowerDevice()
+        self.flower.name = flower.name
+        self.flower.uuid = UUID().uuidString
         self.flower.isSensor = false
-        self.flower.optimalRange = OptimalRange(minTemperature: 0, minBrightness: 0, minMoisture: UInt8(flower.minMoisture ?? 0), minConductivity: 0, maxTemperature: 0, maxBrightness: 0, maxMoisture: UInt8(flower.maxMoisture ?? 0), maxConductivity: 0)
+        self.flower.optimalRange = OptimalRange()
+        self.flower.optimalRange?.minTemperature = 0
+        self.flower.optimalRange?.minBrightness = 0
+        self.flower.optimalRange?.minMoisture = Int16(flower.minMoisture ?? 0)
+        self.flower.optimalRange?.minConductivity = 0
+        self.flower.optimalRange?.maxTemperature = 0
+        self.flower.optimalRange?.maxBrightness = 0
+        self.flower.optimalRange?.maxMoisture = Int16(flower.maxMoisture ?? 0)
+        self.flower.optimalRange?.maxConductivity = 0
     }
     
     @MainActor
@@ -118,7 +134,7 @@ enum NavigationDestination: Hashable {
                                    message: Text("The Device is already added!"))
             self.showAlert = true
         } else {
-            DataService.sharedModelContainer.mainContext.insert(flower)
+            DataService.shared.context.insert(flower)
             
             if allSavedDevices.contains(where: { device in
                 device.name == self.flower.name
@@ -129,7 +145,7 @@ enum NavigationDestination: Hashable {
             }
             
             do {
-                try DataService.sharedModelContainer.mainContext.save()
+                try DataService.shared.context.save()
             } catch {
                 self.alertView = Alert(title: Text("Error"), message: Text(error.localizedDescription))
                 self.showAlert = true
@@ -144,10 +160,10 @@ enum NavigationDestination: Hashable {
     
     @MainActor
     func fetchSavedDevices() {
-        let fetchDescriptor = FetchDescriptor<FlowerDevice>()
-
+        let request = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
+        
         do {
-            let result = try DataService.sharedModelContainer.mainContext.fetch(fetchDescriptor)
+            let result = try DataService.shared.context.fetch(request)
             allSavedDevices = result
         } catch{
             print(error.localizedDescription)
@@ -163,9 +179,9 @@ struct AddDeviceDetails:  View {
     @State var viewModel: AddDeviceDetailsViewModel
 
     var calculatedVolume: Double? {
-        guard viewModel.flower.potSize.width > 0, viewModel.flower.potSize.height > 0 else { return nil }
-        let radius = viewModel.flower.potSize.width
-        return Double.pi * pow(radius, 2) * viewModel.flower.potSize.height
+        guard viewModel.flower.potSize?.width ?? 0 > 0, viewModel.flower.potSize?.height ?? 0 > 0 else { return nil }
+        guard let radius = viewModel.flower.potSize?.width else { return nil }
+        return Double.pi * pow(radius, 2) * (viewModel.flower.potSize?.height ?? 0)
     }
     
     var body: some View {
@@ -179,19 +195,28 @@ struct AddDeviceDetails:  View {
                 }
                 
                 Section {
-                    TextField("Device Name", text: $viewModel.flower.name)
+                    TextField("Device Name", text: Binding(
+                        get: { viewModel.flower.name ?? "" },
+                        set: { viewModel.flower.name = $0 }
+                    ))
                 }
                 
                 Section(header: Text("Flower Pot")) {
                     HStack {
                         Text("Pot radius (cm)")
-                        TextField("0", value: $viewModel.flower.potSize.width, format: .number)
+                        TextField("0", value: Binding(
+                            get: { viewModel.flower.potSize?.width ?? 0},
+                            set: { viewModel.flower.potSize?.width = $0 }
+                        ), format: .number)
                             .keyboardType(.decimalPad)
                     }
                     
                     HStack {
                         Text("Pot height (cm)")
-                        TextField("0", value: $viewModel.flower.potSize.height, format: .number)
+                        TextField("0", value: Binding(
+                            get: { viewModel.flower.potSize?.height ?? 0},
+                            set: { viewModel.flower.potSize?.height = $0 }
+                        ), format: .number)
                             .keyboardType(.decimalPad)
                     }
                     
@@ -200,7 +225,10 @@ struct AddDeviceDetails:  View {
                             .font(.caption)
                         HStack {
                             Text("Pot volume")
-                            TextField("0", value: $viewModel.flower.potSize.volume, format: .number)
+                            TextField("0", value: Binding(
+                                get: { viewModel.flower.potSize?.volume ?? 0},
+                                set: { viewModel.flower.potSize?.volume = $0 }
+                            ), format: .number)
                                 .keyboardType(.decimalPad)
                         }
                         if let calculated = calculatedVolume {
@@ -208,7 +236,7 @@ struct AddDeviceDetails:  View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             Button {
-                                viewModel.flower.potSize.volume = calculated
+                                viewModel.flower.potSize?.volume = calculated
                             } label: {
                                 Text("Accpet calculation")
                             }
@@ -220,13 +248,19 @@ struct AddDeviceDetails:  View {
                 Section(header: Text("Brigtness")) {
                     HStack {
                         Text("Min Brigtness")
-                        TextField("0", value: $viewModel.flower.optimalRange.minBrightness, format: .number)
+                        TextField("0", value: Binding(
+                            get: { viewModel.flower.optimalRange?.minBrightness ?? 0 },
+                            set: { viewModel.flower.optimalRange?.minBrightness = $0 }
+                        ), format: .number)
                             .keyboardType(.decimalPad)
                     }
                     
                     HStack {
                         Text("Max Brigtness")
-                        TextField("0", value: $viewModel.flower.optimalRange.maxBrightness, format: .number)
+                        TextField("0", value: Binding(
+                            get: { viewModel.flower.optimalRange?.maxBrightness ?? 0 },
+                            set: { viewModel.flower.optimalRange?.maxBrightness = $0 }
+                        ), format: .number)
                             .keyboardType(.decimalPad)
                     }
                 }
@@ -234,13 +268,19 @@ struct AddDeviceDetails:  View {
                 Section(header: Text("Temperature")) {
                     HStack {
                         Text("Min Temperature")
-                        TextField("0", value: $viewModel.flower.optimalRange.minTemperature, format: .number)
+                        TextField("0", value: Binding(
+                            get: { viewModel.flower.optimalRange?.minTemperature ?? 0 },
+                            set: { viewModel.flower.optimalRange?.minTemperature = $0 }
+                        ), format: .number)
                             .keyboardType(.decimalPad)
                     }
                     
                     HStack {
                         Text("Max Temperature")
-                        TextField("0", value: $viewModel.flower.optimalRange.maxTemperature, format: .number)
+                        TextField("0", value: Binding(
+                            get: { viewModel.flower.optimalRange?.maxTemperature ?? 0 },
+                            set: { viewModel.flower.optimalRange?.maxTemperature = $0 }
+                        ), format: .number)
                             .keyboardType(.decimalPad)
                     }
                 }
@@ -249,13 +289,19 @@ struct AddDeviceDetails:  View {
                 Section(header: Text("Moisture")) {
                     HStack {
                         Text("Min Moisture")
-                        TextField("0", value: $viewModel.flower.optimalRange.minMoisture, format: .number)
+                        TextField("0", value: Binding(
+                            get: { viewModel.flower.optimalRange?.minMoisture ?? 0 },
+                            set: { viewModel.flower.optimalRange?.minMoisture = $0 }
+                        ), format: .number)
                             .keyboardType(.decimalPad)
                     }
                     
                     HStack {
                         Text("Max Moisture")
-                        TextField("0", value: $viewModel.flower.optimalRange.maxMoisture, format: .number)
+                        TextField("0", value: Binding(
+                            get: { viewModel.flower.optimalRange?.maxMoisture ?? 0 },
+                            set: { viewModel.flower.optimalRange?.maxMoisture = $0 }
+                        ), format: .number)
                             .keyboardType(.decimalPad)
                     }
                 }
@@ -263,13 +309,19 @@ struct AddDeviceDetails:  View {
                 Section(header: Text("Conductivity")) {
                     HStack {
                         Text("Min Conductivity")
-                        TextField("0", value: $viewModel.flower.optimalRange.minConductivity, format: .number)
+                        TextField("0", value: Binding(
+                            get: { viewModel.flower.optimalRange?.minConductivity ?? 0 },
+                            set: { viewModel.flower.optimalRange?.minConductivity = $0 }
+                        ), format: .number)
                             .keyboardType(.decimalPad)
                     }
                     
                     HStack {
                         Text("Max Conductivity")
-                        TextField("0", value: $viewModel.flower.optimalRange.maxConductivity, format: .number)
+                        TextField("0", value: Binding(
+                            get: { viewModel.flower.optimalRange?.maxConductivity ?? 0 },
+                            set: { viewModel.flower.optimalRange?.maxConductivity = $0 }
+                        ), format: .number)
                             .keyboardType(.decimalPad)
                     }
                 }

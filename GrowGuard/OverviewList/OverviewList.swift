@@ -49,8 +49,10 @@ struct OverviewList: View {
                             // Add a new method to NavigationService
                             NavigationService.shared.navigateToDeviceView(flowerDevice: device)
                         } label: {
-                            Text(device.name)
-                            Text(device.lastUpdate, format: .dateTime)
+                            Text(device.name ?? "")
+                            if let lastUpdate = device.lastUpdate {
+                                Text(lastUpdate, format: .dateTime)
+                            }
                         }
                         .navigationLinkStyle()
                         .contentShape(Rectangle())
@@ -81,10 +83,10 @@ struct OverviewList: View {
         let model = viewModel.allSavedDevices[offsets.first!]
         viewModel.allSavedDevices.remove(atOffsets: offsets)
         
-        DataService.sharedModelContainer.mainContext.delete(model)
+        DataService.shared.context.delete(model)
         
         do {
-            try DataService.sharedModelContainer.mainContext.save()
+            try DataService.shared.context.save()
         } catch {
             
         }

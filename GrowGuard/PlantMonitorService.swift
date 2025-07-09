@@ -198,12 +198,13 @@ class PlantMonitorService {
         
         print(validatedData.moisture, validatedData.brightness, validatedData.temperature)
         if isValid {
-            let data = SensorData(temperature: validatedData.temperature,
-                                  brightness: validatedData.brightness,
-                                  moisture: validatedData.moisture,
-                                  conductivity: validatedData.conductivity,
-                                  date: validatedData.date,
-                                  device: device)
+            let data = SensorData()
+            data.temperature = validatedData.temperature
+            data.brightness = Int32(validatedData.brightness)
+            data.moisture = Int16(validatedData.moisture)
+            data.conductivity = Int16(validatedData.conductivity)
+            data.date = validatedData.date
+            data.device = device
             return data
         } else {
             return nil

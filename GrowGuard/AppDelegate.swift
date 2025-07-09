@@ -11,6 +11,7 @@ import SwiftUI
 import Combine
 import SwiftData
 import UserNotifications
+import CoreData
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     
@@ -193,14 +194,10 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     
     @MainActor
     func fetchDevices(withId uuid: String) throws -> [FlowerDevice] {
-        let predicate = #Predicate { (device: FlowerDevice) in
-            device.uuid == uuid
-        }
-
-        let fetchDescriptor = FetchDescriptor<FlowerDevice>(predicate: predicate)
-
+        let request = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
+        request.predicate = NSPredicate(format: "uuid == %@", uuid)
         do {
-            let result = try DataService.sharedModelContainer.mainContext.fetch(fetchDescriptor)
+            let result = try DataService.shared.context.fetch(request)
             return result
         } catch {
             print(error.localizedDescription)

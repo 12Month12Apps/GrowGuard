@@ -16,6 +16,12 @@ struct DeviceDetailsView: View {
     @State private var waterFill: CGFloat = 0.0
     @State private var waterFillProzentage: CGFloat = 0.0
 
+    private var sensorDataBinding: Binding<[SensorData]> {
+        Binding<[SensorData]>(
+            get: { Array((viewModel.device.sensorData as? Set<SensorData>) ?? []) },
+            set: { viewModel.device.sensorData = NSSet(array: $0) }
+        )
+    }
 
     init(device: FlowerDevice) {
         self.viewModel = DeviceDetailsViewModel(device: device)
@@ -112,10 +118,7 @@ struct DeviceDetailsView: View {
             if viewModel.device.isSensor {
                 SensorDataChart(isOverview: false,
                                 componet: viewModel.groupingOption,
-                                data: Binding<[SensorData]>(
-                                    get: { Array((viewModel.device.sensorData as? Set<SensorData>) ?? []) },
-                                    set: { viewModel.device.sensorData = NSSet(array: $0) }
-                                ),
+                                data: sensorDataBinding,
                                 keyPath: \.brightness,
                                 title: "Brightness",
                                 dataType: "lux",
@@ -125,30 +128,30 @@ struct DeviceDetailsView: View {
                 
                 SensorDataChart(isOverview: false,
                                 componet: viewModel.groupingOption,
-                                data: $viewModel.device.sensorData,
+                                data: sensorDataBinding,
                                 keyPath: \.moisture,
                                 title: "Moisture",
                                 dataType: "%",
                                 selectedChartType: .water,
-                                minRange: Int(viewModel.device.optimalRange.minMoisture),
-                                maxRange: Int(viewModel.device.optimalRange.maxMoisture))
+                                minRange: Int(viewModel.device.optimalRange?.minMoisture ?? 0),
+                                maxRange: Int(viewModel.device.optimalRange?.maxMoisture ?? 0))
                 
                 SensorDataChart(isOverview: false,
                                 componet: viewModel.groupingOption,
-                                data: $viewModel.device.sensorData,
+                                data: sensorDataBinding,
                                 keyPath: \.temperature,
                                 title: "Temperature",
                                 dataType: "C",
                                 selectedChartType: .bars,
-                                minRange: Int(viewModel.device.optimalRange.minTemperature),
-                                maxRange: Int(viewModel.device.optimalRange.maxTemperature))
+                                minRange: Int(viewModel.device.optimalRange?.minTemperature ?? 0),
+                                maxRange: Int(viewModel.device.optimalRange?.maxTemperature ?? 0))
                 
                 
                 Section {
                     Text("You cann use this ID to setup an shortcut to this device in the Shortcuts app. This will allow you to quickly refresh the devices data and setup automations without having to open the app.")
                     
                     HStack {
-                        Text("ID: ") + Text(viewModel.device.uuid)
+                        Text("ID: ") + Text(viewModel.device.uuid ?? "")
                         
                         Spacer()
                         
@@ -226,7 +229,7 @@ struct DeviceDetailsView: View {
                 if !viewModel.device.sensorData.isEmpty {
                     SensorDataChart(isOverview: false,
                                     componet: viewModel.groupingOption,
-                                    data: $viewModel.device.sensorData,
+                                    data: sensorDataBinding,
                                     keyPath: \.moisture,
                                     title: "Moisture",
                                     dataType: "%",
@@ -267,5 +270,4 @@ struct DeviceDetailsView: View {
         }
     }
 }
-
 

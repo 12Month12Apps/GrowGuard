@@ -22,9 +22,7 @@ struct GrowGuardApp: App {
             Group {
                 MainNavigationView()
             }
-        }
-        .modelContainer(DataService.sharedModelContainer)
-        
+        }        
     }
     
     static var appShortcuts: [AppShortcut] {
