@@ -111,6 +111,8 @@ enum NavigationDestination: Hashable {
     
     init(flower: VMSpecies) {
         self.flower = FlowerDevice(context: DataService.shared.context)
+        self.flower.added = Date()
+        self.flower.lastUpdate = Date()
         self.flower.name = flower.name
         self.flower.uuid = UUID().uuidString
         self.flower.isSensor = false

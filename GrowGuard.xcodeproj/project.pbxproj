@@ -49,6 +49,7 @@
 		56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CCD2D78E8EB00A6A75A /* print.swift */; };
 		56BF5F9B2DFA5D7300D9B2AE /* AddWithoutSensor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BF5F9A2DFA5D6C00D9B2AE /* AddWithoutSensor.swift */; };
 		56BF5F9D2DFA5E9100D9B2AE /* AddWithoutSensorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */; };
+		56D35EB72E2BE5730059FEE6 /* PotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D35EB62E2BE56C0059FEE6 /* PotView.swift */; };
 		56DC564A2DD9251C00041DBA /* flower.db in Resources */ = {isa = PBXBuildFile; fileRef = 56DC56492DD9251C00041DBA /* flower.db */; };
 		56DC564D2DD9256800041DBA /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 56DC564C2DD9256800041DBA /* GRDB */; };
 /* End PBXBuildFile section */
@@ -118,6 +119,7 @@
 		56B44CCD2D78E8EB00A6A75A /* print.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = print.swift; sourceTree = "<group>"; };
 		56BF5F9A2DFA5D6C00D9B2AE /* AddWithoutSensor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWithoutSensor.swift; sourceTree = "<group>"; };
 		56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWithoutSensorViewModel.swift; sourceTree = "<group>"; };
+		56D35EB62E2BE56C0059FEE6 /* PotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PotView.swift; sourceTree = "<group>"; };
 		56DC56492DD9251C00041DBA /* flower.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = flower.db; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -228,6 +230,7 @@
 		568892062C83292D000E8FAE /* Componetns */ = {
 			isa = PBXGroup;
 			children = (
+				56D35EB62E2BE56C0059FEE6 /* PotView.swift */,
 				568892072C832936000E8FAE /* SensorDataChart.swift */,
 			);
 			path = Componetns;
@@ -504,6 +507,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5684E2DB2C0F81C0005CD8B6 /* AddDeviceView.swift in Sources */,
+				56D35EB72E2BE5730059FEE6 /* PotView.swift in Sources */,
 				56B44CC32D6E7B3F00A6A75A /* FlowerManager.swift in Sources */,
 				56241CE12E03591C0012B18E /* FlowerPot.swift in Sources */,
 				569417562E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld in Sources */,
@@ -715,8 +719,7 @@
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 18;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
@@ -757,8 +760,7 @@
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 18;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";

@@ -2,6 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.growguard.refresh</string>
+		<string>com.growguard.processing</string>
+	</array>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>IntentIntent</string>
@@ -11,10 +16,5 @@
 		<string>fetch</string>
 		<string>processing</string>
 	</array>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-    <array>
-        <string>com.growguard.refresh</string>
-        <string>com.growguard.processing</string>
-    </array>
 </dict>
 </plist>
