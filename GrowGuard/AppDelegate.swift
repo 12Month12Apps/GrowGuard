@@ -170,20 +170,36 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
             // Mark plant as watered
             Task {
                 if let device = try? await fetchDevices(withId: deviceId).first {
-                    // You could add a "lastWatered" property to FlowerDevice model
-                    // device.lastWatered = Date()
-                    try? DataService.shared.saveContext()
+                    // You could add a "lastWatered" property to FlowerDeviceDTO model
+                    // For now, just update the lastUpdate timestamp
+                    let updatedDevice = FlowerDeviceDTO(
+                        id: device.id,
+                        name: device.name,
+                        uuid: device.uuid,
+                        peripheralID: device.peripheralID,
+                        battery: device.battery,
+                        firmware: device.firmware,
+                        isSensor: device.isSensor,
+                        added: device.added,
+                        lastUpdate: Date(),
+                        optimalRange: device.optimalRange,
+                        potSize: device.potSize,
+                        sensorData: device.sensorData
+                    )
+                    try? await RepositoryManager.shared.flowerDeviceRepository.updateDevice(updatedDevice)
                 }
             }
         case "REMIND_LATER":
             // Schedule a reminder for 1 hour later
-            if let device = try? fetchDevices(withId: deviceId).first {
-                let content = response.notification.request.content
-                
-                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 3600, repeats: false)
-                let request = UNNotificationRequest(identifier: "reminder-later-\(deviceId)", content: content, trigger: trigger)
-                
-                UNUserNotificationCenter.current().add(request)
+            Task {
+                if let device = try? await fetchDevices(withId: deviceId).first {
+                    let content = response.notification.request.content
+                    
+                    let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 3600, repeats: false)
+                    let request = UNNotificationRequest(identifier: "reminder-later-\(deviceId)", content: content, trigger: trigger)
+                    
+                    try await UNUserNotificationCenter.current().add(request)
+                }
             }
         default:
             break
@@ -193,14 +209,15 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     }
     
     @MainActor
-    func fetchDevices(withId uuid: String) throws -> [FlowerDevice] {
-        let request = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
-        request.predicate = NSPredicate(format: "uuid == %@", uuid)
+    func fetchDevices(withId uuid: String) async throws -> [FlowerDeviceDTO] {
         do {
-            let result = try DataService.shared.context.fetch(request)
-            return result
+            if let device = try await RepositoryManager.shared.flowerDeviceRepository.getDevice(by: uuid) {
+                return [device]
+            } else {
+                return []
+            }
         } catch {
-            print(error.localizedDescription)
+            print("Error fetching device: \(error.localizedDescription)")
             throw error
         }
     }

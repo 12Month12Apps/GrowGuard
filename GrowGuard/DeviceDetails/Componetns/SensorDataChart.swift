@@ -17,8 +17,8 @@ struct SensorDataChart<T: Comparable & Numeric>: View {
     var isOverview: Bool
     var componet: Calendar.Component
 
-    @Binding var data: [SensorData]
-    var keyPath: KeyPath<SensorData, T>
+    @Binding var data: [SensorDataDTO]
+    var keyPath: KeyPath<SensorDataDTO, T>
 
     var title: String
     var dataType: String

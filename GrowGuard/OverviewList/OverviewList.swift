@@ -50,9 +50,7 @@ struct OverviewList: View {
                             NavigationService.shared.navigateToDeviceView(flowerDevice: device)
                         } label: {
                             Text(device.name ?? "")
-                            if let lastUpdate = device.lastUpdate {
-                                Text(lastUpdate, format: .dateTime)
-                            }
+                            Text(device.lastUpdate , format: .dateTime)
                         }
                         .navigationLinkStyle()
                         .contentShape(Rectangle())
@@ -68,7 +66,7 @@ struct OverviewList: View {
         .onAppear {
             self.loading = true
             Task {
-                viewModel.fetchSavedDevices()
+                await viewModel.fetchSavedDevices()
                 self.loading = false
             }
         }
@@ -80,15 +78,15 @@ struct OverviewList: View {
     }
     
     func delete(at offsets: IndexSet) {
-        let model = viewModel.allSavedDevices[offsets.first!]
-        viewModel.allSavedDevices.remove(atOffsets: offsets)
-        
-        DataService.shared.context.delete(model)
-        
-        do {
-            try DataService.shared.context.save()
-        } catch {
-            
-        }
+//        let model = viewModel.allSavedDevices[offsets.first!]
+//        viewModel.allSavedDevices.remove(atOffsets: offsets)
+//        
+//        DataService.shared.context.delete(model)
+//        
+//        do {
+//            try DataService.shared.context.save()
+//        } catch {
+//            
+//        }
     }
 }

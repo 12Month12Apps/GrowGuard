@@ -10,9 +10,10 @@ import SwiftData
 import CoreData
 
 class ContentViewModel: Observable {
-    var allSavedDevices: [FlowerDevice] = []
+    var allSavedDevices: [FlowerDeviceDTO] = []
+    private let repositoryManager = RepositoryManager.shared
 
-    init(allSavedDevices: [FlowerDevice] = []) {
+    init(allSavedDevices: [FlowerDeviceDTO] = []) {
         self.allSavedDevices = allSavedDevices
         
         Task {
@@ -21,15 +22,13 @@ class ContentViewModel: Observable {
     }
     
     @MainActor
-    func fetchSavedDevices() {
-            let fetchRequest = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
-            do {
-                let result = try DataService.shared.context.fetch(fetchRequest)
-                allSavedDevices = result
-            } catch {
-                print(error.localizedDescription)
-            }
+    func fetchSavedDevices() async {
+        do {
+            allSavedDevices = try await repositoryManager.flowerDeviceRepository.getAllDevices()
+        } catch {
+            print("Error fetching devices: \(error.localizedDescription)")
         }
+    }
 }
 
 enum NavigationTabs {

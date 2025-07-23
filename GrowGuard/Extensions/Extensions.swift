@@ -9,16 +9,11 @@ import Foundation
 import SwiftUI
 import Charts
 
-extension Array where Element == SensorData {
-    func groupedByDay<T: Comparable & Numeric>(by keyPath: KeyPath<SensorData, T>) -> [(date: Date, minValue: T, maxValue: T)] {
+extension Array where Element == SensorDataDTO {
+    func groupedByDay<T: Comparable & Numeric>(by keyPath: KeyPath<SensorDataDTO, T>) -> [(date: Date, minValue: T, maxValue: T)] {
         let calendar = Calendar.current
-        // Filter out elements with nil dates first
-        let filtered = self.compactMap { data -> SensorData? in
-            guard data.date != nil else { return nil }
-            return data
-        }
-        let grouped = Dictionary(grouping: filtered) { data in
-            calendar.startOfDay(for: data.date!)
+        let grouped = Dictionary(grouping: self) { data in
+            calendar.startOfDay(for: data.date)
         }
         
         return grouped.map { (date, dataPoints) in

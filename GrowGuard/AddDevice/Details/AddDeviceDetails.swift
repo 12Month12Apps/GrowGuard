@@ -20,7 +20,7 @@ enum NavigationDestination: Hashable {
     case deviceList
     case addDeviceWithoutSensor
     case home
-    case deviceView(FlowerDevice) // Add this new case
+    case deviceView(FlowerDeviceDTO) // Add this new case
 }
 
 @Observable class NavigationService {
@@ -62,7 +62,7 @@ enum NavigationDestination: Hashable {
         }
     }
     
-    func navigateToDeviceView(flowerDevice: FlowerDevice) {
+    func navigateToDeviceView(flowerDevice: FlowerDeviceDTO) {
         path.append(NavigationDestination.deviceView(flowerDevice))
     }
     
@@ -75,34 +75,50 @@ enum NavigationDestination: Hashable {
 
 @Observable class AddDeviceDetailsViewModel {
     var device:  CBPeripheral?
-    var allSavedDevices: [FlowerDevice] = []
+    var allSavedDevices: [FlowerDeviceDTO] = []
     var alertView: Alert = .empty
     var showAlert = false
-    var flower: FlowerDevice
+    var flower: FlowerDeviceDTO
+    private let repositoryManager = RepositoryManager.shared
     var searchedFlower: VMSpecies? {
         didSet {
             guard let searched = searchedFlower else { return }
-
-            flower.name = searched.name
-            if let minMoisture = searched.minMoisture {
-                flower.optimalRange?.minMoisture = Int16(minMoisture)
-            }
-            if let maxMoisture = searched.maxMoisture {
-                flower.optimalRange?.maxMoisture = Int16(maxMoisture)
-            }
+            
+            // Create updated optimal range
+            let optimalRange = OptimalRangeDTO(
+                minMoisture: Int16(searched.minMoisture ?? 0),
+                maxMoisture: Int16(searched.maxMoisture ?? 100),
+                deviceUUID: flower.uuid
+            )
+            
+            // Update flower with new data
+            flower = FlowerDeviceDTO(
+                id: flower.id,
+                name: searched.name,
+                uuid: flower.uuid,
+                peripheralID: flower.peripheralID,
+                battery: flower.battery,
+                firmware: flower.firmware,
+                isSensor: flower.isSensor,
+                added: flower.added,
+                lastUpdate: flower.lastUpdate,
+                optimalRange: optimalRange,
+                potSize: flower.potSize,
+                sensorData: flower.sensorData
+            )
         }
     }
 
     init(device: CBPeripheral) {
         self.device = device
-        self.flower = FlowerDevice(context: DataService.shared.context)
-
-        
-        self.flower.added = Date()
-        self.flower.lastUpdate = Date()
-        self.flower.peripheralID = device.identifier
-        
-        self.flower.isSensor = true
+        self.flower = FlowerDeviceDTO(
+            name: device.name ?? "Unknown Device",
+            uuid: device.identifier.uuidString,
+            peripheralID: device.identifier,
+            isSensor: true,
+            added: Date(),
+            lastUpdate: Date()
+        )
 
         Task {
             await fetchSavedDevices()
@@ -110,25 +126,24 @@ enum NavigationDestination: Hashable {
     }
     
     init(flower: VMSpecies) {
-        self.flower = FlowerDevice(context: DataService.shared.context)
-        self.flower.added = Date()
-        self.flower.lastUpdate = Date()
-        self.flower.name = flower.name
-        self.flower.uuid = UUID().uuidString
-        self.flower.isSensor = false
-        self.flower.optimalRange = OptimalRange(context: DataService.shared.context)
-        self.flower.optimalRange?.minTemperature = 0
-        self.flower.optimalRange?.minBrightness = 0
-        self.flower.optimalRange?.minMoisture = Int16(flower.minMoisture ?? 0)
-        self.flower.optimalRange?.minConductivity = 0
-        self.flower.optimalRange?.maxTemperature = 0
-        self.flower.optimalRange?.maxBrightness = 0
-        self.flower.optimalRange?.maxMoisture = Int16(flower.maxMoisture ?? 0)
-        self.flower.optimalRange?.maxConductivity = 0
+        let optimalRange = OptimalRangeDTO(
+            minMoisture: Int16(flower.minMoisture ?? 0),
+            maxMoisture: Int16(flower.maxMoisture ?? 100),
+            deviceUUID: UUID().uuidString
+        )
+        
+        self.flower = FlowerDeviceDTO(
+            name: flower.name,
+            uuid: optimalRange.deviceUUID,
+            isSensor: false,
+            added: Date(),
+            lastUpdate: Date(),
+            optimalRange: optimalRange
+        )
     }
     
     @MainActor
-    func save() {
+    func save() async {
         let isSaved = allSavedDevices.contains(where: { device in
             device.uuid == self.device?.identifier.uuidString
         })
@@ -137,21 +152,27 @@ enum NavigationDestination: Hashable {
                                    message: Text("The Device is already added!"))
             self.showAlert = true
         } else {
-            DataService.shared.context.insert(flower)
-            
             if allSavedDevices.contains(where: { device in
                 device.name == self.flower.name
             }) {
                 self.alertView = Alert(title: Text("Info"),
                                        message: Text("The Device name already exists, please pick an unquie one"))
                 self.showAlert = true
+                return
             }
             
             do {
-                try DataService.shared.context.save()
+                try await repositoryManager.flowerDeviceRepository.saveDevice(flower)
+                
+                // Save optimal range if it exists
+                if let optimalRange = flower.optimalRange {
+                    try await repositoryManager.optimalRangeRepository.saveOptimalRange(optimalRange)
+                }
+                
             } catch {
                 self.alertView = Alert(title: Text("Error"), message: Text(error.localizedDescription))
                 self.showAlert = true
+                return
             }
         }
         NavigationService.shared.switchToTab(.overview)
@@ -162,14 +183,11 @@ enum NavigationDestination: Hashable {
     }
     
     @MainActor
-    func fetchSavedDevices() {
-        let request = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
-        
+    func fetchSavedDevices() async {
         do {
-            let result = try DataService.shared.context.fetch(request)
-            allSavedDevices = result
-        } catch{
-            print(error.localizedDescription)
+            allSavedDevices = try await repositoryManager.flowerDeviceRepository.getAllDevices()
+        } catch {
+            print("Error fetching devices: \(error.localizedDescription)")
         }
     }
 }

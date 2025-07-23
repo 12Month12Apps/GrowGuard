@@ -11,18 +11,18 @@ struct DeviceDetailsView: View {
     @State var viewModel: DeviceDetailsViewModel
     @State var showSetting: Bool = false
     @State private var showCopyAlert = false
-    @State private var optimalRange: OptimalRange?
+    @State private var optimalRange: OptimalRangeDTO?
     @State private var showingLoadingScreen = false
     @State private var nextWatering: Date? = nil
 
-    private var sensorDataBinding: Binding<[SensorData]> {
-        Binding<[SensorData]>(
-            get: { Array((viewModel.device.sensorData as? Set<SensorData>) ?? []) },
-            set: { viewModel.device.sensorData = NSSet(array: $0) }
+    private var sensorDataBinding: Binding<[SensorDataDTO]> {
+        Binding<[SensorDataDTO]>(
+            get: { viewModel.device.sensorData },
+            set: { _ in /* Read-only for now */ }
         )
     }
 
-    init(device: FlowerDevice) {
+    init(device: FlowerDeviceDTO) {
         self.viewModel = DeviceDetailsViewModel(device: device)
     }
     
@@ -32,12 +32,10 @@ struct DeviceDetailsView: View {
                 HStack {
                     VStack(alignment: .leading) {
                         TextField("Device Name", text: Binding(
-                            get: { viewModel.device.name ?? "" },
-                            set: { viewModel.device.name = $0 }
+                            get: { viewModel.device.name },
+                            set: { _ in /* Read-only for now */ }
                         ))
-                        if let lastUpdate = viewModel.device.lastUpdate {
-                            Text("Last Update: ") + Text(lastUpdate, format: .dateTime)
-                        }
+                        Text("Last Update: ") + Text(viewModel.device.lastUpdate, format: .dateTime)
                         
                         if viewModel.device.isSensor {
                             Button {
