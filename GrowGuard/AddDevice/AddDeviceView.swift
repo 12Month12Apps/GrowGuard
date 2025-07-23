@@ -56,7 +56,7 @@ struct AddDeviceView: View {
             }
         }.onAppear {
             Task {
-                viewModel.fetchSavedDevices()
+                await viewModel.fetchSavedDevices()
             }
         }
         .navigationTitle("Add Device")

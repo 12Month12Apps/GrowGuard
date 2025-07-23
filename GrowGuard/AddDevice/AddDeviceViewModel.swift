@@ -15,9 +15,10 @@ import CoreData
     var devices: [CBPeripheral] = []
     var addDevice:  CBPeripheral?
     var ble: AddDeviceBLE?
-    var allSavedDevices: [FlowerDevice] = []
+    var allSavedDevices: [FlowerDeviceDTO] = []
     var loading: Bool = false
     private var loadingTask: Task<Void, Never>? = nil
+    private let repositoryManager = RepositoryManager.shared
     
     init() {
         loading = true
@@ -55,37 +56,36 @@ import CoreData
     }
     
     @MainActor
-    func tapOnDevice(peripheral: CBPeripheral) {
+    func tapOnDevice(peripheral: CBPeripheral) async {
         let isSaved = allSavedDevices.contains(where: { device in
             device.uuid == peripheral.identifier.uuidString
         })
         
         if isSaved == false {
             self.addDevice = peripheral
-            let newItem = FlowerDevice(context: DataService.shared.context)
-            newItem.added = Date()
-            newItem.lastUpdate = Date()
-            newItem.peripheralID = peripheral.identifier
+            let newDeviceDTO = FlowerDeviceDTO(
+                name: peripheral.name ?? "Unknown Device",
+                uuid: peripheral.identifier.uuidString,
+                peripheralID: peripheral.identifier,
+                added: Date(),
+                lastUpdate: Date()
+            )
             
-            DataService.shared.persistentContainer.viewContext.insert(newItem)
             do {
-                try DataService.shared.persistentContainer.viewContext.save()
-                self.fetchSavedDevices()
+                try await repositoryManager.flowerDeviceRepository.saveDevice(newDeviceDTO)
+                await fetchSavedDevices()
             } catch {
-                print(error.localizedDescription)
+                print("Error saving device: \(error.localizedDescription)")
             }
         }
     }
     
     @MainActor
-    func fetchSavedDevices() {
-        let fetchRequest = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
-
+    func fetchSavedDevices() async {
         do {
-            let result = try DataService.shared.persistentContainer.viewContext.fetch(fetchRequest)
-            allSavedDevices = result
-        } catch{
-            print(error.localizedDescription)
+            allSavedDevices = try await repositoryManager.flowerDeviceRepository.getAllDevices()
+        } catch {
+            print("Error fetching devices: \(error.localizedDescription)")
         }
     }
 }

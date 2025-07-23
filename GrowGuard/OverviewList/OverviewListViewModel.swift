@@ -10,7 +10,8 @@ import SwiftUI
 import CoreData
 
 @Observable class OverviewListViewModel {
-    var allSavedDevices: [FlowerDevice] = []
+    var allSavedDevices: [FlowerDeviceDTO] = []
+    private let repositoryManager = RepositoryManager.shared
 
     init() {
         Task {
@@ -19,13 +20,11 @@ import CoreData
     }
     
     @MainActor
-    func fetchSavedDevices() {
-        let fetchRequest = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
+    func fetchSavedDevices() async {
         do {
-            let result = try DataService.shared.context.fetch(fetchRequest)
-            allSavedDevices = result
+            allSavedDevices = try await repositoryManager.flowerDeviceRepository.getAllDevices()
         } catch {
-            print(error.localizedDescription)
+            print("Error fetching devices: \(error.localizedDescription)")
         }
     }
     

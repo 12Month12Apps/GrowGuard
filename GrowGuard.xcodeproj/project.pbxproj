@@ -7,6 +7,24 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5622B0CA2E3176F5002C7E74 /* PotSizeDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0C72E3176F5002C7E74 /* PotSizeDTO.swift */; };
+		5622B0CB2E3176F5002C7E74 /* SensorDataDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0C82E3176F5002C7E74 /* SensorDataDTO.swift */; };
+		5622B0CC2E3176F5002C7E74 /* OptimalRangeDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0C62E3176F5002C7E74 /* OptimalRangeDTO.swift */; };
+		5622B0CD2E3176F5002C7E74 /* FlowerDeviceDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0C52E3176F5002C7E74 /* FlowerDeviceDTO.swift */; };
+		5622B0D92E317710002C7E74 /* CoreDataPotSizeRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0D02E317710002C7E74 /* CoreDataPotSizeRepository.swift */; };
+		5622B0DA2E317710002C7E74 /* RepositoryError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0D62E317710002C7E74 /* RepositoryError.swift */; };
+		5622B0DB2E317710002C7E74 /* PotSizeRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0D52E317710002C7E74 /* PotSizeRepository.swift */; };
+		5622B0DC2E317710002C7E74 /* OptimalRangeRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0D42E317710002C7E74 /* OptimalRangeRepository.swift */; };
+		5622B0DD2E317710002C7E74 /* SensorDataRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0D72E317710002C7E74 /* SensorDataRepository.swift */; };
+		5622B0DE2E317710002C7E74 /* CoreDataOptimalRangeRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0CF2E317710002C7E74 /* CoreDataOptimalRangeRepository.swift */; };
+		5622B0DF2E317710002C7E74 /* CoreDataFlowerDeviceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0CE2E317710002C7E74 /* CoreDataFlowerDeviceRepository.swift */; };
+		5622B0E02E317710002C7E74 /* CoreDataSensorDataRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0D12E317710002C7E74 /* CoreDataSensorDataRepository.swift */; };
+		5622B0E12E317710002C7E74 /* FlowerDeviceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0D32E317710002C7E74 /* FlowerDeviceRepository.swift */; };
+		5622B0E32E317717002C7E74 /* RepositoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0E22E317717002C7E74 /* RepositoryManager.swift */; };
+		5622B0E92E317737002C7E74 /* OptimalRange+DTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0E52E317737002C7E74 /* OptimalRange+DTO.swift */; };
+		5622B0EA2E317737002C7E74 /* SensorData+DTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0E72E317737002C7E74 /* SensorData+DTO.swift */; };
+		5622B0EB2E317737002C7E74 /* FlowerDevice+DTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0E42E317737002C7E74 /* FlowerDevice+DTO.swift */; };
+		5622B0EC2E317737002C7E74 /* PotSize+DTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0E62E317737002C7E74 /* PotSize+DTO.swift */; };
 		56241CDE2DFD1E720012B18E /* CircularProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56241CDD2DFD1E6A0012B18E /* CircularProgress.swift */; };
 		56241CE12E03591C0012B18E /* FlowerPot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56241CE02E0359180012B18E /* FlowerPot.swift */; };
 		562629002C42E32700B5DB2A /* AppIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 562628FF2C42E32200B5DB2A /* AppIntent.swift */; };
@@ -72,6 +90,24 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		5622B0C52E3176F5002C7E74 /* FlowerDeviceDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerDeviceDTO.swift; sourceTree = "<group>"; };
+		5622B0C62E3176F5002C7E74 /* OptimalRangeDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptimalRangeDTO.swift; sourceTree = "<group>"; };
+		5622B0C72E3176F5002C7E74 /* PotSizeDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PotSizeDTO.swift; sourceTree = "<group>"; };
+		5622B0C82E3176F5002C7E74 /* SensorDataDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataDTO.swift; sourceTree = "<group>"; };
+		5622B0CE2E317710002C7E74 /* CoreDataFlowerDeviceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataFlowerDeviceRepository.swift; sourceTree = "<group>"; };
+		5622B0CF2E317710002C7E74 /* CoreDataOptimalRangeRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataOptimalRangeRepository.swift; sourceTree = "<group>"; };
+		5622B0D02E317710002C7E74 /* CoreDataPotSizeRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataPotSizeRepository.swift; sourceTree = "<group>"; };
+		5622B0D12E317710002C7E74 /* CoreDataSensorDataRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataSensorDataRepository.swift; sourceTree = "<group>"; };
+		5622B0D32E317710002C7E74 /* FlowerDeviceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerDeviceRepository.swift; sourceTree = "<group>"; };
+		5622B0D42E317710002C7E74 /* OptimalRangeRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptimalRangeRepository.swift; sourceTree = "<group>"; };
+		5622B0D52E317710002C7E74 /* PotSizeRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PotSizeRepository.swift; sourceTree = "<group>"; };
+		5622B0D62E317710002C7E74 /* RepositoryError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepositoryError.swift; sourceTree = "<group>"; };
+		5622B0D72E317710002C7E74 /* SensorDataRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataRepository.swift; sourceTree = "<group>"; };
+		5622B0E22E317717002C7E74 /* RepositoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepositoryManager.swift; sourceTree = "<group>"; };
+		5622B0E42E317737002C7E74 /* FlowerDevice+DTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FlowerDevice+DTO.swift"; sourceTree = "<group>"; };
+		5622B0E52E317737002C7E74 /* OptimalRange+DTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OptimalRange+DTO.swift"; sourceTree = "<group>"; };
+		5622B0E62E317737002C7E74 /* PotSize+DTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PotSize+DTO.swift"; sourceTree = "<group>"; };
+		5622B0E72E317737002C7E74 /* SensorData+DTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SensorData+DTO.swift"; sourceTree = "<group>"; };
 		56241CDD2DFD1E6A0012B18E /* CircularProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircularProgress.swift; sourceTree = "<group>"; };
 		56241CE02E0359180012B18E /* FlowerPot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerPot.swift; sourceTree = "<group>"; };
 		562628FF2C42E32200B5DB2A /* AppIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntent.swift; sourceTree = "<group>"; };
@@ -149,6 +185,52 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		5622B0C92E3176F5002C7E74 /* DTOs */ = {
+			isa = PBXGroup;
+			children = (
+				5622B0C52E3176F5002C7E74 /* FlowerDeviceDTO.swift */,
+				5622B0C62E3176F5002C7E74 /* OptimalRangeDTO.swift */,
+				5622B0C72E3176F5002C7E74 /* PotSizeDTO.swift */,
+				5622B0C82E3176F5002C7E74 /* SensorDataDTO.swift */,
+			);
+			path = DTOs;
+			sourceTree = "<group>";
+		};
+		5622B0D22E317710002C7E74 /* CoreData */ = {
+			isa = PBXGroup;
+			children = (
+				5622B0CE2E317710002C7E74 /* CoreDataFlowerDeviceRepository.swift */,
+				5622B0CF2E317710002C7E74 /* CoreDataOptimalRangeRepository.swift */,
+				5622B0D02E317710002C7E74 /* CoreDataPotSizeRepository.swift */,
+				5622B0D12E317710002C7E74 /* CoreDataSensorDataRepository.swift */,
+			);
+			path = CoreData;
+			sourceTree = "<group>";
+		};
+		5622B0D82E317710002C7E74 /* Repositories */ = {
+			isa = PBXGroup;
+			children = (
+				5622B0D22E317710002C7E74 /* CoreData */,
+				5622B0D32E317710002C7E74 /* FlowerDeviceRepository.swift */,
+				5622B0D42E317710002C7E74 /* OptimalRangeRepository.swift */,
+				5622B0D52E317710002C7E74 /* PotSizeRepository.swift */,
+				5622B0D62E317710002C7E74 /* RepositoryError.swift */,
+				5622B0D72E317710002C7E74 /* SensorDataRepository.swift */,
+			);
+			path = Repositories;
+			sourceTree = "<group>";
+		};
+		5622B0E82E317737002C7E74 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				5622B0E42E317737002C7E74 /* FlowerDevice+DTO.swift */,
+				5622B0E52E317737002C7E74 /* OptimalRange+DTO.swift */,
+				5622B0E62E317737002C7E74 /* PotSize+DTO.swift */,
+				5622B0E72E317737002C7E74 /* SensorData+DTO.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
 		56241CDF2E03590C0012B18E /* Manuell Water */ = {
 			isa = PBXGroup;
 			children = (
@@ -219,6 +301,10 @@
 		5684E2E52C0FA303005CD8B6 /* Database */ = {
 			isa = PBXGroup;
 			children = (
+				5622B0E82E317737002C7E74 /* Extensions */,
+				5622B0E22E317717002C7E74 /* RepositoryManager.swift */,
+				5622B0D82E317710002C7E74 /* Repositories */,
+				5622B0C92E3176F5002C7E74 /* DTOs */,
 				56A948F52DE3A46A0010575F /* SQLlite */,
 				56A948F42DE3A4640010575F /* SwiftData */,
 				56A948F32DE3A45C0010575F /* Models */,
@@ -507,6 +593,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				5684E2DB2C0F81C0005CD8B6 /* AddDeviceView.swift in Sources */,
+				5622B0CA2E3176F5002C7E74 /* PotSizeDTO.swift in Sources */,
+				5622B0CB2E3176F5002C7E74 /* SensorDataDTO.swift in Sources */,
+				5622B0CC2E3176F5002C7E74 /* OptimalRangeDTO.swift in Sources */,
+				5622B0CD2E3176F5002C7E74 /* FlowerDeviceDTO.swift in Sources */,
 				56D35EB72E2BE5730059FEE6 /* PotView.swift in Sources */,
 				56B44CC32D6E7B3F00A6A75A /* FlowerManager.swift in Sources */,
 				56241CE12E03591C0012B18E /* FlowerPot.swift in Sources */,
@@ -516,6 +606,7 @@
 				56B44CC52D6E7B3F00A6A75A /* SensorDataDecoder.swift in Sources */,
 				56B44CC62D6E7B3F00A6A75A /* UUIDs.swift in Sources */,
 				5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */,
+				5622B0E32E317717002C7E74 /* RepositoryManager.swift in Sources */,
 				56A8C6EA2D8ECF37004021C0 /* AddDeviceDetails.swift in Sources */,
 				565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */,
 				5684E2DF2C0F820D005CD8B6 /* AddDeviceBLE.swift in Sources */,
@@ -526,6 +617,15 @@
 				5667BD8A2C28925300D04382 /* SensorData.swift in Sources */,
 				56B44CCC2D725C2700A6A75A /* PlantMonitorService.swift in Sources */,
 				568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */,
+				5622B0D92E317710002C7E74 /* CoreDataPotSizeRepository.swift in Sources */,
+				5622B0DA2E317710002C7E74 /* RepositoryError.swift in Sources */,
+				5622B0DB2E317710002C7E74 /* PotSizeRepository.swift in Sources */,
+				5622B0DC2E317710002C7E74 /* OptimalRangeRepository.swift in Sources */,
+				5622B0DD2E317710002C7E74 /* SensorDataRepository.swift in Sources */,
+				5622B0DE2E317710002C7E74 /* CoreDataOptimalRangeRepository.swift in Sources */,
+				5622B0DF2E317710002C7E74 /* CoreDataFlowerDeviceRepository.swift in Sources */,
+				5622B0E02E317710002C7E74 /* CoreDataSensorDataRepository.swift in Sources */,
+				5622B0E12E317710002C7E74 /* FlowerDeviceRepository.swift in Sources */,
 				56A948F92DE3A5370010575F /* SpeciesModel.swift in Sources */,
 				5684E2DD2C0F81E7005CD8B6 /* AddDeviceViewModel.swift in Sources */,
 				56A8C6F12D90095B004021C0 /* HistoryLoadingView.swift in Sources */,
@@ -537,6 +637,10 @@
 				56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */,
 				56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */,
 				5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */,
+				5622B0E92E317737002C7E74 /* OptimalRange+DTO.swift in Sources */,
+				5622B0EA2E317737002C7E74 /* SensorData+DTO.swift in Sources */,
+				5622B0EB2E317737002C7E74 /* FlowerDevice+DTO.swift in Sources */,
+				5622B0EC2E317737002C7E74 /* PotSize+DTO.swift in Sources */,
 				5654B2B92CB4575E00EED3D3 /* SettingsView.swift in Sources */,
 				56BF5F9D2DFA5E9100D9B2AE /* AddWithoutSensorViewModel.swift in Sources */,
 				56BF5F9B2DFA5D7300D9B2AE /* AddWithoutSensor.swift in Sources */,
