@@ -4,7 +4,7 @@ import CoreData
 class CoreDataOptimalRangeRepository: OptimalRangeRepository {
     private let context: NSManagedObjectContext
     
-    init(context: NSManagedObjectContext = DataService.shared.context) {
+    init(context: NSManagedObjectContext = DataService.shared.backgroundContext) {
         self.context = context
     }
     

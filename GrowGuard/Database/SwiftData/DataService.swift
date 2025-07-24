@@ -17,6 +17,16 @@ class DataService {
     var context: NSManagedObjectContext {
         return persistentContainer.viewContext
     }
+    
+    private var _backgroundContext: NSManagedObjectContext?
+    
+    var backgroundContext: NSManagedObjectContext {
+        if _backgroundContext == nil {
+            _backgroundContext = persistentContainer.newBackgroundContext()
+            _backgroundContext?.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        }
+        return _backgroundContext!
+    }
 
     func saveContext () {
         let context = persistentContainer.viewContext
