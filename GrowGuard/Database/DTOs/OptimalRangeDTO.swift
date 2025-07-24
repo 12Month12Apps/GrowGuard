@@ -2,14 +2,14 @@ import Foundation
 
 struct OptimalRangeDTO: Identifiable, Hashable {
     let id: String
-    let minTemperature: Double
-    let maxTemperature: Double
-    let minBrightness: Int32
-    let maxBrightness: Int32
-    let minMoisture: Int16
-    let maxMoisture: Int16
-    let minConductivity: Int16
-    let maxConductivity: Int16
+    var minTemperature: Double
+    var maxTemperature: Double
+    var minBrightness: Int32
+    var maxBrightness: Int32
+    var minMoisture: Int16
+    var maxMoisture: Int16
+    var minConductivity: Int16
+    var maxConductivity: Int16
     let deviceUUID: String
     
     init(

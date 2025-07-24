@@ -22,7 +22,8 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     var isConnected = false
     
     private var isScanning = false
-    private var device: FlowerDevice?
+    private var deviceUUID: String?
+    private let repositoryManager = RepositoryManager.shared
     private var totalEntries: Int = 0
     private var currentEntryIndex: Int = 0
     private var invalidDataRetryCount = 0
@@ -107,8 +108,8 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         centralManager = CBCentralManager(delegate: self, queue: nil)
     }
 
-    func startScanning(device: FlowerDevice) {
-        self.device = device
+    func startScanning(deviceUUID: String) {
+        self.deviceUUID = deviceUUID
         guard let centralManager = centralManager else { return }
         if (!isScanning && centralManager.state == .poweredOn) {
             centralManager.scanForPeripherals(withServices: [flowerCareServiceUUID], options: nil)
@@ -126,16 +127,21 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         }
     }
     
-    func connectToKnownDevice(device: FlowerDevice) {
-        let peripherals = centralManager.retrievePeripherals(withIdentifiers: [UUID(uuidString: device.uuid ?? "")!])
+    func connectToKnownDevice(deviceUUID: String) {
+        self.deviceUUID = deviceUUID
+        guard let uuid = UUID(uuidString: deviceUUID) else {
+            print("Invalid device UUID: \(deviceUUID)")
+            return
+        }
+        
+        let peripherals = centralManager.retrievePeripherals(withIdentifiers: [uuid])
         if let peripheral = peripherals.first {
             discoveredPeripheral = peripheral
             centralManager.connect(peripheral, options: nil)
-            self.device = device
             print("Connecting to known device...")
         } else {
             print("Known device not found, starting scan...")
-            startScanning(device: device) // example method call
+            startScanning(deviceUUID: deviceUUID)
         }
     }
     
@@ -154,7 +160,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         entryCountCharacteristic = nil
 
         isScanning = false
-        device = nil
+        deviceUUID = nil
         totalEntries = 0
         currentEntryIndex = 0
         isConnected = false
@@ -185,7 +191,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     }
 
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        if (peripheral.identifier.uuidString == device?.uuid) {
+        if (peripheral.identifier.uuidString == deviceUUID) {
             centralManager.stopScan()
             discoveredPeripheral = peripheral
             discoveredPeripheral?.delegate = self
@@ -386,7 +392,9 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             case realTimeSensorValuesCharacteristicUUID:
                 processAndValidateSensorData(value)
             case firmwareVersionCharacteristicUUID:
-                decodeFirmwareAndBattery(data: value)
+                Task {
+                    await decodeFirmwareAndBattery(data: value)
+                }
             case deviceNameCharacteristicUUID:
                 decodeDeviceName(data: value)
             case deviceTimeCharacteristicUUID:
@@ -419,18 +427,53 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         }
     }
 
-    private func decodeRealTimeSensorValues(data: Data) {
-        if let sensorData = decoder.decodeRealTimeSensorValues(data: data, device: device) {
-            if let validateSensorData = PlantMonitorService.shared.validateSensorData(sensorData) {
-                sensorDataSubject.send(validateSensorData)
+    private func decodeRealTimeSensorValues(data: Data) async {
+        guard let deviceUUID = self.deviceUUID else {
+            print("No device UUID available for sensor data")
+            return
+        }
+        
+        if let sensorData = decoder.decodeRealTimeSensorValues(data: data, deviceUUID: deviceUUID) {
+            do {
+                if let validateSensorData = try await PlantMonitorService.shared.validateSensorData(sensorData, deviceUUID: deviceUUID) {
+                    // Convert to SensorData for backward compatibility with publishers
+                    if let coreDataSensorData = validateSensorData.toCoreDataSensorData() {
+                        sensorDataSubject.send(coreDataSensorData)
+                    }
+                }
+            } catch {
+                print("Error validating sensor data: \(error)")
             }
         }
     }
 
-    private func decodeFirmwareAndBattery(data: Data) {
-        guard let (battery, firmware) = decoder.decodeFirmwareAndBattery(data: data) else { return }
-        device?.battery = Int16(battery)
-        device?.firmware = firmware
+    private func decodeFirmwareAndBattery(data: Data) async {
+        guard let (battery, firmware) = decoder.decodeFirmwareAndBattery(data: data),
+              let deviceUUID = self.deviceUUID else { return }
+        
+        do {
+            // Get current device data
+            if let device = try await repositoryManager.flowerDeviceRepository.getDevice(by: deviceUUID) {
+                // Update device with new battery and firmware info
+                let updatedDevice = FlowerDeviceDTO(
+                    id: device.id,
+                    name: device.name,
+                    uuid: device.uuid,
+                    peripheralID: device.peripheralID,
+                    battery: Int16(battery),
+                    firmware: firmware,
+                    isSensor: device.isSensor,
+                    added: device.added,
+                    lastUpdate: device.lastUpdate,
+                    optimalRange: device.optimalRange,
+                    potSize: device.potSize,
+                    sensorData: device.sensorData
+                )
+                try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
+            }
+        } catch {
+            print("Error updating device firmware/battery: \(error)")
+        }
     }
 
     private func decodeDeviceName(data: Data) {
@@ -610,24 +653,35 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     // Add these new methods for validation
     
     private func processAndValidateSensorData(_ rawData: Data) {
-        guard let deviceUUID = discoveredPeripheral?.identifier.uuidString,
-              let device = self.device else { return }
+        guard let deviceUUID = self.deviceUUID else {
+            print("No device UUID available for sensor data processing")
+            return
+        }
         
-        // Decode the raw data
-        if let decodedData = decoder.decodeRealTimeSensorValues(data: rawData, device: device) {
-            // Validate the sensor data
-            if let validatedData = PlantMonitorService.shared.validateSensorData(decodedData) {
-                // Reset retry counter on valid data
-                invalidDataRetryCount = 0
-                // Publish valid data
-                sensorDataSubject.send(validatedData)
+        Task {
+            // Decode the raw data
+            if let decodedData = decoder.decodeRealTimeSensorValues(data: rawData, deviceUUID: deviceUUID) {
+                do {
+                    // Validate the sensor data
+                    if let validatedData = try await PlantMonitorService.shared.validateSensorData(decodedData, deviceUUID: deviceUUID) {
+                        // Reset retry counter on valid data
+                        invalidDataRetryCount = 0
+                        // Convert to SensorData for backward compatibility with publishers
+                        if let coreDataSensorData = validatedData.toCoreDataSensorData() {
+                            sensorDataSubject.send(coreDataSensorData)
+                        }
+                    } else {
+                        // Data was invalid, retry if we haven't exceeded max attempts
+                        handleInvalidData()
+                    }
+                } catch {
+                    print("Error validating sensor data: \(error)")
+                    handleInvalidData()
+                }
             } else {
-                // Data was invalid, retry if we haven't exceeded max attempts
+                // Decoding failed, retry
                 handleInvalidData()
             }
-        } else {
-            // Decoding failed, retry
-            handleInvalidData()
         }
     }
     
@@ -719,8 +773,10 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             requestFreshSensorData()
         } else if !isConnected {
             // Connect first if not connected
-            if let device = device, let peripheral = discoveredPeripheral {
+            if let deviceUUID = deviceUUID, let peripheral = discoveredPeripheral {
                 centralManager.connect(peripheral, options: nil)
+            } else if let deviceUUID = deviceUUID {
+                connectToKnownDevice(deviceUUID: deviceUUID)
             }
         }
     }
@@ -739,8 +795,10 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             startHistoryDataFlow()
         } else if !isConnected {
             // Connect first if not connected
-            if let device = device, let peripheral = discoveredPeripheral {
+            if let deviceUUID = deviceUUID, let peripheral = discoveredPeripheral {
                 centralManager.connect(peripheral, options: nil)
+            } else if let deviceUUID = deviceUUID {
+                connectToKnownDevice(deviceUUID: deviceUUID)
             }
         }
     }

@@ -348,7 +348,9 @@ struct AddDeviceDetails:  View {
                 }
                 
                 Button {
-                    viewModel.save()
+                    Task {
+                        await viewModel.save()
+                    }
                 } label: {
                     Text("Save")
                 }

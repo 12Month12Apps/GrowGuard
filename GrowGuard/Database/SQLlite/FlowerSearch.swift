@@ -24,9 +24,7 @@ struct FlowerSearch {
                     .filter(Species.Columns.scientificName.like("%\(flower)%"))
                     .limit(10)
                     .fetchAll(db)
-                
-                print("\(foundSpecies)")
-                
+                                
                 return foundSpecies
             }
         } catch {

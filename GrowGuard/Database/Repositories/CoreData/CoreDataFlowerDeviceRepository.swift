@@ -11,7 +11,13 @@ class CoreDataFlowerDeviceRepository: FlowerDeviceRepository {
     func getAllDevices() async throws -> [FlowerDeviceDTO] {
         let request = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
         let devices = try context.fetch(request)
-        return devices.map { $0.toDTO() }
+        return devices.compactMap { device in
+            guard let dto = device.toDTO() else {
+                print("Failed to convert FlowerDevice to DTO - skipping device")
+                return nil
+            }
+            return dto
+        }
     }
     
     func getDevice(by uuid: String) async throws -> FlowerDeviceDTO? {
@@ -20,7 +26,9 @@ class CoreDataFlowerDeviceRepository: FlowerDeviceRepository {
         request.fetchLimit = 1
         
         let devices = try context.fetch(request)
-        return devices.first?.toDTO()
+        guard let device = devices.first else { return nil }
+        
+        return device.toDTO()
     }
     
     func saveDevice(_ device: FlowerDeviceDTO) async throws {

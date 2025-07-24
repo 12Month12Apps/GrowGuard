@@ -95,16 +95,12 @@ struct DeviceDetailsView: View {
             
             
             TextField("Device Name", text: Binding(get: { viewModel.device.name ?? "" }, set: { viewModel.device.name = $0 }))
-            if let added = viewModel.device.added {
-                Text("Added: ") + Text(added, format: .dateTime)
-            }
-            if let lastUpdate = viewModel.device.lastUpdate {
-                Text("Last Update: ") + Text(lastUpdate, format: .dateTime)
-            }
+            Text("Added: ") + Text(viewModel.device.added, format: .dateTime)
+            Text("Last Update: ") + Text(viewModel.device.lastUpdate, format: .dateTime)
+            
             Text("Battery: ") + Text(viewModel.device.battery, format: .percent)
-            if let firmware = viewModel.device.firmware {
-                Text("Firmware: ") + Text(firmware)
-            }
+            Text("Firmware: ") + Text(viewModel.device.firmware)
+            
             
 
             if let nextWatering = nextWatering {
@@ -179,19 +175,17 @@ struct DeviceDetailsView: View {
                     ))
                 }
                 
-                if let sensorData = viewModel.device.sensorData, sensorData.count > 0 {
-                    SensorDataChart(
-                        isOverview: false,
-                        componet: viewModel.groupingOption,
-                        data: sensorDataBinding,
-                        keyPath: \.moisture,
-                        title: "Moisture",
-                        dataType: "%",
-                        selectedChartType: .water,
-                        minRange: Int(viewModel.device.optimalRange?.minMoisture ?? 0),
-                        maxRange: Int(viewModel.device.optimalRange?.maxMoisture ?? 0)
-                    )
-                }
+                SensorDataChart(
+                    isOverview: false,
+                    componet: viewModel.groupingOption,
+                    data: sensorDataBinding,
+                    keyPath: \.moisture,
+                    title: "Moisture",
+                    dataType: "%",
+                    selectedChartType: .water,
+                    minRange: Int(viewModel.device.optimalRange?.minMoisture ?? 0),
+                    maxRange: Int(viewModel.device.optimalRange?.maxMoisture ?? 0)
+                )
             }
 
         }.onAppear {
@@ -232,19 +226,19 @@ struct DeviceDetailsView: View {
         .navigationTitle(viewModel.device.name ?? "")
         .sheet(isPresented: $showSetting, onDismiss: {
             viewModel.device.optimalRange = optimalRange
-            viewModel.saveDatabase()
+//            viewModel.saveDatabase()
         }) {
-            SettingsView(
-                potSize: Binding(
-                    get: { viewModel.device.potSize ?? PotSize(context: DataService.shared.context) },
-                    set: { viewModel.device.potSize = $0 }
-                ),
-                optimalRange: Binding(
-                    get: { optimalRange ?? OptimalRange(context: DataService.shared.context) },
-                    set: { optimalRange = $0 }
-                ),
-                isSensor: viewModel.device.isSensor
-            )
+//            SettingsView(
+//                potSize: Binding(
+//                    get: { viewModel.device.potSize ?? PotSize(context: DataService.shared.context) },
+//                    set: { viewModel.device.potSize = $0 }
+//                ),
+//                optimalRange: Binding(
+//                    get: { optimalRange ?? OptimalRange(context: DataService.shared.context) },
+//                    set: { optimalRange = $0 }
+//                ),
+//                isSensor: viewModel.device.isSensor
+//            )
         }
         .sheet(isPresented: $showingLoadingScreen) {
             HistoryLoadingView()

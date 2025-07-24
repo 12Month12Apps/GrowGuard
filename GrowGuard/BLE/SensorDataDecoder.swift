@@ -17,7 +17,7 @@ class SensorDataDecoder {
         self.secondsSinceBoot = secondsSinceBoot
     }
     
-    func decodeRealTimeSensorValues(data: Data, device: FlowerDevice?) -> SensorDataTemp? {
+    func decodeRealTimeSensorValues(data: Data, deviceUUID: String) -> SensorDataTemp? {
         guard data.count == 16 else {
             print("Unexpected data length: \(data.count)")
             return nil
@@ -44,7 +44,7 @@ class SensorDataDecoder {
             moisture: moisture,
             conductivity: conductivity,
             date: Date(),
-            device: device
+            deviceUUID: deviceUUID
         )
     }
 

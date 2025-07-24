@@ -35,22 +35,16 @@ struct MyAppIntent: AppIntent {
     }
 
     @MainActor
-    private func scanAndCollectData(for device: FlowerDevice, using ble: FlowerCareManager) async {
+    private func scanAndCollectData(for device: FlowerDeviceDTO, using ble: FlowerCareManager) async {
         await withCheckedContinuation { continuation in
             var subscription: AnyCancellable?
 
-            ble.connectToKnownDevice(device: device)
+            ble.connectToKnownDevice(deviceUUID: device.uuid)
             ble.requestLiveData()
             
             subscription = ble.sensorDataPublisher.sink { data in
-//                device.sensorData.append(data)
-                data.device = device
-                
-                do {
-                    try DataService.shared.context.save()
-                } catch {
-                    print(error.localizedDescription)
-                }
+                // Data is already saved by the FlowerCareManager through repositories
+                // No need to manually save here anymore
                 
                 subscription?.cancel()
                 continuation.resume()
@@ -59,14 +53,15 @@ struct MyAppIntent: AppIntent {
     }
 
     @MainActor
-    func fetchDevices(withId uuid: String) throws -> [FlowerDevice] {
-        let fetchRequest = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
-        fetchRequest.predicate = NSPredicate(format: "uuid == %@", uuid)
+    func fetchDevices(withId uuid: String) async throws -> [FlowerDeviceDTO] {
         do {
-            let result = try DataService.shared.context.fetch(fetchRequest)
-            return result
+            if let device = try await RepositoryManager.shared.flowerDeviceRepository.getDevice(by: uuid) {
+                return [device]
+            } else {
+                return []
+            }
         } catch {
-            print(error.localizedDescription)
+            print("Error fetching device: \(error.localizedDescription)")
             throw error
         }
     }

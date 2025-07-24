@@ -10,7 +10,7 @@ import SwiftUI
 struct PotView: View {
     @State private var waterFill: CGFloat = 0.0
     @State private var waterFillProzentage: CGFloat = 0.0
-    @Binding var potSize: PotSize
+    @Binding var potSize: PotSizeDTO
     
     var body: some View {
         Section {

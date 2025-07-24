@@ -26,8 +26,10 @@ import CoreData
             
             self.subscription = ble.sensorDataPublisher.sink { data in
                 Task {
-                    await self.saveSensorData(data)
-                    await self.updateDeviceLastUpdate()
+                    if let dto = data.toTemp() {
+                        await self.saveSensorData(dto)
+                        await self.updateDeviceLastUpdate()
+                    }
                 }
             }
         }
@@ -40,19 +42,21 @@ import CoreData
     }
     
     func loadDetails() {
-        ble.connectToKnownDevice(device: device)
+        ble.connectToKnownDevice(deviceUUID: device.uuid)
         ble.requestLiveData()
     }
     
     func blinkLED() {
-        ble.connectToKnownDevice(device: device)
+        ble.connectToKnownDevice(deviceUUID: device.uuid)
         ble.blinkLED()
     }
     
     @MainActor
     private func saveSensorData(_ data: SensorDataTemp) async {
         do {
-            _ = try await PlantMonitorService.shared.validateSensorData(data, deviceUUID: device.uuid)
+            if let deviceUUID = data.device {
+                _ = try await PlantMonitorService.shared.validateSensorData(data, deviceUUID: deviceUUID)
+            }
         } catch {
             print("Error saving sensor data: \(error.localizedDescription)")
         }
@@ -107,7 +111,7 @@ import CoreData
     @MainActor
     func fetchHistoricalData() {
         // Connect to the device
-        ble.connectToKnownDevice(device: device)
+        ble.connectToKnownDevice(deviceUUID: device.uuid)
         ble.requestHistoricalData()
 
         // Subscribe to historical data

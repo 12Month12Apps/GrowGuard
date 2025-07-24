@@ -2,9 +2,9 @@ import Foundation
 
 struct PotSizeDTO: Identifiable, Hashable {
     let id: String
-    let width: Double
-    let height: Double
-    let volume: Double
+    var width: Double
+    var height: Double
+    var volume: Double
     let deviceUUID: String
     
     init(

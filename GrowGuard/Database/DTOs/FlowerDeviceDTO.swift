@@ -2,7 +2,7 @@ import Foundation
 
 struct FlowerDeviceDTO: Identifiable, Hashable {
     let id: String
-    let name: String
+    var name: String
     let uuid: String
     let peripheralID: UUID?
     let battery: Int16
@@ -10,8 +10,8 @@ struct FlowerDeviceDTO: Identifiable, Hashable {
     let isSensor: Bool
     let added: Date
     let lastUpdate: Date
-    let optimalRange: OptimalRangeDTO?
-    let potSize: PotSizeDTO?
+    var optimalRange: OptimalRangeDTO?
+    var potSize: PotSizeDTO?
     let sensorData: [SensorDataDTO]
     
     init(
