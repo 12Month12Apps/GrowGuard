@@ -17,7 +17,7 @@ struct DeviceDetailsView: View {
 
     private var sensorDataBinding: Binding<[SensorDataDTO]> {
         Binding<[SensorDataDTO]>(
-            get: { viewModel.device.sensorData },
+            get: { viewModel.currentWeekData },
             set: { _ in /* Read-only for now */ }
         )
     }
@@ -116,6 +116,46 @@ struct DeviceDetailsView: View {
             }
             
             if viewModel.device.isSensor {
+                // Week navigation controls
+                Section(header: 
+                    HStack {
+                        Text("Sensor Data")
+                        Spacer()
+                        HStack {
+                            Button("‹", action: {
+                                Task { await viewModel.goToPreviousWeek() }
+                            })
+                            .disabled(viewModel.isLoadingSensorData)
+                            
+                            Text(viewModel.currentWeekDisplayText)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Button("›", action: {
+                                Task { await viewModel.goToNextWeek() }
+                            })
+                            .disabled(viewModel.isLoadingSensorData)
+                            
+                            Button("↻", action: {
+                                Task { await viewModel.refreshCurrentWeek() }
+                            })
+                            .disabled(viewModel.isLoadingSensorData)
+                        }
+                        .font(.title2)
+                    }
+                ) {
+                    if viewModel.isLoadingSensorData {
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("Loading week data...")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 5)
+                    }
+                }
+                
                 SensorDataChart(isOverview: false,
                                 componet: viewModel.groupingOption,
                                 data: sensorDataBinding,

@@ -18,11 +18,25 @@ import CoreData
     var groupingOption: Calendar.Component = .day
     private let repositoryManager = RepositoryManager.shared
     
+    // MARK: - Smart Sensor Data Loading
+    @MainActor private let sensorDataManager = SensorDataManager.shared
+    var currentWeekData: [SensorDataDTO] = []
+    var isLoadingSensorData = false
+    
+    @MainActor
+    var currentWeekDisplayText: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        let startOfWeek = Calendar.current.dateInterval(of: .weekOfYear, for: sensorDataManager.currentWeek)?.start ?? sensorDataManager.currentWeek
+        let endOfWeek = Calendar.current.date(byAdding: .day, value: 6, to: startOfWeek) ?? sensorDataManager.currentWeek
+        return "\(formatter.string(from: startOfWeek)) - \(formatter.string(from: endOfWeek))"
+    }
+    
     init(device: FlowerDeviceDTO) {
         self.device = device
         
         Task {
-            await try PlantMonitorService.shared.checkDeviceStatus(device: device)
+            try await PlantMonitorService.shared.checkDeviceStatus(device: device)
             
             self.subscription = ble.sensorDataPublisher.sink { data in
                 Task {
@@ -31,6 +45,18 @@ import CoreData
                         await self.updateDeviceLastUpdate()
                     }
                 }
+            }
+            
+            // Load current week's sensor data immediately
+            do {
+                let weekData = try await self.sensorDataManager.getCurrentWeekData(for: device.uuid)
+                await MainActor.run {
+                    self.currentWeekData = weekData
+                }
+                // Preload adjacent weeks for smooth navigation
+                await self.sensorDataManager.preloadAdjacentWeeks(for: device.uuid)
+            } catch {
+                print("Failed to load current week data: \(error)")
             }
         }
         
@@ -108,47 +134,51 @@ import CoreData
         }
     }
 
+    // MARK: - Week Navigation Methods
+    
+    @MainActor
+    func goToPreviousWeek() async {
+        isLoadingSensorData = true
+        do {
+            let weekData = try await sensorDataManager.goToPreviousWeek(for: device.uuid)
+            currentWeekData = weekData
+        } catch {
+            print("Failed to load previous week data: \(error)")
+        }
+        isLoadingSensorData = false
+    }
+    
+    @MainActor
+    func goToNextWeek() async {
+        isLoadingSensorData = true
+        do {
+            let weekData = try await sensorDataManager.goToNextWeek(for: device.uuid)
+            currentWeekData = weekData
+        } catch {
+            print("Failed to load next week data: \(error)")
+        }
+        isLoadingSensorData = false
+    }
+    
+    @MainActor
+    func refreshCurrentWeek() async {
+        isLoadingSensorData = true
+        // Clear cache for this device to force fresh data
+        sensorDataManager.clearCache(for: device.uuid)
+        do {
+            let weekData = try await sensorDataManager.getCurrentWeekData(for: device.uuid)
+            currentWeekData = weekData
+        } catch {
+            print("Failed to refresh current week data: \(error)")
+        }
+        isLoadingSensorData = false
+    }
+
     @MainActor
     func fetchHistoricalData() {
         // Connect to the device
         ble.connectToKnownDevice(deviceUUID: device.uuid)
         ble.requestHistoricalData()
-
-        // Subscribe to historical data
-//        let cancellable = FlowerCareManager.shared.historicalDataPublisher
-//            .sink { [weak self] historicalData in
-//                guard let self = self else { return }
-//
-//                // Convert historical data to SensorData and add to device
-//                let sensorData = SensorData(
-//                    temperature: historicalData.temperature,
-//                    brightness: historicalData.brightness,
-//                    moisture: historicalData.moisture,
-//                    conductivity: historicalData.conductivity,
-//                    date: historicalData.date,
-//                    device: self.device
-//                )
-//
-//                // Add data to the device (avoiding duplicates)
-//                if !self.device.sensorData.contains(where: {
-//                    $0.date == sensorData.date &&
-//                    $0.temperature == sensorData.temperature &&
-//                    $0.brightness == sensorData.brightness &&
-//                    $0.moisture == sensorData.moisture &&
-//                    $0.conductivity == sensorData.conductivity
-//                }) {
-//                    self.device.sensorData.append(sensorData)
-//                    self.saveDatabase()
-//                }
-//            }
-        
-        // Store cancellable reference if needed
-        // self.cancellables.insert(cancellable)
-        
-//        // Start the fetch process
-//        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-//            FlowerCareManager.shared.fetchEntryCount()
-//        }
     }
 
 }

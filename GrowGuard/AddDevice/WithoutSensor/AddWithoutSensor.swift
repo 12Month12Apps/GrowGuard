@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import FoundationModels
+//import FoundationModels
 
 struct AddWithoutSensor: View {
     @Environment(\.dismiss) var dismiss

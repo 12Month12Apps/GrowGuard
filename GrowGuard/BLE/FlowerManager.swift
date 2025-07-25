@@ -44,9 +44,42 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     
     static var shared = FlowerCareManager()
 
+    // MARK: - Safe Timer Management
+    
+    /// CRITICAL FIX: Safe timer scheduling to prevent timer cascades
+    private func safeScheduleTimer(delay: TimeInterval, action: @escaping () -> Void) {
+        timerLock.lock()
+        defer { timerLock.unlock() }
+        
+        let timer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] timer in
+            action()
+            self?.removeTimer(timer)
+        }
+        
+        activeTimers.insert(timer)
+    }
+    
+    private func removeTimer(_ timer: Timer) {
+        timerLock.lock()
+        defer { timerLock.unlock() }
+        
+        activeTimers.remove(timer)
+        timer.invalidate()
+    }
+    
+    private func cancelAllTimers() {
+        timerLock.lock()
+        defer { timerLock.unlock() }
+        
+        activeTimers.forEach { $0.invalidate() }
+        activeTimers.removeAll()
+    }
+
     // Neues Flag zur Vermeidung doppelter Anfragen
     private var isRequestingData = false
     private var requestTimeoutTimer: Timer?
+    private var activeTimers: Set<Timer> = []
+    private let timerLock = NSLock()
     private let requestTimeout = 10.0  // Timeout in Sekunden
 
     private var deviceBootTime: Date?
@@ -105,12 +138,23 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
 
     override init() {
         super.init()
+        
+        // Use background queue for BLE in debug builds to reduce main thread blocking
+        #if DEBUG
+        let bleQueue = DispatchQueue(label: "com.growguard.ble", qos: .userInitiated)
+        centralManager = CBCentralManager(delegate: self, queue: bleQueue)
+        #else
         centralManager = CBCentralManager(delegate: self, queue: nil)
+        #endif
     }
 
     func startScanning(deviceUUID: String) {
         self.deviceUUID = deviceUUID
         guard let centralManager = centralManager else { return }
+        
+        // CRITICAL FIX: Cancel existing timers before starting new operations
+        cancelAllTimers()
+        
         if (!isScanning && centralManager.state == .poweredOn) {
             centralManager.scanForPeripherals(withServices: [flowerCareServiceUUID], options: nil)
             isScanning = true
@@ -120,6 +164,10 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
 
     func stopScanning() {
         guard let centralManager = centralManager else { return }
+        
+        // CRITICAL FIX: Cancel all timers when stopping operations
+        cancelAllTimers()
+        
         if (isScanning) {
             centralManager.stopScan()
             isScanning = false
@@ -310,20 +358,20 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         discoveredPeripheral?.writeValue(modeData, for: historyControlCharacteristic, type: .withResponse)
         
         // Step 2: Read device time 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        self.safeScheduleTimer(delay: 0.5) {
             print("Step 2: Reading device time...")
             if let deviceTimeCharacteristic = self.deviceTimeCharacteristic {
                 self.discoveredPeripheral?.readValue(for: deviceTimeCharacteristic)
             }
             
             // Step 3: Get entry count
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.safeScheduleTimer(delay: 0.5) {
                 print("Step 3: Getting entry count...")
                 let entryCountCommand: [UInt8] = [0x3c]  // Command to get entry count
                 self.discoveredPeripheral?.writeValue(Data(entryCountCommand), for: historyControlCharacteristic, type: .withResponse)
                 
                 // After sending the command, read the history data characteristic
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.safeScheduleTimer(delay: 0.5) {
                     print("Reading history data characteristic...")
                     if let historyDataCharacteristic = self.historyDataCharacteristic {
                         self.discoveredPeripheral?.readValue(for: historyDataCharacteristic)
@@ -513,7 +561,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         discoveredPeripheral?.writeValue(command, for: historyControlCharacteristic, type: .withResponse)
         
         // After sending the command, read the history data characteristic
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+        self.safeScheduleTimer(delay: 0.2) {
             self.discoveredPeripheral?.readValue(for: historyDataCharacteristic)
         }
     }
@@ -560,12 +608,12 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     if nextIndex % batchSize == 0 {
                         print("Completed batch. Taking a break before next batch...")
                         // Take a longer break between batches to avoid disconnection
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        self.safeScheduleTimer(delay: 2.0) {
                             self.fetchHistoricalDataEntry(index: nextIndex)
                         }
                     } else {
                         // Increased delay between individual entries
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self.safeScheduleTimer(delay: 0.5) {
                             self.fetchHistoricalDataEntry(index: nextIndex)
                         }
                     }
@@ -583,7 +631,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 if (nextIndex < totalEntries) {
                     print("Skipping to next entry...")
                     currentEntryIndex = nextIndex
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self.safeScheduleTimer(delay: 0.5) {
                         self.fetchHistoricalDataEntry(index: nextIndex)
                     }
                 }
@@ -638,7 +686,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         peripheral.writeValue(entryAddress, for: historyControlCharacteristic, type: .withResponse)
         
         // Increased delay to give the device more time to respond
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { // Increased delay
+        self.safeScheduleTimer(delay: 0.8) { // Increased delay
             // Check connection again before reading
             if peripheral.state == .connected {
                 peripheral.readValue(for: historyDataCharacteristic)
@@ -690,7 +738,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         if (invalidDataRetryCount <= maxRetryAttempts) {
             print("Ungültige Sensordaten. Wiederhole... (Versuch \(invalidDataRetryCount)/\(maxRetryAttempts))")
             // Kurze Verzögerung vor erneutem Versuch
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.safeScheduleTimer(delay: 1.0) {
                 self.requestFreshSensorData()
             }
         } else {

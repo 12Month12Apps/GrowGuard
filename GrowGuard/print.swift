@@ -9,13 +9,13 @@ import os
 public func print(_ object: Any...) {
     #if DEBUG
     for item in object {
-        Swift.print(item)
+//        Swift.print(item)
     }
     #endif
 }
 
 public func print(_ object: Any) {
     #if DEBUG
-    Swift.print(object)
+//    Swift.print(object)
     #endif
 }

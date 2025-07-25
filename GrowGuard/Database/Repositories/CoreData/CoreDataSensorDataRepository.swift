@@ -9,42 +9,71 @@ class CoreDataSensorDataRepository: SensorDataRepository {
     }
     
     func getSensorData(for deviceUUID: String, limit: Int? = nil) async throws -> [SensorDataDTO] {
-        let request = NSFetchRequest<SensorData>(entityName: "SensorData")
-        request.predicate = NSPredicate(format: "device.uuid == %@", deviceUUID)
-        request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
-        
-        if let limit = limit {
-            request.fetchLimit = limit
+        return try await withCheckedThrowingContinuation { continuation in
+            context.perform {
+                do {
+                    let request = NSFetchRequest<SensorData>(entityName: "SensorData")
+                    request.predicate = NSPredicate(format: "device.uuid == %@", deviceUUID)
+                    request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
+                    
+                    if let limit = limit {
+                        request.fetchLimit = limit
+                    }
+                    
+                    let sensorData = try self.context.fetch(request)
+                    let dtos = sensorData.compactMap { $0.toDTO() }
+                    continuation.resume(returning: dtos)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
         }
-        
-        let sensorData = try context.fetch(request)
-        return sensorData.compactMap { $0.toDTO() }
     }
     
     func getRecentSensorData(for deviceUUID: String, limit: Int) async throws -> [SensorDataDTO] {
-        let request = NSFetchRequest<SensorData>(entityName: "SensorData")
-        request.predicate = NSPredicate(format: "device.uuid == %@", deviceUUID)
-        request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
-        request.fetchLimit = limit
-        
-        let sensorData = try context.fetch(request)
-        return sensorData.compactMap { $0.toDTO() }.reversed()
+        return try await withCheckedThrowingContinuation { continuation in
+            context.perform {
+                do {
+                    let request = NSFetchRequest<SensorData>(entityName: "SensorData")
+                    request.predicate = NSPredicate(format: "device.uuid == %@", deviceUUID)
+                    request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
+                    request.fetchLimit = limit
+                    
+                    let sensorData = try self.context.fetch(request)
+                    let dtos = sensorData.compactMap { $0.toDTO() }.reversed()
+                    continuation.resume(returning: Array(dtos))
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
     }
     
     func saveSensorData(_ sensorData: SensorDataDTO) async throws {
-        let deviceRequest = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
-        deviceRequest.predicate = NSPredicate(format: "uuid == %@", sensorData.deviceUUID)
-        deviceRequest.fetchLimit = 1
-        
-        guard let device = try context.fetch(deviceRequest).first else {
-            throw RepositoryError.deviceNotFound
-        }
-        
-        let coreDataSensorData = SensorData(context: context)
-        coreDataSensorData.updateFromDTO(sensorData, device: device)
-        
-        if context.hasChanges {
-            try context.save()
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            context.perform {
+                do {
+                    let deviceRequest = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
+                    deviceRequest.predicate = NSPredicate(format: "uuid == %@", sensorData.deviceUUID)
+                    deviceRequest.fetchLimit = 1
+                    
+                    guard let device = try self.context.fetch(deviceRequest).first else {
+                        continuation.resume(throwing: RepositoryError.deviceNotFound)
+                        return
+                    }
+                    
+                    let coreDataSensorData = SensorData(context: self.context)
+                    coreDataSensorData.updateFromDTO(sensorData, device: device)
+                    
+                    if self.context.hasChanges {
+                        try self.context.save()
+                    }
+                    
+                    continuation.resume()
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
         }
     }
     
@@ -73,6 +102,25 @@ class CoreDataSensorDataRepository: SensorDataRepository {
         
         if context.hasChanges {
             try context.save()
+        }
+    }
+    
+    func getSensorDataInDateRange(for deviceUUID: String, startDate: Date, endDate: Date) async throws -> [SensorDataDTO] {
+        return try await withCheckedThrowingContinuation { continuation in
+            context.perform {
+                do {
+                    let request = NSFetchRequest<SensorData>(entityName: "SensorData")
+                    request.predicate = NSPredicate(format: "device.uuid == %@ AND date >= %@ AND date <= %@", 
+                                                  deviceUUID, startDate as NSDate, endDate as NSDate)
+                    request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
+                    
+                    let sensorData = try self.context.fetch(request)
+                    let dtos = sensorData.compactMap { $0.toDTO() }
+                    continuation.resume(returning: dtos)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
         }
     }
 }

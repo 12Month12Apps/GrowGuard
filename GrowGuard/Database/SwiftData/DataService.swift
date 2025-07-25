@@ -6,12 +6,25 @@ class DataService {
     let persistentContainer: NSPersistentContainer
 
     private init() {
-        persistentContainer = NSPersistentContainer(name: "CoreDataModels") // Der Name muss dem deiner .xcdatamodeld Datei entsprechen
+        persistentContainer = NSPersistentContainer(name: "CoreDataModels")
+        
+        // Disable Core Data debug logging in debug builds for performance
+        #if DEBUG
+        persistentContainer.persistentStoreDescriptions.first?.setOption(false as NSNumber, forKey: "NSPersistentStoreConnectionPoolMaxSize")
+        persistentContainer.persistentStoreDescriptions.first?.setOption(false as NSNumber, forKey: "com.apple.CoreData.ConcurrencyDebug")
+        #endif
+        
         persistentContainer.loadPersistentStores { (storeDescription, error) in
             if let error = error as NSError? {
                 fatalError("Unresolved error \(error), \(error.userInfo)")
             }
         }
+        
+        // Optimize context settings for debug performance
+        #if DEBUG
+        persistentContainer.viewContext.automaticallyMergesChangesFromParent = false
+        persistentContainer.viewContext.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy
+        #endif
     }
 
     var context: NSManagedObjectContext {
