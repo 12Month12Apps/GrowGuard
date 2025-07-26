@@ -138,14 +138,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
 
     override init() {
         super.init()
-        
-        // Use background queue for BLE in debug builds to reduce main thread blocking
-        #if DEBUG
-        let bleQueue = DispatchQueue(label: "com.growguard.ble", qos: .userInitiated)
-        centralManager = CBCentralManager(delegate: self, queue: bleQueue)
-        #else
         centralManager = CBCentralManager(delegate: self, queue: nil)
-        #endif
     }
 
     func startScanning(deviceUUID: String) {
@@ -250,6 +243,10 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         print("Connected to: \(peripheral.name ?? "Unknown")")
+        
+        // Reset reconnection counter on successful connection
+        reconnectionAttempts = 0
+        
         peripheral.delegate = self
         peripheral.discoverServices(nil)
         
@@ -268,15 +265,24 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         let wasRequestingData = isRequestingData
         isRequestingData = false
         
-        // If we were in the middle of history data retrieval
-        if totalEntries > 0 && currentEntryIndex < totalEntries {
-            print("Disconnected during history retrieval. Reconnecting...")
-            // Try to reconnect
-            centralManager.connect(peripheral, options: nil)
-        } else if wasRequestingData {
-            print("Disconnected during sensor data request")
-            // Try to reconnect if needed
-            centralManager.connect(peripheral, options: nil)
+        // Check if we were in the middle of history data loading
+        let wasLoadingHistory = (loadingStateSubject.value == .loading)
+        
+        // Check if we should attempt reconnection
+        let shouldReconnect = (totalEntries > 0 && currentEntryIndex < totalEntries) || wasRequestingData || wasLoadingHistory
+        
+        if shouldReconnect && reconnectionAttempts < maxReconnectionAttempts {
+            reconnectionAttempts += 1
+            print("Disconnected during BLE operation. Reconnecting attempt \(reconnectionAttempts)/\(maxReconnectionAttempts) in 2 seconds...")
+            
+            // Add delay before reconnecting to prevent rapid connect/disconnect loops
+            safeScheduleTimer(delay: 2.0) {
+                self.centralManager.connect(peripheral, options: nil)
+            }
+        } else if shouldReconnect && reconnectionAttempts >= maxReconnectionAttempts {
+            print("Max reconnection attempts reached. Stopping history data loading.")
+            loadingStateSubject.send(.error("Connection lost after \(maxReconnectionAttempts) attempts"))
+            cancelHistoryDataLoading()
         }
     }
 
@@ -340,41 +346,71 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     // New method to handle the correct history data flow
     private func startHistoryDataFlow() {
         print("Starting history data flow...")
+        
+        // Prevent concurrent history setup attempts
+        guard !isSettingUpHistory else {
+            print("History setup already in progress, skipping...")
+            return
+        }
+        
+        isSettingUpHistory = true
         isCancelled = false  // Reset cancel flag when starting
         loadingStateSubject.send(.loading)
-        
-        // Start connection quality monitoring
-        startConnectionQualityMonitoring()
 
         // Step 1: Send 0xa00000 to switch to history mode
-        guard let historyControlCharacteristic = historyControlCharacteristic else {
-            print("History control characteristic not found.")
+        guard let historyControlCharacteristic = historyControlCharacteristic,
+              let peripheral = discoveredPeripheral,
+              peripheral.state == .connected else {
+            print("History control characteristic not found or device not connected.")
+            isSettingUpHistory = false
+            loadingStateSubject.send(.error("Device not connected"))
             return
         }
         
         print("Step 1: Setting history mode...")
         let modeCommand: [UInt8] = [0xa0, 0x00, 0x00]
         let modeData = Data(modeCommand)
-        discoveredPeripheral?.writeValue(modeData, for: historyControlCharacteristic, type: .withResponse)
+        peripheral.writeValue(modeData, for: historyControlCharacteristic, type: .withResponse)
         
         // Step 2: Read device time 
-        self.safeScheduleTimer(delay: 0.5) {
+        self.safeScheduleTimer(delay: 1.0) {
+            guard let peripheral = self.discoveredPeripheral, peripheral.state == .connected else {
+                print("Device disconnected before step 2")
+                self.isSettingUpHistory = false
+                self.loadingStateSubject.send(.error("Device disconnected"))
+                return
+            }
+            
             print("Step 2: Reading device time...")
             if let deviceTimeCharacteristic = self.deviceTimeCharacteristic {
-                self.discoveredPeripheral?.readValue(for: deviceTimeCharacteristic)
+                peripheral.readValue(for: deviceTimeCharacteristic)
             }
             
             // Step 3: Get entry count
-            self.safeScheduleTimer(delay: 0.5) {
+            self.safeScheduleTimer(delay: 1.0) {
+                guard let peripheral = self.discoveredPeripheral, peripheral.state == .connected else {
+                    print("Device disconnected before step 3")
+                    self.isSettingUpHistory = false
+                    self.loadingStateSubject.send(.error("Device disconnected"))
+                    return
+                }
+                
                 print("Step 3: Getting entry count...")
                 let entryCountCommand: [UInt8] = [0x3c]  // Command to get entry count
-                self.discoveredPeripheral?.writeValue(Data(entryCountCommand), for: historyControlCharacteristic, type: .withResponse)
+                peripheral.writeValue(Data(entryCountCommand), for: historyControlCharacteristic, type: .withResponse)
                 
                 // After sending the command, read the history data characteristic
-                self.safeScheduleTimer(delay: 0.5) {
+                self.safeScheduleTimer(delay: 1.0) {
+                    guard let peripheral = self.discoveredPeripheral, peripheral.state == .connected else {
+                        print("Device disconnected before reading history data")
+                        self.isSettingUpHistory = false
+                        self.loadingStateSubject.send(.error("Device disconnected"))
+                        return
+                    }
+                    
                     print("Reading history data characteristic...")
                     if let historyDataCharacteristic = self.historyDataCharacteristic {
-                        self.discoveredPeripheral?.readValue(for: historyDataCharacteristic)
+                        peripheral.readValue(for: historyDataCharacteristic)
                     }
                 }
             }
@@ -461,12 +497,19 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         if let count = decoder.decodeEntryCount(data: data) {
             totalEntries = count
             print("Total historical entries: \(totalEntries)")
+            
+            // History setup is complete, reset flag
+            isSettingUpHistory = false
 
             if (totalEntries > 0) {
                 currentEntryIndex = 0
                 // Update loading state
                 loadingStateSubject.send(.loading)
                 loadingProgressSubject.send((0, totalEntries))
+                
+                // Start connection quality monitoring now that we have totalEntries
+                startConnectionQualityMonitoring()
+                
                 fetchHistoricalDataEntry(index: currentEntryIndex)
             } else {
                 print("No historical entries available.")
@@ -582,9 +625,16 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 totalEntries = count
                 print("Total historical entries from metadata: \(totalEntries)")
                 
+                // History setup is complete, reset flag
+                isSettingUpHistory = false
+                
                 // If there are entries, start fetching them
                 if (totalEntries > 0) {
                     currentEntryIndex = 0
+                    
+                    // Start connection quality monitoring now that we have totalEntries
+                    startConnectionQualityMonitoring()
+                    
                     fetchHistoricalDataEntry(index: currentEntryIndex)
                 } else {
                     print("No historical entries available.")
@@ -795,11 +845,15 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
 
     // Add this property to your FlowerCareManager class
     private var isCancelled = false
+    private var isSettingUpHistory = false
+    private var reconnectionAttempts = 0
+    private let maxReconnectionAttempts = 3
 
     // Add this method to cancel the loading process
     func cancelHistoryDataLoading() {
         print("Cancelling history data loading")
         isCancelled = true
+        isSettingUpHistory = false
         
         // Stop connection monitoring
         stopConnectionQualityMonitoring()
@@ -837,6 +891,8 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         totalEntries = 0
         currentEntryIndex = 0
         isCancelled = false
+        isSettingUpHistory = false
+        reconnectionAttempts = 0
         
         if isConnected && historyControlCharacteristic != nil && 
            historyDataCharacteristic != nil && deviceTimeCharacteristic != nil {
