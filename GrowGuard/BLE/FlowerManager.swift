@@ -383,7 +383,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             case realTimeSensorValuesCharacteristicUUID:
                 processAndValidateSensorData(value)
             case firmwareVersionCharacteristicUUID:
-                decodeFirmwareAndBattery(data: value)f
+                decodeFirmwareAndBattery(data: value)
             case deviceNameCharacteristicUUID:
                 decodeDeviceName(data: value)
             case deviceTimeCharacteristicUUID:
@@ -450,6 +450,155 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     // Add the rest of the missing methods from beta...
     
     private var isCancelled = false
+    
+    // MARK: - Resume Functionality
+    let progressManager = HistoryProgressManager()
+    private var currentLoadingPlan: LoadingPlan?
+    
+    // MARK: - Test Access Properties (Internal for testing)
+    #if DEBUG
+    internal var testTotalEntries: Int {
+        get { return totalEntries }
+        set { totalEntries = newValue }
+    }
+    
+    internal var testCurrentEntryIndex: Int {
+        get { return currentEntryIndex }
+        set { currentEntryIndex = newValue }
+    }
+    
+    internal var testIsCancelled: Bool {
+        get { return isCancelled }
+        set { isCancelled = newValue }
+    }
+    
+    internal var testDeviceBootTime: Date? {
+        return deviceBootTime
+    }
+    
+    internal var testLoadingStateSubject: CurrentValueSubject<LoadingState, Never> {
+        return loadingStateSubject
+    }
+    
+    internal var testLoadingProgressSubject: CurrentValueSubject<(current: Int, total: Int), Never> {
+        return loadingProgressSubject
+    }
+    
+    internal var testHistoricalDataSubject: PassthroughSubject<HistoricalSensorData, Never> {
+        return historicalDataSubject
+    }
+    
+    internal func testDecodeEntryCount(data: Data) {
+        decodeEntryCount(data: data)
+    }
+    
+    internal func testDecodeDeviceTime(data: Data) {
+        decodeDeviceTime(data: data)
+    }
+    
+    internal func testDecodeHistoryData(data: Data) {
+        decodeHistoryData(data: data)
+    }
+    #endif
+
+    // MARK: - Resume Methods
+    
+    func saveLoadingProgress(deviceUUID: String) {
+        let targetDeviceUUID = deviceUUID.isEmpty ? (self.deviceUUID ?? "") : deviceUUID
+        guard !targetDeviceUUID.isEmpty else { return }
+        
+        let progress = HistoryLoadingProgress(
+            deviceUUID: targetDeviceUUID,
+            currentIndex: currentEntryIndex,
+            totalEntries: totalEntries,
+            lastUpdateDate: Date(),
+            deviceBootTime: deviceBootTime
+        )
+        
+        progressManager.saveProgress(progress)
+    }
+    
+    func getLoadingProgress(deviceUUID: String) -> HistoryLoadingProgress? {
+        return progressManager.loadProgress(for: deviceUUID)
+    }
+    
+    func setLoadingProgress(_ progress: HistoryLoadingProgress) {
+        totalEntries = progress.totalEntries
+        currentEntryIndex = progress.currentIndex
+        deviceUUID = progress.deviceUUID
+    }
+    
+    func onHistoryLoadingCompleted() {
+        guard let deviceUUID = self.deviceUUID else { return }
+        progressManager.clearProgress(for: deviceUUID)
+        print("✅ History loading completed, progress cleared for device \(deviceUUID)")
+    }
+    
+    func resumeHistoricalDataLoading(deviceUUID: String) {
+        guard let savedProgress = progressManager.loadProgress(for: deviceUUID) else {
+            print("No saved progress found for device \(deviceUUID), starting from beginning")
+            return
+        }
+        
+        guard savedProgress.isValid else {
+            print("Saved progress is invalid, clearing and starting fresh")
+            progressManager.clearProgress(for: deviceUUID)
+            return
+        }
+        
+        print("📍 Resuming history loading for \(deviceUUID) from index \(savedProgress.currentIndex)/\(savedProgress.totalEntries)")
+        setLoadingProgress(savedProgress)
+        
+        // Continue loading from where we left off
+        loadingStateSubject.send(.loading)
+        loadingProgressSubject.send((savedProgress.currentIndex, savedProgress.totalEntries))
+        
+        if savedProgress.currentIndex < savedProgress.totalEntries {
+            fetchHistoricalDataEntry(index: savedProgress.currentIndex)
+        } else {
+            onHistoryLoadingCompleted()
+        }
+    }
+    
+    func validateSavedProgress(deviceUUID: String, currentTotalEntries: Int) -> Bool {
+        guard let savedProgress = progressManager.loadProgress(for: deviceUUID) else {
+            return false
+        }
+        
+        // Check if saved total matches current total
+        let isValid = savedProgress.isValid && savedProgress.totalEntries == currentTotalEntries
+        
+        if !isValid {
+            print("❌ Saved progress invalid: saved total \(savedProgress.totalEntries) vs current \(currentTotalEntries)")
+            progressManager.clearProgress(for: deviceUUID)
+        }
+        
+        return isValid
+    }
+    
+    func resumeFromLastCompletedBatch(deviceUUID: String) {
+        guard let savedProgress = progressManager.loadProgress(for: deviceUUID) else {
+            print("No saved progress for batch resume")
+            return
+        }
+        
+        // Calculate last completed batch (batches of 10)
+        let batchSize = 10
+        let lastCompletedBatch = (savedProgress.currentIndex / batchSize) * batchSize
+        
+        print("📦 Resuming from last completed batch at index \(lastCompletedBatch)")
+        
+        // Set progress to start of incomplete batch
+        totalEntries = savedProgress.totalEntries
+        currentEntryIndex = lastCompletedBatch
+        
+        loadingStateSubject.send(.loading)
+        loadingProgressSubject.send((lastCompletedBatch, savedProgress.totalEntries))
+        
+        if lastCompletedBatch < savedProgress.totalEntries {
+            fetchHistoricalDataEntry(index: lastCompletedBatch)
+        }
+    }
 
     func cancelHistoryDataLoading() {
         print("Cancelling history data loading")
@@ -484,11 +633,20 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     // Public method to request historical data
     func requestHistoricalData() {
         historicalDataRequested = true
-        // Reset any previous loading state
+        isCancelled = false
+        
+        // Check for existing progress first
+        if let deviceUUID = self.deviceUUID,
+           let savedProgress = progressManager.loadProgress(for: deviceUUID) {
+            print("📍 Found existing progress for \(deviceUUID), resuming from index \(savedProgress.currentIndex)")
+            resumeHistoricalDataLoading(deviceUUID: deviceUUID)
+            return
+        }
+        
+        // Reset loading state for fresh start
         loadingStateSubject.send(.idle)
         totalEntries = 0
         currentEntryIndex = 0
-        isCancelled = false
         
         if isConnected && historyControlCharacteristic != nil && 
            historyDataCharacteristic != nil && deviceTimeCharacteristic != nil {
@@ -633,6 +791,11 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 currentEntryIndex = nextIndex
                 loadingProgressSubject.send((nextIndex, totalEntries))
                 
+                // Save progress automatically every 10 entries
+                if let deviceUUID = self.deviceUUID, nextIndex % 10 == 0 {
+                    saveLoadingProgress(deviceUUID: deviceUUID)
+                }
+                
                 if nextIndex < totalEntries && !isCancelled {
                     // Add batch processing with longer delays between batches
                     let batchSize = 10
@@ -651,6 +814,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 } else if !isCancelled {
                     print("All historical data fetched successfully.")
                     loadingStateSubject.send(.completed)
+                    onHistoryLoadingCompleted()
                 }
             } else {
                 print("Failed to decode history entry \(currentEntryIndex)")
@@ -832,5 +996,30 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             case .good: return "good"
             }
         }
+    }
+    
+    // MARK: - Future Implementation Stubs (for gap detection and optimized loading)
+    
+    func identifyDataGaps(deviceUUID: String, totalEntries: Int, deviceBootTime: Date) async -> [DataGap] {
+        // TODO: Implement gap detection by comparing with existing Core Data
+        // This will query the repository for existing timestamps and identify missing ranges
+        return []
+    }
+    
+    func startOptimizedHistoryLoading(deviceUUID: String, missingIndexes: [Int]) {
+        // TODO: Implement optimized loading that only fetches missing entries
+        print("🎯 Starting optimized loading for \(missingIndexes.count) missing entries")
+        
+        currentLoadingPlan = LoadingPlan(
+            deviceUUID: deviceUUID,
+            totalEntriesToLoad: missingIndexes.count,
+            indexesToLoad: missingIndexes,
+            estimatedTimeRemaining: Double(missingIndexes.count) * 1.0, // 1 second per entry
+            strategy: .fillGaps
+        )
+    }
+    
+    func getCurrentLoadingPlan() -> LoadingPlan? {
+        return currentLoadingPlan
     }
 }

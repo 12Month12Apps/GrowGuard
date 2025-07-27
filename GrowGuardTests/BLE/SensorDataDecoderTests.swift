@@ -24,7 +24,7 @@ class SensorDataDecoderTests {
             60, 0, 251, 52, 155     // Padding or unused data
         ])
 
-        if let sensorData = decoder.decodeRealTimeSensorValues(data: data) {
+        if let sensorData = decoder.decodeRealTimeSensorValues(data: data, deviceUUID: "1") {
             #expect(sensorData.temperature == 23.9)
             #expect(sensorData.brightness == 185)
             #expect(sensorData.moisture == 51)
@@ -38,7 +38,7 @@ class SensorDataDecoderTests {
     func testDecodeRealTimeSensorValuesInvalidLength() {
         // Invalid data length (only 1 byte, expected 16)
         let data: Data = Data([0x1A])
-        let sensorData = decoder.decodeRealTimeSensorValues(data: data)
+        let sensorData = decoder.decodeRealTimeSensorValues(data: data, deviceUUID: "1")
         #expect(sensorData == nil)
     }
 

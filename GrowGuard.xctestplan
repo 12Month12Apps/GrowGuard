@@ -1,0 +1,29 @@
+{
+  "configurations" : [
+    {
+      "id" : "F2142190-E32D-4F30-B755-A03D95752C72",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:GrowGuard.xcodeproj",
+      "identifier" : "56AF11142BDED05900887073",
+      "name" : "GrowGuard"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:GrowGuard.xcodeproj",
+        "identifier" : "56AF11272BDED05B00887073",
+        "name" : "GrowGuardTests"
+      }
+    }
+  ],
+  "version" : 1
+}

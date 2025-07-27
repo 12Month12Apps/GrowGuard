@@ -11,17 +11,23 @@ import Testing
 class OverviewListViewModelTests {
     
     var viewModel: OverviewListViewModel!
+    let context = DataService.shared.context
 
     @MainActor
     func setupMockedDataService() {
-        let device1 = FlowerDevice(name: "Rose", uuid: "1")
-        let device2 = FlowerDevice(name: "Tulip", uuid: "2")
+        let device1 = FlowerDevice(context: context)
+        device1.name = "Rose"
+        device1.uuid = "1"
         
-        DataService.sharedModelContainer.mainContext.insert(device1)
-        DataService.sharedModelContainer.mainContext.insert(device2)
+        let device2 = FlowerDevice(context: context)
+        device2.name = "Tulip"
+        device2.uuid = "2"
+        
+        DataService.shared.context.insert(device1)
+        DataService.shared.context.insert(device2)
 
         do {
-            try DataService.sharedModelContainer.mainContext.save()
+            try DataService.shared.context.save()
         } catch {
             print(error.localizedDescription)
         }

@@ -73,6 +73,10 @@
 		56DC564D2DD9256800041DBA /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 56DC564C2DD9256800041DBA /* GRDB */; };
 		56FD6C862E34194C00905984 /* SensorDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C852E34194C00905984 /* SensorDataManager.swift */; };
 		56FD6C892E34BF9300905984 /* ReliableFlowerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C882E34BF9300905984 /* ReliableFlowerManager.swift */; };
+		56FD6C8C2E36960300905984 /* FlowerManagerResumeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C8B2E36960300905984 /* FlowerManagerResumeTests.swift */; };
+		56FD6C8D2E36960300905984 /* FlowerManagerHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C8A2E36960300905984 /* FlowerManagerHistoryTests.swift */; };
+		56FD6C8F2E36973B00905984 /* HistoryLoadingProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C8E2E36973B00905984 /* HistoryLoadingProgress.swift */; };
+		56FD6C912E36974E00905984 /* ResumeDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C902E36974E00905984 /* ResumeDemo.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -123,6 +127,7 @@
 		565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsView.swift; sourceTree = "<group>"; };
 		565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsViewModel.swift; sourceTree = "<group>"; };
 		5667BD892C28924600D04382 /* SensorData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorData.swift; sourceTree = "<group>"; };
+		567465842E36A6A50084A296 /* GrowGuard.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = GrowGuard.xctestplan; sourceTree = "<group>"; };
 		5684E2DA2C0F81C0005CD8B6 /* AddDeviceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceView.swift; sourceTree = "<group>"; };
 		5684E2DC2C0F81E7005CD8B6 /* AddDeviceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceViewModel.swift; sourceTree = "<group>"; };
 		5684E2DE2C0F820D005CD8B6 /* AddDeviceBLE.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceBLE.swift; sourceTree = "<group>"; };
@@ -163,6 +168,10 @@
 		56DC56492DD9251C00041DBA /* flower.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = flower.db; sourceTree = "<group>"; };
 		56FD6C852E34194C00905984 /* SensorDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataManager.swift; sourceTree = "<group>"; };
 		56FD6C882E34BF9300905984 /* ReliableFlowerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReliableFlowerManager.swift; sourceTree = "<group>"; };
+		56FD6C8A2E36960300905984 /* FlowerManagerHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerManagerHistoryTests.swift; sourceTree = "<group>"; };
+		56FD6C8B2E36960300905984 /* FlowerManagerResumeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerManagerResumeTests.swift; sourceTree = "<group>"; };
+		56FD6C8E2E36973B00905984 /* HistoryLoadingProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryLoadingProgress.swift; sourceTree = "<group>"; };
+		56FD6C902E36974E00905984 /* ResumeDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumeDemo.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -266,6 +275,8 @@
 		5654B2BF2CB46EF200EED3D3 /* BLE */ = {
 			isa = PBXGroup;
 			children = (
+				56FD6C8A2E36960300905984 /* FlowerManagerHistoryTests.swift */,
+				56FD6C8B2E36960300905984 /* FlowerManagerResumeTests.swift */,
 				5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */,
 			);
 			path = BLE;
@@ -375,6 +386,7 @@
 		56AF110C2BDED05900887073 = {
 			isa = PBXGroup;
 			children = (
+				567465842E36A6A50084A296 /* GrowGuard.xctestplan */,
 				56AF11172BDED05900887073 /* GrowGuard */,
 				56AF112B2BDED05B00887073 /* GrowGuardTests */,
 				56AF11352BDED05B00887073 /* GrowGuardUITests */,
@@ -451,7 +463,9 @@
 			children = (
 				56B44CBE2D6E7B3F00A6A75A /* FlowerManager.swift */,
 				56FD6C882E34BF9300905984 /* ReliableFlowerManager.swift */,
+				56FD6C8E2E36973B00905984 /* HistoryLoadingProgress.swift */,
 				56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */,
+				56FD6C902E36974E00905984 /* ResumeDemo.swift */,
 				56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */,
 				56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */,
 			);
@@ -610,6 +624,7 @@
 				56B44CC32D6E7B3F00A6A75A /* FlowerManager.swift in Sources */,
 				56241CE12E03591C0012B18E /* FlowerPot.swift in Sources */,
 				56FD6C892E34BF9300905984 /* ReliableFlowerManager.swift in Sources */,
+				56FD6C912E36974E00905984 /* ResumeDemo.swift in Sources */,
 				5622B0EE2E327ADD002C7E74 /* SensorDataDTO+CoreData.swift in Sources */,
 				569417562E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld in Sources */,
 				56B44CC42D6E7B3F00A6A75A /* HistoricalSensorData.swift in Sources */,
@@ -643,6 +658,7 @@
 				56A8C6F12D90095B004021C0 /* HistoryLoadingView.swift in Sources */,
 				56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */,
 				5684E2E22C0FA2EE005CD8B6 /* OverviewList.swift in Sources */,
+				56FD6C8F2E36973B00905984 /* HistoryLoadingProgress.swift in Sources */,
 				562629002C42E32700B5DB2A /* AppIntent.swift in Sources */,
 				56A8C6EF2D8F38CD004021C0 /* Button.swift in Sources */,
 				56A948F72DE3A4790010575F /* FlowerSearch.swift in Sources */,
@@ -666,6 +682,8 @@
 			files = (
 				5654B2C12CB4739C00EED3D3 /* AddDeviceViewModelTests.swift in Sources */,
 				5654B2BB2CB45C6E00EED3D3 /* SensorDataDecoderTests.swift in Sources */,
+				56FD6C8C2E36960300905984 /* FlowerManagerResumeTests.swift in Sources */,
+				56FD6C8D2E36960300905984 /* FlowerManagerHistoryTests.swift in Sources */,
 				5654B2BD2CB46EE600EED3D3 /* OverviewListViewModelTests.swift in Sources */,
 				56AF112D2BDED05B00887073 /* GrowGuardTests.swift in Sources */,
 			);
@@ -836,7 +854,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 18;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -877,7 +895,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 18;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
