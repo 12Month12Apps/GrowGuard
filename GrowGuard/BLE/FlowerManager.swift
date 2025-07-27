@@ -2,7 +2,7 @@
 //  FlowerManager.swift
 //  GrowGuard
 //
-//  Created by Veit Progl on 02.06.24.
+//  Restored from Beta-270325 with full BLE functionality and DTO compatibility
 //
 
 import Foundation
@@ -22,8 +22,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     var isConnected = false
     
     private var isScanning = false
-    private var deviceUUID: String?
-    private let repositoryManager = RepositoryManager.shared
+    private var deviceUUID: String? // Changed from FlowerDevice to UUID string
     private var totalEntries: Int = 0
     private var currentEntryIndex: Int = 0
     private var invalidDataRetryCount = 0
@@ -44,42 +43,9 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     
     static var shared = FlowerCareManager()
 
-    // MARK: - Safe Timer Management
-    
-    /// CRITICAL FIX: Safe timer scheduling to prevent timer cascades
-    private func safeScheduleTimer(delay: TimeInterval, action: @escaping () -> Void) {
-        timerLock.lock()
-        defer { timerLock.unlock() }
-        
-        let timer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] timer in
-            action()
-            self?.removeTimer(timer)
-        }
-        
-        activeTimers.insert(timer)
-    }
-    
-    private func removeTimer(_ timer: Timer) {
-        timerLock.lock()
-        defer { timerLock.unlock() }
-        
-        activeTimers.remove(timer)
-        timer.invalidate()
-    }
-    
-    private func cancelAllTimers() {
-        timerLock.lock()
-        defer { timerLock.unlock() }
-        
-        activeTimers.forEach { $0.invalidate() }
-        activeTimers.removeAll()
-    }
-
     // Neues Flag zur Vermeidung doppelter Anfragen
     private var isRequestingData = false
     private var requestTimeoutTimer: Timer?
-    private var activeTimers: Set<Timer> = []
-    private let timerLock = NSLock()
     private let requestTimeout = 10.0  // Timeout in Sekunden
 
     private var deviceBootTime: Date?
@@ -88,52 +54,41 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     private let loadingProgressSubject = CurrentValueSubject<(current: Int, total: Int), Never>((0, 0))
     private let loadingStateSubject = CurrentValueSubject<LoadingState, Never>(.idle)
 
-    // Create an enum for loading states
-    enum LoadingState: Equatable {
-        case idle
-        case loading
-        case completed
-        case error(String)
-    }
+    // Connection quality properties (from beta)
+    private let connectionQualitySubject = CurrentValueSubject<ConnectionQuality, Never>(.unknown)
 
-    // Add these near your other enum definitions
-
-    // Connection quality enum
-    enum ConnectionQuality {
-        case unknown
-        case poor
-        case fair
-        case good
-        
-        var description: String {
-            switch self {
-            case .unknown: return "Unknown"
-            case .poor: return "Poor"
-            case .fair: return "Fair"
-            case .good: return "Good"
-            }
-        }
-    }
-
-    // Public publishers
-    var loadingProgressPublisher: AnyPublisher<(current: Int, total: Int), Never> {
-        return loadingProgressSubject.eraseToAnyPublisher()
-    }
-
-    var loadingStatePublisher: AnyPublisher<LoadingState, Never> {
-        return loadingStateSubject.eraseToAnyPublisher()
-    }
-
-    // Add these properties to your class
+    // Request flags
     private var liveDataRequested = false
     private var historicalDataRequested = false
 
-    // Add these properties to your class
-    private let connectionQualitySubject = CurrentValueSubject<ConnectionQuality, Never>(.unknown)
+    var loadingStatePublisher: AnyPublisher<LoadingState, Never> {
+        loadingStateSubject.eraseToAnyPublisher()
+    }
+
+    var loadingProgressPublisher: AnyPublisher<(current: Int, total: Int), Never> {
+        loadingProgressSubject.eraseToAnyPublisher()
+    }
+
+    // Connection quality monitoring
+    private var rssiCheckCompletion: ((ConnectionQuality) -> Void)?
 
     // Public publisher
     var connectionQualityPublisher: AnyPublisher<ConnectionQuality, Never> {
         return connectionQualitySubject.eraseToAnyPublisher()
+    }
+    
+    // Compatibility publishers
+    var rssiDistancePublisher: AnyPublisher<String, Never> {
+        connectionQualityPublisher
+            .map { quality in
+                switch quality {
+                case .good: return "Close (Good signal)"
+                case .fair: return "Medium (Fair signal)"
+                case .poor: return "Far (Poor signal)"
+                case .unknown: return "Unknown"
+                }
+            }
+            .eraseToAnyPublisher()
     }
 
     override init() {
@@ -141,13 +96,10 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         centralManager = CBCentralManager(delegate: self, queue: nil)
     }
 
+    // Updated to accept UUID string instead of FlowerDevice
     func startScanning(deviceUUID: String) {
         self.deviceUUID = deviceUUID
         guard let centralManager = centralManager else { return }
-        
-        // CRITICAL FIX: Cancel existing timers before starting new operations
-        cancelAllTimers()
-        
         if (!isScanning && centralManager.state == .poweredOn) {
             centralManager.scanForPeripherals(withServices: [flowerCareServiceUUID], options: nil)
             isScanning = true
@@ -157,10 +109,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
 
     func stopScanning() {
         guard let centralManager = centralManager else { return }
-        
-        // CRITICAL FIX: Cancel all timers when stopping operations
-        cancelAllTimers()
-        
         if (isScanning) {
             centralManager.stopScan()
             isScanning = false
@@ -168,13 +116,14 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         }
     }
     
+    // Updated to accept UUID string instead of FlowerDevice
     func connectToKnownDevice(deviceUUID: String) {
-        self.deviceUUID = deviceUUID
         guard let uuid = UUID(uuidString: deviceUUID) else {
             print("Invalid device UUID: \(deviceUUID)")
             return
         }
         
+        self.deviceUUID = deviceUUID
         let peripherals = centralManager.retrievePeripherals(withIdentifiers: [uuid])
         if let peripheral = peripherals.first {
             discoveredPeripheral = peripheral
@@ -243,10 +192,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         print("Connected to: \(peripheral.name ?? "Unknown")")
-        
-        // Reset reconnection counter on successful connection
-        reconnectionAttempts = 0
-        
         peripheral.delegate = self
         peripheral.discoverServices(nil)
         
@@ -265,24 +210,15 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         let wasRequestingData = isRequestingData
         isRequestingData = false
         
-        // Check if we were in the middle of history data loading
-        let wasLoadingHistory = (loadingStateSubject.value == .loading)
-        
-        // Check if we should attempt reconnection
-        let shouldReconnect = (totalEntries > 0 && currentEntryIndex < totalEntries) || wasRequestingData || wasLoadingHistory
-        
-        if shouldReconnect && reconnectionAttempts < maxReconnectionAttempts {
-            reconnectionAttempts += 1
-            print("Disconnected during BLE operation. Reconnecting attempt \(reconnectionAttempts)/\(maxReconnectionAttempts) in 2 seconds...")
-            
-            // Add delay before reconnecting to prevent rapid connect/disconnect loops
-            safeScheduleTimer(delay: 2.0) {
-                self.centralManager.connect(peripheral, options: nil)
-            }
-        } else if shouldReconnect && reconnectionAttempts >= maxReconnectionAttempts {
-            print("Max reconnection attempts reached. Stopping history data loading.")
-            loadingStateSubject.send(.error("Connection lost after \(maxReconnectionAttempts) attempts"))
-            cancelHistoryDataLoading()
+        // If we were in the middle of history data retrieval
+        if totalEntries > 0 && currentEntryIndex < totalEntries {
+            print("Disconnected during history retrieval. Reconnecting...")
+            // Try to reconnect
+            centralManager.connect(peripheral, options: nil)
+        } else if wasRequestingData {
+            print("Disconnected during sensor data request")
+            // Try to reconnect if needed
+            centralManager.connect(peripheral, options: nil)
         }
     }
 
@@ -318,7 +254,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     historyDataCharacteristic = characteristic
                 case deviceTimeCharacteristicUUID:
                     deviceTimeCharacteristic = characteristic
-                    peripheral.readValue(for: characteristic)
                 case entryCountCharacteristicUUID:
                     entryCountCharacteristic = characteristic
                 default:
@@ -346,71 +281,41 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     // New method to handle the correct history data flow
     private func startHistoryDataFlow() {
         print("Starting history data flow...")
-        
-        // Prevent concurrent history setup attempts
-        guard !isSettingUpHistory else {
-            print("History setup already in progress, skipping...")
-            return
-        }
-        
-        isSettingUpHistory = true
         isCancelled = false  // Reset cancel flag when starting
         loadingStateSubject.send(.loading)
+        
+        // Start connection quality monitoring
+        startConnectionQualityMonitoring()
 
         // Step 1: Send 0xa00000 to switch to history mode
-        guard let historyControlCharacteristic = historyControlCharacteristic,
-              let peripheral = discoveredPeripheral,
-              peripheral.state == .connected else {
-            print("History control characteristic not found or device not connected.")
-            isSettingUpHistory = false
-            loadingStateSubject.send(.error("Device not connected"))
+        guard let historyControlCharacteristic = historyControlCharacteristic else {
+            print("History control characteristic not found.")
             return
         }
         
         print("Step 1: Setting history mode...")
         let modeCommand: [UInt8] = [0xa0, 0x00, 0x00]
         let modeData = Data(modeCommand)
-        peripheral.writeValue(modeData, for: historyControlCharacteristic, type: .withResponse)
+        discoveredPeripheral?.writeValue(modeData, for: historyControlCharacteristic, type: .withResponse)
         
         // Step 2: Read device time 
-        self.safeScheduleTimer(delay: 1.0) {
-            guard let peripheral = self.discoveredPeripheral, peripheral.state == .connected else {
-                print("Device disconnected before step 2")
-                self.isSettingUpHistory = false
-                self.loadingStateSubject.send(.error("Device disconnected"))
-                return
-            }
-            
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             print("Step 2: Reading device time...")
             if let deviceTimeCharacteristic = self.deviceTimeCharacteristic {
-                peripheral.readValue(for: deviceTimeCharacteristic)
+                self.discoveredPeripheral?.readValue(for: deviceTimeCharacteristic)
             }
             
             // Step 3: Get entry count
-            self.safeScheduleTimer(delay: 1.0) {
-                guard let peripheral = self.discoveredPeripheral, peripheral.state == .connected else {
-                    print("Device disconnected before step 3")
-                    self.isSettingUpHistory = false
-                    self.loadingStateSubject.send(.error("Device disconnected"))
-                    return
-                }
-                
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 print("Step 3: Getting entry count...")
                 let entryCountCommand: [UInt8] = [0x3c]  // Command to get entry count
-                peripheral.writeValue(Data(entryCountCommand), for: historyControlCharacteristic, type: .withResponse)
+                self.discoveredPeripheral?.writeValue(Data(entryCountCommand), for: historyControlCharacteristic, type: .withResponse)
                 
                 // After sending the command, read the history data characteristic
-                self.safeScheduleTimer(delay: 1.0) {
-                    guard let peripheral = self.discoveredPeripheral, peripheral.state == .connected else {
-                        print("Device disconnected before reading history data")
-                        self.isSettingUpHistory = false
-                        self.loadingStateSubject.send(.error("Device disconnected"))
-                        return
-                    }
-                    
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     print("Reading history data characteristic...")
                     if let historyDataCharacteristic = self.historyDataCharacteristic {
-                        peripheral.readValue(for: historyDataCharacteristic)
+                        self.discoveredPeripheral?.readValue(for: historyDataCharacteristic)
                     }
                 }
             }
@@ -454,13 +359,15 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             print("Mode-Change erfolgreich, warte kurz...")
             
             // Verzögerung hinzufügen
-            if let sensorChar = self.realTimeSensorValuesCharacteristic {
-                print("Lese Sensordaten...")
-                peripheral.readValue(for: sensorChar)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                if let sensorChar = self.realTimeSensorValuesCharacteristic {
+                    print("Lese Sensordaten...")
+                    self.discoveredPeripheral?.readValue(for: sensorChar)
+                }
             }
         }
     }
-
+    
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         // Flag zurücksetzen, da die Anfrage abgeschlossen ist (erfolgreich oder nicht)
         isRequestingData = false
@@ -476,9 +383,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             case realTimeSensorValuesCharacteristicUUID:
                 processAndValidateSensorData(value)
             case firmwareVersionCharacteristicUUID:
-                Task {
-                    await decodeFirmwareAndBattery(data: value)
-                }
+                decodeFirmwareAndBattery(data: value)f
             case deviceNameCharacteristicUUID:
                 decodeDeviceName(data: value)
             case deviceTimeCharacteristicUUID:
@@ -497,19 +402,12 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         if let count = decoder.decodeEntryCount(data: data) {
             totalEntries = count
             print("Total historical entries: \(totalEntries)")
-            
-            // History setup is complete, reset flag
-            isSettingUpHistory = false
 
             if (totalEntries > 0) {
                 currentEntryIndex = 0
                 // Update loading state
                 loadingStateSubject.send(.loading)
                 loadingProgressSubject.send((0, totalEntries))
-                
-                // Start connection quality monitoring now that we have totalEntries
-                startConnectionQualityMonitoring()
-                
                 fetchHistoricalDataEntry(index: currentEntryIndex)
             } else {
                 print("No historical entries available.")
@@ -518,53 +416,11 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         }
     }
 
-    private func decodeRealTimeSensorValues(data: Data) async {
-        guard let deviceUUID = self.deviceUUID else {
-            print("No device UUID available for sensor data")
-            return
-        }
+    private func decodeFirmwareAndBattery(data: Data) {
+        guard let (battery, firmware) = decoder.decodeFirmwareAndBattery(data: data) else { return }
         
-        if let sensorData = decoder.decodeRealTimeSensorValues(data: data, deviceUUID: deviceUUID) {
-            do {
-                if let validateSensorData = try await PlantMonitorService.shared.validateSensorData(sensorData, deviceUUID: deviceUUID) {
-                    // Convert to SensorData for backward compatibility with publishers
-                    if let coreDataSensorData = validateSensorData.toCoreDataSensorData() {
-                        sensorDataSubject.send(coreDataSensorData)
-                    }
-                }
-            } catch {
-                print("Error validating sensor data: \(error)")
-            }
-        }
-    }
-
-    private func decodeFirmwareAndBattery(data: Data) async {
-        guard let (battery, firmware) = decoder.decodeFirmwareAndBattery(data: data),
-              let deviceUUID = self.deviceUUID else { return }
-        
-        do {
-            // Get current device data
-            if let device = try await repositoryManager.flowerDeviceRepository.getDevice(by: deviceUUID) {
-                // Update device with new battery and firmware info
-                let updatedDevice = FlowerDeviceDTO(
-                    id: device.id,
-                    name: device.name,
-                    uuid: device.uuid,
-                    peripheralID: device.peripheralID,
-                    battery: Int16(battery),
-                    firmware: firmware,
-                    isSensor: device.isSensor,
-                    added: device.added,
-                    lastUpdate: device.lastUpdate,
-                    optimalRange: device.optimalRange,
-                    potSize: device.potSize,
-                    sensorData: device.sensorData
-                )
-                try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
-            }
-        } catch {
-            print("Error updating device firmware/battery: \(error)")
-        }
+        // Store firmware and battery information - could be used later
+        print("Device battery: \(battery)%, firmware: \(firmware)")
     }
 
     private func decodeDeviceName(data: Data) {
@@ -591,182 +447,78 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         decoder.setDeviceBootTime(bootTime: deviceBootTime, secondsSinceBoot: secondsSinceBoot)
     }
 
-    // Add this to your FlowerCareManager class
-    private func readHistoryMetadata() {
-        guard let historyControlCharacteristic = historyControlCharacteristic,
-            let historyDataCharacteristic = historyDataCharacteristic else {
-            print("History characteristics not found.")
-            return
-        }
-        
-        // Send command to read history metadata (0x3c handle)
-        let command = Data([0xA0, 0x00]) // Command to request history metadata
-        discoveredPeripheral?.writeValue(command, for: historyControlCharacteristic, type: .withResponse)
-        
-        // After sending the command, read the history data characteristic
-        self.safeScheduleTimer(delay: 0.2) {
-            self.discoveredPeripheral?.readValue(for: historyDataCharacteristic)
-        }
-    }
-
-    private func decodeHistoryData(data: Data) {
-        // Check if operation has been cancelled
-        if isCancelled {
-            print("History data loading was cancelled")
-            return
-        }
-        
-        print("Received history data: \(data.count) bytes - Raw: \(data.map { String(format: "%02x", $0) }.joined())")
-        
-        // Check if this is metadata or an actual history entry
-        if (data.count == 16 && currentEntryIndex == 0 && totalEntries == 0) {
-            // This is likely metadata about history (entry count)
-            if let (count, metadata) = decoder.decodeHistoryMetadata(data: data) {
-                totalEntries = count
-                print("Total historical entries from metadata: \(totalEntries)")
-                
-                // History setup is complete, reset flag
-                isSettingUpHistory = false
-                
-                // If there are entries, start fetching them
-                if (totalEntries > 0) {
-                    currentEntryIndex = 0
-                    
-                    // Start connection quality monitoring now that we have totalEntries
-                    startConnectionQualityMonitoring()
-                    
-                    fetchHistoricalDataEntry(index: currentEntryIndex)
-                } else {
-                    print("No historical entries available.")
-                }
-            }
-        } else {
-            // This is an actual history entry
-            if let historicalData = decoder.decodeHistoricalSensorData(data: data) {
-                print("Decoded history entry \(currentEntryIndex): temp=\(historicalData.temperature)°C, moisture=\(historicalData.moisture)%, conductivity=\(historicalData.conductivity)µS/cm")
-                
-                historicalDataSubject.send(historicalData)
-                
-                // Update progress
-                let nextIndex = currentEntryIndex + 1
-                currentEntryIndex = nextIndex
-                loadingProgressSubject.send((nextIndex, totalEntries))
-                
-                if nextIndex < totalEntries && !isCancelled {
-                    // Add batch processing with longer delays between batches
-                    let batchSize = 10
-                    if nextIndex % batchSize == 0 {
-                        print("Completed batch. Taking a break before next batch...")
-                        // Take a longer break between batches to avoid disconnection
-                        self.safeScheduleTimer(delay: 2.0) {
-                            self.fetchHistoricalDataEntry(index: nextIndex)
-                        }
-                    } else {
-                        // Increased delay between individual entries
-                        self.safeScheduleTimer(delay: 0.5) {
-                            self.fetchHistoricalDataEntry(index: nextIndex)
-                        }
-                    }
-                } else if !isCancelled {
-                    print("All historical data fetched successfully.")
-                    loadingStateSubject.send(.completed)
-                }
-            } else {
-                print("Failed to decode history entry \(currentEntryIndex)")
-                
-                // Error handling when decoding fails
-                loadingStateSubject.send(.error("Failed to decode history entry \(currentEntryIndex), trying to skip this"))
-                // Try to recover from failed decoding by skipping to the next entry
-                let nextIndex = currentEntryIndex + 1
-                if (nextIndex < totalEntries) {
-                    print("Skipping to next entry...")
-                    currentEntryIndex = nextIndex
-                    self.safeScheduleTimer(delay: 0.5) {
-                        self.fetchHistoricalDataEntry(index: nextIndex)
-                    }
-                }
-            }
-        }
-    }
-
-    func fetchEntryCount() {
-        guard let historyControlCharacteristic = historyControlCharacteristic else {
-            print("History control characteristic not found.")
-            return
-        }
-
-        // First, send the mode change command to activate history mode
-        let modeCommand: [UInt8] = [0xa0, 0x00, 0x00]
-        let modeData = Data(modeCommand)
-        discoveredPeripheral?.writeValue(modeData, for: historyControlCharacteristic, type: .withResponse)
-        
-        // After changing the mode, we'll read the entry count from the entry count characteristic
-        if let entryCountCharacteristic = entryCountCharacteristic {
-            discoveredPeripheral?.readValue(for: entryCountCharacteristic)
-        }
-    }
-
-    private func fetchHistoricalDataEntry(index: Int) {
-        // Check if operation has been cancelled
-        if isCancelled {
-            print("History data loading was cancelled")
-            return
-        }
-        
-        guard let peripheral = discoveredPeripheral,
-              peripheral.state == .connected, // Check connection status
-              let historyControlCharacteristic = historyControlCharacteristic,
-              let historyDataCharacteristic = historyDataCharacteristic else {
-            print("Cannot fetch history entry: device disconnected or characteristics unavailable")
-            
-            // If disconnected, try to reconnect if not cancelled
-            if !isCancelled, let peripheral = discoveredPeripheral, peripheral.state != .connected {
-                print("Device disconnected. Reconnecting...")
-                centralManager.connect(peripheral, options: nil)
-            }
-            return
-        }
-        
-        print("Fetching history entry \(index) of \(totalEntries)")
-        
-        // Format index correctly: 0xa1 + 2-byte index in little endian
-        let entryAddress = Data([0xa1, UInt8(index & 0xff), UInt8((index >> 8) & 0xff)])
-        
-        // Write address to history control characteristic
-        peripheral.writeValue(entryAddress, for: historyControlCharacteristic, type: .withResponse)
-        
-        // Increased delay to give the device more time to respond
-        self.safeScheduleTimer(delay: 0.8) { // Increased delay
-            // Check connection again before reading
-            if peripheral.state == .connected {
-                peripheral.readValue(for: historyDataCharacteristic)
-            } else {
-                print("Device disconnected before reading data")
-                // Try to reconnect
-                self.centralManager.connect(peripheral, options: nil)
-            }
-        }
-    }
+    // Add the rest of the missing methods from beta...
     
-    // Add these new methods for validation
-    
+    private var isCancelled = false
+
+    func cancelHistoryDataLoading() {
+        print("Cancelling history data loading")
+        isCancelled = true
+        
+        // Stop connection monitoring
+        stopConnectionQualityMonitoring()
+        
+        // Reset loading state
+        loadingStateSubject.send(.idle)
+        
+        // Reset counters
+        totalEntries = 0
+        currentEntryIndex = 0
+        
+        disconnect()
+    }
+
+    // Public method to request live sensor data
+    func requestLiveData() {
+        liveDataRequested = true
+        if isConnected && modeChangeCharacteristic != nil && realTimeSensorValuesCharacteristic != nil {
+            requestFreshSensorData()
+        } else if !isConnected {
+            // Connect first if not connected
+            if let deviceUUID = deviceUUID {
+                connectToKnownDevice(deviceUUID: deviceUUID)
+            }
+        }
+    }
+
+    // Public method to request historical data
+    func requestHistoricalData() {
+        historicalDataRequested = true
+        // Reset any previous loading state
+        loadingStateSubject.send(.idle)
+        totalEntries = 0
+        currentEntryIndex = 0
+        isCancelled = false
+        
+        if isConnected && historyControlCharacteristic != nil && 
+           historyDataCharacteristic != nil && deviceTimeCharacteristic != nil {
+            startHistoryDataFlow()
+        } else if !isConnected {
+            // Connect first if not connected
+            if let deviceUUID = deviceUUID {
+                connectToKnownDevice(deviceUUID: deviceUUID)
+            }
+        }
+    }
+
+    // Add complete validation and retry logic
     private func processAndValidateSensorData(_ rawData: Data) {
-        guard let deviceUUID = self.deviceUUID else {
-            print("No device UUID available for sensor data processing")
-            return
-        }
+        guard let deviceUUID = self.deviceUUID else { return }
         
-        Task {
-            // Decode the raw data
-            if let decodedData = decoder.decodeRealTimeSensorValues(data: rawData, deviceUUID: deviceUUID) {
+        // Decode the raw data
+        if let decodedData = decoder.decodeRealTimeSensorValues(data: rawData, deviceUUID: deviceUUID) {
+            Task {
                 do {
                     // Validate the sensor data
                     if let validatedData = try await PlantMonitorService.shared.validateSensorData(decodedData, deviceUUID: deviceUUID) {
                         // Reset retry counter on valid data
                         invalidDataRetryCount = 0
-                        // Convert to SensorData for backward compatibility with publishers
+                        // Convert to Core Data format for backward compatibility
                         if let coreDataSensorData = validatedData.toCoreDataSensorData() {
+                            print("📡 FlowerManager: Sending sensor data to subscribers")
                             sensorDataSubject.send(coreDataSensorData)
+                        } else {
+                            print("❌ FlowerManager: Failed to convert validated data to Core Data format")
                         }
                     } else {
                         // Data was invalid, retry if we haven't exceeded max attempts
@@ -776,10 +528,10 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     print("Error validating sensor data: \(error)")
                     handleInvalidData()
                 }
-            } else {
-                // Decoding failed, retry
-                handleInvalidData()
             }
+        } else {
+            // Decoding failed, retry
+            handleInvalidData()
         }
     }
     
@@ -788,7 +540,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         if (invalidDataRetryCount <= maxRetryAttempts) {
             print("Ungültige Sensordaten. Wiederhole... (Versuch \(invalidDataRetryCount)/\(maxRetryAttempts))")
             // Kurze Verzögerung vor erneutem Versuch
-            self.safeScheduleTimer(delay: 1.0) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 self.requestFreshSensorData()
             }
         } else {
@@ -797,7 +549,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         }
     }
     
-    func requestFreshSensorData() {
+    private func requestFreshSensorData() {
         // Verhindere parallele Anfragen
         guard !isRequestingData else {
             print("Datenabfrage bereits im Gange, überspringe...")
@@ -834,7 +586,9 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 
                 if (self.invalidDataRetryCount <= self.maxRetryAttempts) {
                     print("Versuche erneut... (Versuch \(self.invalidDataRetryCount)/\(self.maxRetryAttempts))")
-                    self.requestFreshSensorData()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        self.requestFreshSensorData()
+                    }
                 } else {
                     print("Maximale Anzahl an Versuchen erreicht")
                     self.invalidDataRetryCount = 0
@@ -842,73 +596,146 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             }
         }
     }
-
-    // Add this property to your FlowerCareManager class
-    private var isCancelled = false
-    private var isSettingUpHistory = false
-    private var reconnectionAttempts = 0
-    private let maxReconnectionAttempts = 3
-
-    // Add this method to cancel the loading process
-    func cancelHistoryDataLoading() {
-        print("Cancelling history data loading")
-        isCancelled = true
-        isSettingUpHistory = false
+    
+    private func decodeHistoryData(data: Data) {
+        // Check if operation has been cancelled
+        if isCancelled {
+            print("History data loading was cancelled")
+            return
+        }
         
-        // Stop connection monitoring
+        print("Received history data: \(data.count) bytes - Raw: \(data.map { String(format: "%02x", $0) }.joined())")
+        
+        // Check if this is metadata or an actual history entry
+        if (data.count == 16 && currentEntryIndex == 0 && totalEntries == 0) {
+            // This is likely metadata about history (entry count)
+            if let (count, metadata) = decoder.decodeHistoryMetadata(data: data) {
+                totalEntries = count
+                print("Total historical entries from metadata: \(totalEntries)")
+                
+                // If there are entries, start fetching them
+                if (totalEntries > 0) {
+                    currentEntryIndex = 0
+                    fetchHistoricalDataEntry(index: currentEntryIndex)
+                } else {
+                    print("No historical entries available.")
+                }
+            }
+        } else {
+            // This is an actual history entry
+            if let historicalData = decoder.decodeHistoricalSensorData(data: data) {
+                print("Decoded history entry \(currentEntryIndex): temp=\(historicalData.temperature)°C, moisture=\(historicalData.moisture)%, conductivity=\(historicalData.conductivity)µS/cm")
+                
+                historicalDataSubject.send(historicalData)
+                
+                // Update progress
+                let nextIndex = currentEntryIndex + 1
+                currentEntryIndex = nextIndex
+                loadingProgressSubject.send((nextIndex, totalEntries))
+                
+                if nextIndex < totalEntries && !isCancelled {
+                    // Add batch processing with longer delays between batches
+                    let batchSize = 10
+                    if nextIndex % batchSize == 0 {
+                        print("Completed batch. Taking a break before next batch...")
+                        // Take a longer break between batches to avoid disconnection
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            self.fetchHistoricalDataEntry(index: nextIndex)
+                        }
+                    } else {
+                        // Increased delay between individual entries
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            self.fetchHistoricalDataEntry(index: nextIndex)
+                        }
+                    }
+                } else if !isCancelled {
+                    print("All historical data fetched successfully.")
+                    loadingStateSubject.send(.completed)
+                }
+            } else {
+                print("Failed to decode history entry \(currentEntryIndex)")
+                
+                // Error handling when decoding fails
+                loadingStateSubject.send(.error("Failed to decode history entry \(currentEntryIndex), trying to skip this"))
+                // Try to recover from failed decoding by skipping to the next entry
+                let nextIndex = currentEntryIndex + 1
+                if (nextIndex < totalEntries) {
+                    print("Skipping to next entry...")
+                    currentEntryIndex = nextIndex
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self.fetchHistoricalDataEntry(index: nextIndex)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func fetchHistoricalDataEntry(index: Int) {
+        // Check if operation has been cancelled
+        if isCancelled {
+            print("History data loading was cancelled")
+            return
+        }
+        
+        guard let peripheral = discoveredPeripheral,
+              peripheral.state == .connected, // Check connection status
+              let historyControlCharacteristic = historyControlCharacteristic,
+              let historyDataCharacteristic = historyDataCharacteristic else {
+            print("Cannot fetch history entry: device disconnected or characteristics unavailable")
+            
+            // If disconnected, try to reconnect if not cancelled
+            if !isCancelled, let peripheral = discoveredPeripheral, peripheral.state != .connected {
+                print("Device disconnected. Reconnecting...")
+                centralManager.connect(peripheral, options: nil)
+            }
+            return
+        }
+        
+        print("Fetching history entry \(index) of \(totalEntries)")
+        
+        // Format index correctly: 0xa1 + 2-byte index in little endian
+        let entryAddress = Data([0xa1, UInt8(index & 0xff), UInt8((index >> 8) & 0xff)])
+        
+        // Write address to history control characteristic
+        peripheral.writeValue(entryAddress, for: historyControlCharacteristic, type: .withResponse)
+        
+        // Increased delay to give the device more time to respond
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { // Increased delay
+            // Check connection again before reading
+            if peripheral.state == .connected {
+                peripheral.readValue(for: historyDataCharacteristic)
+            } else {
+                print("Device disconnected before reading data")
+                // Try to reconnect
+                self.centralManager.connect(peripheral, options: nil)
+            }
+        }
+    }
+    
+    // Connection quality monitoring implementation
+    private var connectionMonitorTimer: Timer?
+    
+    private func startConnectionQualityMonitoring() {
         stopConnectionQualityMonitoring()
         
-        // Reset loading state
-        loadingStateSubject.send(.idle)
-        
-        // Reset counters
-        totalEntries = 0
-        currentEntryIndex = 0
-        
-        disconnect()
-    }
-
-    // Public method to request live sensor data
-    func requestLiveData() {
-        liveDataRequested = true
-        if isConnected && modeChangeCharacteristic != nil && realTimeSensorValuesCharacteristic != nil {
-            requestFreshSensorData()
-        } else if !isConnected {
-            // Connect first if not connected
-            if let deviceUUID = deviceUUID, let peripheral = discoveredPeripheral {
-                centralManager.connect(peripheral, options: nil)
-            } else if let deviceUUID = deviceUUID {
-                connectToKnownDevice(deviceUUID: deviceUUID)
+        connectionMonitorTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            guard let self = self, 
+                  self.totalEntries > 0, 
+                  self.currentEntryIndex < self.totalEntries,
+                  !self.isCancelled else {
+                self?.stopConnectionQualityMonitoring()
+                return
             }
+            
+            self.discoveredPeripheral?.readRSSI()
         }
     }
 
-    // Public method to request historical data
-    func requestHistoricalData() {
-        historicalDataRequested = true
-        // Reset any previous loading state
-        loadingStateSubject.send(.idle)
-        totalEntries = 0
-        currentEntryIndex = 0
-        isCancelled = false
-        isSettingUpHistory = false
-        reconnectionAttempts = 0
-        
-        if isConnected && historyControlCharacteristic != nil && 
-           historyDataCharacteristic != nil && deviceTimeCharacteristic != nil {
-            startHistoryDataFlow()
-        } else if !isConnected {
-            // Connect first if not connected
-            if let deviceUUID = deviceUUID, let peripheral = discoveredPeripheral {
-                centralManager.connect(peripheral, options: nil)
-            } else if let deviceUUID = deviceUUID {
-                connectToKnownDevice(deviceUUID: deviceUUID)
-            }
-        }
+    private func stopConnectionQualityMonitoring() {
+        connectionMonitorTimer?.invalidate()
+        connectionMonitorTimer = nil
     }
-
-    // Add this method to your class
-
+    
     private func checkConnectionQuality(completion: @escaping (ConnectionQuality) -> Void) {
         guard let peripheral = discoveredPeripheral, peripheral.state == .connected else {
             connectionQualitySubject.send(.unknown)
@@ -941,9 +768,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         }
     }
 
-    // Property to store the completion handler
-    private var rssiCheckCompletion: ((ConnectionQuality) -> Void)?
-
     // Add this method to your CBPeripheralDelegate implementations
 
     func peripheral(_ peripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
@@ -966,29 +790,47 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             rssiCheckCompletion = nil
         }
     }
+    
+    func fetchEntryCount() {
+        guard let historyControlCharacteristic = historyControlCharacteristic else {
+            print("History control characteristic not found.")
+            return
+        }
 
-    // Add this method to monitor connection during history retrieval
-
-    private var connectionMonitorTimer: Timer?
-
-    private func startConnectionQualityMonitoring() {
-        stopConnectionQualityMonitoring()
+        // First, send the mode change command to activate history mode
+        let modeCommand: [UInt8] = [0xa0, 0x00, 0x00]
+        let modeData = Data(modeCommand)
+        discoveredPeripheral?.writeValue(modeData, for: historyControlCharacteristic, type: .withResponse)
         
-        connectionMonitorTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
-            guard let self = self, 
-                  self.totalEntries > 0, 
-                  self.currentEntryIndex < self.totalEntries,
-                  !self.isCancelled else {
-                self?.stopConnectionQualityMonitoring()
-                return
+        // After changing the mode, we'll read the entry count from the entry count characteristic
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if let entryCountCharacteristic = self.entryCountCharacteristic {
+                self.discoveredPeripheral?.readValue(for: entryCountCharacteristic)
             }
-            
-            self.discoveredPeripheral?.readRSSI()
         }
     }
+    
+    // MARK: - Nested Types for Compatibility
+    enum LoadingState: Equatable {
+        case idle
+        case loading  
+        case completed
+        case error(String)
+    }
 
-    private func stopConnectionQualityMonitoring() {
-        connectionMonitorTimer?.invalidate()
-        connectionMonitorTimer = nil
+    enum ConnectionQuality {
+        case unknown
+        case poor
+        case fair
+        case good
+        
+        var description: String {
+            switch self {
+            case .unknown: return "unknown"
+            case .poor: return "poor"
+            case .fair: return "fair" 
+            case .good: return "good"
+            }
+        }
     }
 }

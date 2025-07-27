@@ -72,6 +72,7 @@
 		56DC564A2DD9251C00041DBA /* flower.db in Resources */ = {isa = PBXBuildFile; fileRef = 56DC56492DD9251C00041DBA /* flower.db */; };
 		56DC564D2DD9256800041DBA /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 56DC564C2DD9256800041DBA /* GRDB */; };
 		56FD6C862E34194C00905984 /* SensorDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C852E34194C00905984 /* SensorDataManager.swift */; };
+		56FD6C892E34BF9300905984 /* ReliableFlowerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C882E34BF9300905984 /* ReliableFlowerManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -161,6 +162,7 @@
 		56D35EB62E2BE56C0059FEE6 /* PotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PotView.swift; sourceTree = "<group>"; };
 		56DC56492DD9251C00041DBA /* flower.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = flower.db; sourceTree = "<group>"; };
 		56FD6C852E34194C00905984 /* SensorDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataManager.swift; sourceTree = "<group>"; };
+		56FD6C882E34BF9300905984 /* ReliableFlowerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReliableFlowerManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -448,6 +450,7 @@
 			isa = PBXGroup;
 			children = (
 				56B44CBE2D6E7B3F00A6A75A /* FlowerManager.swift */,
+				56FD6C882E34BF9300905984 /* ReliableFlowerManager.swift */,
 				56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */,
 				56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */,
 				56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */,
@@ -606,6 +609,7 @@
 				56D35EB72E2BE5730059FEE6 /* PotView.swift in Sources */,
 				56B44CC32D6E7B3F00A6A75A /* FlowerManager.swift in Sources */,
 				56241CE12E03591C0012B18E /* FlowerPot.swift in Sources */,
+				56FD6C892E34BF9300905984 /* ReliableFlowerManager.swift in Sources */,
 				5622B0EE2E327ADD002C7E74 /* SensorDataDTO+CoreData.swift in Sources */,
 				569417562E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld in Sources */,
 				56B44CC42D6E7B3F00A6A75A /* HistoricalSensorData.swift in Sources */,

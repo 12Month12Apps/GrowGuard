@@ -15,12 +15,6 @@ struct DeviceDetailsView: View {
     @State private var showingLoadingScreen = false
     @State private var nextWatering: Date? = nil
 
-    private var sensorDataBinding: Binding<[SensorDataDTO]> {
-        Binding<[SensorDataDTO]>(
-            get: { viewModel.currentWeekData },
-            set: { _ in /* Read-only for now */ }
-        )
-    }
 
     init(device: FlowerDeviceDTO) {
         self.viewModel = DeviceDetailsViewModel(device: device)
@@ -38,6 +32,16 @@ struct DeviceDetailsView: View {
                         Text("Last Update: ") + Text(viewModel.device.lastUpdate, format: .dateTime)
                         
                         if viewModel.device.isSensor {
+                            // Connection quality hint
+                            if !viewModel.connectionDistanceHint.isEmpty {
+                                HStack {
+                                    Text(viewModel.connectionDistanceHint)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.vertical, 2)
+                            }
+                            
                             Button {
                                 viewModel.fetchHistoricalData()
                                 showingLoadingScreen = true
@@ -158,7 +162,7 @@ struct DeviceDetailsView: View {
                 
                 SensorDataChart(isOverview: false,
                                 componet: viewModel.groupingOption,
-                                data: sensorDataBinding,
+                                data: .constant(viewModel.currentWeekData),
                                 keyPath: \.brightness,
                                 title: "Brightness",
                                 dataType: "lux",
@@ -168,7 +172,7 @@ struct DeviceDetailsView: View {
                 
                 SensorDataChart(isOverview: false,
                                 componet: viewModel.groupingOption,
-                                data: sensorDataBinding,
+                                data: .constant(viewModel.currentWeekData),
                                 keyPath: \.moisture,
                                 title: "Moisture",
                                 dataType: "%",
@@ -178,7 +182,7 @@ struct DeviceDetailsView: View {
                 
                 SensorDataChart(isOverview: false,
                                 componet: viewModel.groupingOption,
-                                data: sensorDataBinding,
+                                data: .constant(viewModel.currentWeekData),
                                 keyPath: \.temperature,
                                 title: "Temperature",
                                 dataType: "C",
@@ -218,7 +222,7 @@ struct DeviceDetailsView: View {
                 SensorDataChart(
                     isOverview: false,
                     componet: viewModel.groupingOption,
-                    data: sensorDataBinding,
+                    data: .constant(viewModel.currentWeekData),
                     keyPath: \.moisture,
                     title: "Moisture",
                     dataType: "%",

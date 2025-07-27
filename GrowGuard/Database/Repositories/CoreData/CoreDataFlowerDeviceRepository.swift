@@ -93,15 +93,40 @@ class CoreDataFlowerDeviceRepository: FlowerDeviceRepository {
                     
                     let devices = try self.context.fetch(request)
                     for device in devices {
+                        // Manually delete related entities to avoid orphaned data
+                        // since deletion rule is set to Nullify in Core Data model
+                        
+                        // Delete all sensor data for this device
+                        if let sensorDataSet = device.sensorData {
+                            for sensorData in sensorDataSet {
+                                if let data = sensorData as? SensorData {
+                                    self.context.delete(data)
+                                }
+                            }
+                        }
+                        
+                        // Delete optimal range if it exists
+                        if let optimalRange = device.optimalRange {
+                            self.context.delete(optimalRange)
+                        }
+                        
+                        // Delete pot size if it exists
+                        if let potSize = device.potSize {
+                            self.context.delete(potSize)
+                        }
+                        
+                        // Finally delete the device itself
                         self.context.delete(device)
                     }
                     
                     if self.context.hasChanges {
                         try self.context.save()
+                        print("Successfully deleted device with UUID: \(uuid) and all related data")
                     }
                     
                     continuation.resume()
                 } catch {
+                    print("Error deleting device with UUID \(uuid): \(error)")
                     continuation.resume(throwing: error)
                 }
             }

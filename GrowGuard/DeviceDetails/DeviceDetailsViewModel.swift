@@ -15,8 +15,12 @@ import CoreData
     var device: FlowerDeviceDTO
     var subscription: AnyCancellable?
     var subscriptionHistory: AnyCancellable?
+    var rssiDistanceSubscription: AnyCancellable?
     var groupingOption: Calendar.Component = .day
     private let repositoryManager = RepositoryManager.shared
+    
+    // MARK: - Connection Quality & Distance
+    var connectionDistanceHint: String = ""
     
     // MARK: - Smart Sensor Data Loading
     @MainActor private let sensorDataManager = SensorDataManager.shared
@@ -39,11 +43,22 @@ import CoreData
             try await PlantMonitorService.shared.checkDeviceStatus(device: device)
             
             self.subscription = ble.sensorDataPublisher.sink { data in
+                print("📡 DeviceDetailsViewModel: Received new sensor data from BLE")
                 Task {
                     if let dto = data.toTemp() {
+                        print("📡 DeviceDetailsViewModel: Converting sensor data to temp format")
                         await self.saveSensorData(dto)
                         await self.updateDeviceLastUpdate()
+                    } else {
+                        print("❌ DeviceDetailsViewModel: Failed to convert sensor data to temp format")
                     }
+                }
+            }
+            
+            // Subscribe to distance hints for connection quality feedback
+            self.rssiDistanceSubscription = ble.rssiDistancePublisher.sink { hint in
+                Task { @MainActor in
+                    self.connectionDistanceHint = hint
                 }
             }
             
@@ -81,10 +96,29 @@ import CoreData
     private func saveSensorData(_ data: SensorDataTemp) async {
         do {
             if let deviceUUID = data.device {
+                print("💾 DeviceDetailsViewModel: Saving sensor data for device \(deviceUUID)")
                 _ = try await PlantMonitorService.shared.validateSensorData(data, deviceUUID: deviceUUID)
+                
+                // Refresh current week data to show the new sensor data
+                print("🔄 DeviceDetailsViewModel: Refreshing current week data after saving new sensor data")
+                await refreshCurrentWeekSilently()
             }
         } catch {
             print("Error saving sensor data: \(error.localizedDescription)")
+        }
+    }
+    
+    @MainActor
+    private func refreshCurrentWeekSilently() async {
+        // Clear cache for this device to force fresh data
+        print("🗑️ DeviceDetailsViewModel: Clearing cache for device \(device.uuid)")
+        sensorDataManager.clearCache(for: device.uuid)
+        do {
+            let weekData = try await sensorDataManager.getCurrentWeekData(for: device.uuid)
+            print("📊 DeviceDetailsViewModel: Loaded \(weekData.count) sensor data entries for current week")
+            currentWeekData = weekData
+        } catch {
+            print("Failed to refresh current week data silently: \(error)")
         }
     }
     
@@ -104,6 +138,13 @@ import CoreData
             
             if !isDuplicate {
                 _ = try await PlantMonitorService.shared.validateHistoricSensorData(data, deviceUUID: device.uuid)
+                
+                // Refresh current week data if this historical data falls within current week
+                let calendar = Calendar.current
+                let currentWeekInterval = calendar.dateInterval(of: .weekOfYear, for: sensorDataManager.currentWeek)
+                if let interval = currentWeekInterval, interval.contains(data.date) {
+                    await refreshCurrentWeekSilently()
+                }
             }
         } catch {
             print("Error saving historical sensor data: \(error.localizedDescription)")

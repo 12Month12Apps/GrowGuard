@@ -13,6 +13,9 @@ struct OverviewList: View {
     @State var showAddFlowerSheet = false
     @State var loading: Bool = false
     @State var progress: Double = 0
+    @State private var deviceToDelete: IndexSet?
+    @State private var showDeleteConfirmation = false
+    @State private var showDeleteError = false
 
     init() {
         self.viewModel = OverviewListViewModel()
@@ -75,18 +78,42 @@ struct OverviewList: View {
                 ProgressView()
             }
         }
+        .alert("Delete Device", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {
+                deviceToDelete = nil
+            }
+            Button("Delete", role: .destructive) {
+                confirmDelete()
+            }
+        } message: {
+            if let offsets = deviceToDelete, let index = offsets.first {
+                Text("Are you sure you want to delete '\(viewModel.allSavedDevices[index].name ?? "this device")'? This will also delete all associated sensor data and cannot be undone.")
+            }
+        }
+        .alert("Error", isPresented: $showDeleteError) {
+            Button("OK") {
+                viewModel.deleteError = nil
+            }
+        } message: {
+            if let error = viewModel.deleteError {
+                Text(error)
+            }
+        }
+        .onChange(of: viewModel.deleteError) { _, newError in
+            showDeleteError = newError != nil
+        }
     }
     
     func delete(at offsets: IndexSet) {
-//        let model = viewModel.allSavedDevices[offsets.first!]
-//        viewModel.allSavedDevices.remove(atOffsets: offsets)
-//        
-//        DataService.shared.context.delete(model)
-//        
-//        do {
-//            try DataService.shared.context.save()
-//        } catch {
-//            
-//        }
+        deviceToDelete = offsets
+        showDeleteConfirmation = true
+    }
+    
+    private func confirmDelete() {
+        guard let offsets = deviceToDelete else { return }
+        Task {
+            await viewModel.deleteDevice(at: offsets)
+        }
+        deviceToDelete = nil
     }
 }
