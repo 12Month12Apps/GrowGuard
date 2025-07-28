@@ -96,16 +96,6 @@ struct DeviceDetailsView: View {
                     }
                 }
             }
-            
-            
-            TextField("Device Name", text: Binding(get: { viewModel.device.name ?? "" }, set: { viewModel.device.name = $0 }))
-            Text("Added: ") + Text(viewModel.device.added, format: .dateTime)
-            Text("Last Update: ") + Text(viewModel.device.lastUpdate, format: .dateTime)
-            
-            Text("Battery: ") + Text(viewModel.device.battery, format: .percent)
-            Text("Firmware: ") + Text(viewModel.device.firmware)
-            
-            
 
             if let nextWatering = nextWatering {
                 Section(header: Text("Prediction")) {

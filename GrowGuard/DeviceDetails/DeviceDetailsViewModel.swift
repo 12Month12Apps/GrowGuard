@@ -16,6 +16,7 @@ import CoreData
     var subscription: AnyCancellable?
     var subscriptionHistory: AnyCancellable?
     var rssiDistanceSubscription: AnyCancellable?
+    var deviceUpdateSubscription: AnyCancellable?
     var groupingOption: Calendar.Component = .day
     private let repositoryManager = RepositoryManager.shared
     
@@ -59,6 +60,17 @@ import CoreData
             self.rssiDistanceSubscription = ble.rssiDistancePublisher.sink { hint in
                 Task { @MainActor in
                     self.connectionDistanceHint = hint
+                }
+            }
+            
+            // Subscribe to device updates (battery, firmware, etc.)
+            self.deviceUpdateSubscription = ble.deviceUpdatePublisher.sink { updatedDevice in
+                Task { @MainActor in
+                    // Only update if this is the same device
+                    if updatedDevice.uuid == self.device.uuid {
+                        print("📱 DeviceDetailsViewModel: Received device update for \(updatedDevice.uuid)")
+                        self.device = updatedDevice
+                    }
                 }
             }
             

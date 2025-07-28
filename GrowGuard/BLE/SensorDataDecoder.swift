@@ -132,6 +132,7 @@ class SensorDataDecoder {
         if let firmwareVersion = String(data: data[2..<7], encoding: .ascii) {
             print("Battery Level: \(batteryLevel) %")
             print("Firmware Version: \(firmwareVersion)")
+            
             return (batteryLevel, firmwareVersion)
         } else {
             print("Failed to decode firmware version.")

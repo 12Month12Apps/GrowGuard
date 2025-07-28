@@ -30,6 +30,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     
     private let sensorDataSubject = PassthroughSubject<SensorData, Never>()
     private let historicalDataSubject = PassthroughSubject<HistoricalSensorData, Never>()
+    private let deviceUpdateSubject = PassthroughSubject<FlowerDeviceDTO, Never>()
 
     private let decoder = SensorDataDecoder()
 
@@ -39,6 +40,10 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     
     var historicalDataPublisher: AnyPublisher<HistoricalSensorData, Never> {
         return historicalDataSubject.eraseToAnyPublisher()
+    }
+    
+    var deviceUpdatePublisher: AnyPublisher<FlowerDeviceDTO, Never> {
+        return deviceUpdateSubject.eraseToAnyPublisher()
     }
     
     static var shared = FlowerCareManager()
@@ -419,8 +424,43 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     private func decodeFirmwareAndBattery(data: Data) {
         guard let (battery, firmware) = decoder.decodeFirmwareAndBattery(data: data) else { return }
         
-        // Store firmware and battery information - could be used later
         print("Device battery: \(battery)%, firmware: \(firmware)")
+        
+        // Update device battery level in database
+        guard let deviceUUID = self.deviceUUID else { return }
+        
+        Task {
+            do {
+                guard var deviceDTO = try await RepositoryManager.shared.flowerDeviceRepository.getDevice(by: deviceUUID) else {
+                    print("Device not found for UUID: \(deviceUUID)")
+                    return
+                }
+                
+                // Update battery level
+                deviceDTO = FlowerDeviceDTO(
+                    id: deviceDTO.id,
+                    name: deviceDTO.name,
+                    uuid: deviceDTO.uuid,
+                    peripheralID: deviceDTO.peripheralID,
+                    battery: Int16(battery),
+                    firmware: firmware,
+                    isSensor: deviceDTO.isSensor,
+                    added: deviceDTO.added,
+                    lastUpdate: Date(),
+                    optimalRange: deviceDTO.optimalRange,
+                    potSize: deviceDTO.potSize,
+                    sensorData: deviceDTO.sensorData
+                )
+                
+                try await RepositoryManager.shared.flowerDeviceRepository.updateDevice(deviceDTO)
+                print("Successfully updated battery level to \(battery)% for device \(deviceUUID)")
+                
+                // Publish the updated device
+                deviceUpdateSubject.send(deviceDTO)
+            } catch {
+                print("Error updating device battery: \(error)")
+            }
+        }
     }
 
     private func decodeDeviceName(data: Data) {
