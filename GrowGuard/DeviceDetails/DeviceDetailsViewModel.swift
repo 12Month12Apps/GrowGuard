@@ -233,5 +233,62 @@ import CoreData
         ble.connectToKnownDevice(deviceUUID: device.uuid)
         ble.requestHistoricalData()
     }
+    
+    // MARK: - Settings Management
+    
+    /// Saves the updated settings (optimal range and pot size) to the database
+    /// - Parameters:
+    ///   - optimalRange: The updated optimal range settings, or nil to remove
+    ///   - potSize: The updated pot size settings, or nil to remove
+    @MainActor
+    func saveSettings(optimalRange: OptimalRangeDTO?, potSize: PotSizeDTO?) async throws {
+        print("💾 DeviceDetailsViewModel: Saving settings for device \(device.uuid)")
+        print("  Current device optimalRange: \(device.optimalRange != nil ? "exists" : "nil")")
+        print("  Current device potSize: \(device.potSize != nil ? "exists" : "nil")")
+        print("  New optimalRange: \(optimalRange != nil ? "exists" : "nil")")
+        print("  New potSize: \(potSize != nil ? "exists" : "nil")")
+        
+        if let optimalRange = optimalRange {
+            print("  New OptimalRange - Min/Max Temp: \(optimalRange.minTemperature)/\(optimalRange.maxTemperature)")
+        }
+        if let potSize = potSize {
+            print("  New PotSize - Width/Height/Volume: \(potSize.width)/\(potSize.height)/\(potSize.volume)")
+        }
+        
+        do {
+            // Create updated device with new settings
+            let updatedDevice = FlowerDeviceDTO(
+                id: device.id,
+                name: device.name,
+                uuid: device.uuid,
+                peripheralID: device.peripheralID,
+                battery: device.battery,
+                firmware: device.firmware,
+                isSensor: device.isSensor,
+                added: device.added,
+                lastUpdate: Date(), // Update timestamp
+                optimalRange: optimalRange,
+                potSize: potSize,
+                sensorData: device.sensorData
+            )
+            
+            print("🗃️ DeviceDetailsViewModel: Calling repository.updateDevice...")
+            // Save to database
+            try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
+            print("✅ DeviceDetailsViewModel: Repository.updateDevice completed successfully")
+            
+            // Update local device only after successful database save
+            self.device = updatedDevice
+            print("📱 DeviceDetailsViewModel: Local device updated")
+            
+            print("✅ DeviceDetailsViewModel: Settings saved successfully")
+            
+        } catch {
+            print("❌ DeviceDetailsViewModel: Failed to save settings: \(error.localizedDescription)")
+            print("❌ Error details: \(error)")
+            // Don't update local device if database save fails
+            throw error
+        }
+    }
 
 }

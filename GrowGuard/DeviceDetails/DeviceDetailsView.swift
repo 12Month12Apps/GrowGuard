@@ -11,7 +11,6 @@ struct DeviceDetailsView: View {
     @State var viewModel: DeviceDetailsViewModel
     @State var showSetting: Bool = false
     @State private var showCopyAlert = false
-    @State private var optimalRange: OptimalRangeDTO?
     @State private var showingLoadingScreen = false
     @State private var nextWatering: Date? = nil
 
@@ -224,7 +223,6 @@ struct DeviceDetailsView: View {
 
         }.onAppear {
             self.viewModel.loadDetails()
-            self.optimalRange = viewModel.device.optimalRange
             
             Task {
 //                do {
@@ -238,7 +236,6 @@ struct DeviceDetailsView: View {
             if viewModel.device.isSensor {
                 self.viewModel.loadDetails()
             }
-            self.optimalRange = viewModel.device.optimalRange
             
             Task {
 //                do {
@@ -258,21 +255,29 @@ struct DeviceDetailsView: View {
             }
         }
         .navigationTitle(viewModel.device.name ?? "")
-        .sheet(isPresented: $showSetting, onDismiss: {
-            viewModel.device.optimalRange = optimalRange
-//            viewModel.saveDatabase()
-        }) {
-//            SettingsView(
-//                potSize: Binding(
-//                    get: { viewModel.device.potSize ?? PotSize(context: DataService.shared.context) },
-//                    set: { viewModel.device.potSize = $0 }
-//                ),
-//                optimalRange: Binding(
-//                    get: { optimalRange ?? OptimalRange(context: DataService.shared.context) },
-//                    set: { optimalRange = $0 }
-//                ),
-//                isSensor: viewModel.device.isSensor
-//            )
+        .sheet(isPresented: $showSetting) {
+            SettingsView(
+                deviceUUID: viewModel.device.uuid,
+                isSensor: viewModel.device.isSensor
+            ) { updatedOptimalRange, updatedPotSize in
+                // Handle save callback
+                print("🔄 DeviceDetailsView: Received settings to save:")
+                print("  OptimalRange - Min/Max Temp: \(updatedOptimalRange.minTemperature)/\(updatedOptimalRange.maxTemperature)")
+                print("  PotSize - Width/Height/Volume: \(updatedPotSize.width)/\(updatedPotSize.height)/\(updatedPotSize.volume)")
+                
+                Task {
+                    do {
+                        try await viewModel.saveSettings(
+                            optimalRange: updatedOptimalRange,
+                            potSize: updatedPotSize
+                        )
+                        print("✅ DeviceDetailsView: Settings saved successfully via callback")
+                    } catch {
+                        print("❌ DeviceDetailsView: Failed to save settings: \(error)")
+                        // Handle error gracefully - could show alert to user in real app
+                    }
+                }
+            }
         }
         .sheet(isPresented: $showingLoadingScreen) {
             HistoryLoadingView()
