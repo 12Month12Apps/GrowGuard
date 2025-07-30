@@ -48,8 +48,10 @@ import CoreData
                 Task {
                     if let dto = data.toTemp() {
                         print("📡 DeviceDetailsViewModel: Converting sensor data to temp format")
-                        await self.saveSensorData(dto)
-                        await self.updateDeviceLastUpdate()
+                        let success = await self.saveSensorData(dto)
+                        if success {
+                            await self.updateDeviceLastUpdate()
+                        }
                     } else {
                         print("❌ DeviceDetailsViewModel: Failed to convert sensor data to temp format")
                     }
@@ -105,7 +107,7 @@ import CoreData
     }
     
     @MainActor
-    private func saveSensorData(_ data: SensorDataTemp) async {
+    private func saveSensorData(_ data: SensorDataTemp) async -> Bool {
         do {
             if let deviceUUID = data.device {
                 print("💾 DeviceDetailsViewModel: Saving sensor data for device \(deviceUUID)")
@@ -114,9 +116,12 @@ import CoreData
                 // Refresh current week data to show the new sensor data
                 print("🔄 DeviceDetailsViewModel: Refreshing current week data after saving new sensor data")
                 await refreshCurrentWeekSilently()
+                return true
             }
+            return false
         } catch {
             print("Error saving sensor data: \(error.localizedDescription)")
+            return false
         }
     }
     

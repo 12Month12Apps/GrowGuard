@@ -482,7 +482,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     return
                 }
                 
-                // Update battery level
+                // Update battery level (keep existing lastUpdate - don't change it for firmware/battery reads)
                 deviceDTO = FlowerDeviceDTO(
                     id: deviceDTO.id,
                     name: deviceDTO.name,
@@ -492,7 +492,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     firmware: firmware,
                     isSensor: deviceDTO.isSensor,
                     added: deviceDTO.added,
-                    lastUpdate: Date(),
+                    lastUpdate: deviceDTO.lastUpdate, // Keep existing lastUpdate
                     optimalRange: deviceDTO.optimalRange,
                     potSize: deviceDTO.potSize,
                     sensorData: deviceDTO.sensorData
