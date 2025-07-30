@@ -12,7 +12,15 @@ import Foundation
 class SettingsViewModel {
     var potSize: PotSizeDTO
     var optimalRange: OptimalRangeDTO
+    var selectedFlower: VMSpecies? {
+        didSet {
+            if !isLoadingData {
+                updateOptimalRangeFromFlower()
+            }
+        }
+    }
     var isLoading: Bool = false
+    private var isLoadingData: Bool = false
     private let deviceUUID: String
     private let repositoryManager = RepositoryManager.shared
     
@@ -21,11 +29,13 @@ class SettingsViewModel {
         // Initialize with default values, will be loaded in loadSettings()
         self.potSize = PotSizeDTO(deviceUUID: deviceUUID)
         self.optimalRange = OptimalRangeDTO(deviceUUID: deviceUUID)
+        self.selectedFlower = nil
     }
     
     @MainActor
     func loadSettings() async {
         isLoading = true
+        isLoadingData = true
         print("🔧 SettingsViewModel: Loading settings for device \(deviceUUID)")
         
         await withTaskGroup(of: Void.self) { group in
@@ -37,8 +47,13 @@ class SettingsViewModel {
             group.addTask { [weak self] in
                 await self?.loadOptimalRange()
             }
+            
+            group.addTask { [weak self] in
+                await self?.loadSelectedFlower()
+            }
         }
         
+        isLoadingData = false
         isLoading = false
         print("✅ SettingsViewModel: Settings loaded successfully")
     }
@@ -75,6 +90,28 @@ class SettingsViewModel {
         }
     }
     
+    @MainActor
+    private func loadSelectedFlower() async {
+        print("🔍 SettingsViewModel.loadSelectedFlower: Starting for device \(deviceUUID)")
+        do {
+            if let device = try await repositoryManager.flowerDeviceRepository.getDevice(by: deviceUUID) {
+                print("🔍 Device found, selectedFlower: \(device.selectedFlower?.name ?? "nil")")
+                self.selectedFlower = device.selectedFlower
+                if let flower = device.selectedFlower {
+                    print("✅  Loaded SelectedFlower: \(flower.name) (ID: \(flower.id))")
+                } else {
+                    print("ℹ️  No flower selected for this device")
+                }
+            } else {
+                print("❌  Device not found, no flower information available")
+                self.selectedFlower = nil
+            }
+        } catch {
+            print("❌ SettingsViewModel: Failed to load selectedFlower: \(error)")
+            self.selectedFlower = nil
+        }
+    }
+    
     func getUpdatedPotSize() -> PotSizeDTO {
         return potSize
     }
@@ -83,28 +120,76 @@ class SettingsViewModel {
         return optimalRange
     }
     
+    func getSelectedFlower() -> VMSpecies? {
+        return selectedFlower
+    }
+    
     @MainActor
     func saveSettings() async throws {
         print("💾 SettingsViewModel: Saving settings for device \(deviceUUID)")
         
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask { [weak self] in
-                guard let self = self else { return }
-                try await self.repositoryManager.potSizeRepository.savePotSize(self.potSize)
-                print("  Saved PotSize - Width/Height/Volume: \(self.potSize.width)/\(self.potSize.height)/\(self.potSize.volume)")
-            }
-            
-            group.addTask { [weak self] in
-                guard let self = self else { return }
-                try await self.repositoryManager.optimalRangeRepository.saveOptimalRange(self.optimalRange)
-                print("  Saved OptimalRange - Min/Max Temp: \(self.optimalRange.minTemperature)/\(self.optimalRange.maxTemperature)")
-            }
-            
-            // Wait for all saves to complete
-            try await group.waitForAll()
+        // Get current device first
+        guard let device = try await repositoryManager.flowerDeviceRepository.getDevice(by: deviceUUID) else {
+            print("❌ SettingsViewModel.saveSettings: Device not found")
+            throw RepositoryError.deviceNotFound
+        }
+        
+        // Save potSize and optimalRange separately first (these have their own entities)
+        try await repositoryManager.potSizeRepository.savePotSize(potSize)
+        print("  Saved PotSize - Width/Height/Volume: \(potSize.width)/\(potSize.height)/\(potSize.volume)")
+        
+        try await repositoryManager.optimalRangeRepository.saveOptimalRange(optimalRange)
+        print("  Saved OptimalRange - Min/Max Temp: \(optimalRange.minTemperature)/\(optimalRange.maxTemperature)")
+        
+        // Now update the device with the selectedFlower in a single operation
+        let updatedDevice = FlowerDeviceDTO(
+            id: device.id,
+            name: device.name,
+            uuid: device.uuid,
+            peripheralID: device.peripheralID,
+            battery: device.battery,
+            firmware: device.firmware,
+            isSensor: device.isSensor,
+            added: device.added,
+            lastUpdate: device.lastUpdate,
+            optimalRange: device.optimalRange, // Keep existing relationships
+            potSize: device.potSize, // Keep existing relationships
+            selectedFlower: selectedFlower, // Only update the flower
+            sensorData: device.sensorData
+        )
+        
+        print("🔧 Saving device with flower: \(selectedFlower?.name ?? "nil") (ID: \(selectedFlower?.id ?? 0))")
+        try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
+        
+        if let flower = selectedFlower {
+            print("✅  Saved SelectedFlower: \(flower.name) (ID: \(flower.id))")
+        } else {
+            print("✅  Removed flower selection")
         }
         
         print("✅ SettingsViewModel: Settings saved successfully")
+    }
+    
+    
+    private func updateOptimalRangeFromFlower() {
+        guard let flower = selectedFlower else { return }
+        
+        // Update moisture values if the selected flower has them
+        if let minMoisture = flower.minMoisture {
+            optimalRange = OptimalRangeDTO(
+                id: optimalRange.id,
+                minTemperature: optimalRange.minTemperature,
+                maxTemperature: optimalRange.maxTemperature,
+                minBrightness: optimalRange.minBrightness,
+                maxBrightness: optimalRange.maxBrightness,
+                minMoisture: Int16(minMoisture),
+                maxMoisture: flower.maxMoisture != nil ? Int16(flower.maxMoisture!) : optimalRange.maxMoisture,
+                minConductivity: optimalRange.minConductivity,
+                maxConductivity: optimalRange.maxConductivity,
+                deviceUUID: optimalRange.deviceUUID
+            )
+            print("🌱 SettingsViewModel: Updated moisture range from flower - Min: \(minMoisture), Max: \(flower.maxMoisture ?? Int(optimalRange.maxMoisture))")
+        }
     }
 }
 
@@ -113,6 +198,7 @@ struct SettingsView: View {
     @State private var isSaving = false
     @State private var saveError: Error?
     @State private var showSaveError = false
+    @State private var showFlowerSelection = false
     let isSensor: Bool
     let onSave: (OptimalRangeDTO, PotSizeDTO) -> Void
     @Environment(\.dismiss) private var dismiss
@@ -169,7 +255,54 @@ struct SettingsView: View {
                     }
                 }
                 
+                Section(header: Text("Plant Selection")) {
+                    if let selectedFlower = viewModel.selectedFlower {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(selectedFlower.name)
+                                        .font(.headline)
+                                    
+                                    if let minMoisture = selectedFlower.minMoisture,
+                                       let maxMoisture = selectedFlower.maxMoisture {
+                                        Text("Recommended Moisture: \(minMoisture)% - \(maxMoisture)%")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                Button("Change") {
+                                    showFlowerSelection = true
+                                }
+                            }
+                            
+                            Button("Remove Plant") {
+                                viewModel.selectedFlower = nil
+                            }
+                            .foregroundColor(.red)
+                        }
+                    } else {
+                        Button("Select Plant") {
+                            showFlowerSelection = true
+                        }
+                    }
+                }
+                
                 Section(header: Text("Moisture")) {
+                    if let selectedFlower = viewModel.selectedFlower,
+                       selectedFlower.minMoisture != nil || selectedFlower.maxMoisture != nil {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Values automatically set from selected plant")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                            Text("Plant: \(selectedFlower.name)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
                     HStack {
                         Text("Min Moisture")
                         TextField("0", value: $viewModel.optimalRange.minMoisture, format: .number)
@@ -269,6 +402,9 @@ struct SettingsView: View {
                 Button("OK") { }
             } message: {
                 Text(saveError?.localizedDescription ?? "Unknown error occurred")
+            }
+            .sheet(isPresented: $showFlowerSelection) {
+                FlowerSelectionView(selectedFlower: $viewModel.selectedFlower)
             }
         }
     }

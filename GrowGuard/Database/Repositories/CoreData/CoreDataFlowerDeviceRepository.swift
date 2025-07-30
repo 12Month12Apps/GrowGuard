@@ -39,7 +39,7 @@ class CoreDataFlowerDeviceRepository: FlowerDeviceRepository {
                 do {
                     let request = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
                     request.predicate = NSPredicate(format: "uuid == %@", uuid)
-                    request.fetchLimit = 1
+//                    request.fetchLimit = 1
                     
                     let devices = try self.context.fetch(request)
                     let dto = devices.first?.toDTO()

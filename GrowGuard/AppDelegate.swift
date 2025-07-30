@@ -184,6 +184,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                         lastUpdate: Date(),
                         optimalRange: device.optimalRange,
                         potSize: device.potSize,
+                        selectedFlower: device.selectedFlower,
                         sensorData: device.sensorData
                     )
                     try? await RepositoryManager.shared.flowerDeviceRepository.updateDevice(updatedDevice)

@@ -104,6 +104,7 @@ enum NavigationDestination: Hashable {
                 lastUpdate: flower.lastUpdate,
                 optimalRange: optimalRange,
                 potSize: flower.potSize,
+                selectedFlower: searched, // Set the searched flower as selectedFlower
                 sensorData: flower.sensorData
             )
         }
@@ -138,7 +139,8 @@ enum NavigationDestination: Hashable {
             isSensor: false,
             added: Date(),
             lastUpdate: Date(),
-            optimalRange: optimalRange
+            optimalRange: optimalRange,
+            selectedFlower: flower
         )
     }
     

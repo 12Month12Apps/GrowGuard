@@ -495,6 +495,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     lastUpdate: deviceDTO.lastUpdate, // Keep existing lastUpdate
                     optimalRange: deviceDTO.optimalRange,
                     potSize: deviceDTO.potSize,
+                    selectedFlower: deviceDTO.selectedFlower,
                     sensorData: deviceDTO.sensorData
                 )
                 

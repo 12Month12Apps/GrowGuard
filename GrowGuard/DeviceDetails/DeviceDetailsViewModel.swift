@@ -183,6 +183,7 @@ import CoreData
                 lastUpdate: Date(),
                 optimalRange: device.optimalRange,
                 potSize: device.potSize,
+                selectedFlower: device.selectedFlower,
                 sensorData: device.sensorData
             )
             try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
@@ -274,6 +275,7 @@ import CoreData
                 lastUpdate: Date(), // Update timestamp
                 optimalRange: optimalRange,
                 potSize: potSize,
+                selectedFlower: device.selectedFlower,
                 sensorData: device.sensorData
             )
             

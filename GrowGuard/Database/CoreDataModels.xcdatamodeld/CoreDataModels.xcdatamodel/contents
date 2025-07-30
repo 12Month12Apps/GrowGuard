@@ -8,6 +8,11 @@
         <attribute name="lastUpdate" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="name" attributeType="String"/>
         <attribute name="peripheralID" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="selectedFlowerID" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="selectedFlowerImageUrl" optional="YES" attributeType="String"/>
+        <attribute name="selectedFlowerMaxMoisture" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="selectedFlowerMinMoisture" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="selectedFlowerName" optional="YES" attributeType="String"/>
         <attribute name="uuid" attributeType="String"/>
         <relationship name="optimalRange" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="OptimalRange" inverseName="device" inverseEntity="OptimalRange"/>
         <relationship name="potSize" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="PotSize" inverseName="device" inverseEntity="PotSize"/>

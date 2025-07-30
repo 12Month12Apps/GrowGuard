@@ -29,6 +29,7 @@
 		56241CDE2DFD1E720012B18E /* CircularProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56241CDD2DFD1E6A0012B18E /* CircularProgress.swift */; };
 		56241CE12E03591C0012B18E /* FlowerPot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56241CE02E0359180012B18E /* FlowerPot.swift */; };
 		562629002C42E32700B5DB2A /* AppIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 562628FF2C42E32200B5DB2A /* AppIntent.swift */; };
+		565058C72E3A98A200CC6E2B /* FlowerSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565058C62E3A98A200CC6E2B /* FlowerSelectionView.swift */; };
 		5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2AB2CB44DA000EED3D3 /* Extensions.swift */; };
 		5654B2B92CB4575E00EED3D3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2B82CB4575C00EED3D3 /* SettingsView.swift */; };
 		5654B2BB2CB45C6E00EED3D3 /* SensorDataDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */; };
@@ -116,6 +117,7 @@
 		56241CDD2DFD1E6A0012B18E /* CircularProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircularProgress.swift; sourceTree = "<group>"; };
 		56241CE02E0359180012B18E /* FlowerPot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerPot.swift; sourceTree = "<group>"; };
 		562628FF2C42E32200B5DB2A /* AppIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntent.swift; sourceTree = "<group>"; };
+		565058C62E3A98A200CC6E2B /* FlowerSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerSelectionView.swift; sourceTree = "<group>"; };
 		5654B2AB2CB44DA000EED3D3 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		5654B2B82CB4575C00EED3D3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataDecoderTests.swift; sourceTree = "<group>"; };
@@ -252,6 +254,7 @@
 		5654B2B72CB4575700EED3D3 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				565058C62E3A98A200CC6E2B /* FlowerSelectionView.swift */,
 				5654B2B82CB4575C00EED3D3 /* SettingsView.swift */,
 			);
 			path = Settings;
@@ -643,6 +646,7 @@
 				56FD6C862E34194C00905984 /* SensorDataManager.swift in Sources */,
 				5622B0E02E317710002C7E74 /* CoreDataSensorDataRepository.swift in Sources */,
 				5622B0E12E317710002C7E74 /* FlowerDeviceRepository.swift in Sources */,
+				565058C72E3A98A200CC6E2B /* FlowerSelectionView.swift in Sources */,
 				56A948F92DE3A5370010575F /* SpeciesModel.swift in Sources */,
 				5684E2DD2C0F81E7005CD8B6 /* AddDeviceViewModel.swift in Sources */,
 				56A8C6F12D90095B004021C0 /* HistoryLoadingView.swift in Sources */,

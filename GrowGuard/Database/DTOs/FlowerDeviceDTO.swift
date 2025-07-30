@@ -12,6 +12,7 @@ struct FlowerDeviceDTO: Identifiable, Hashable {
     let lastUpdate: Date
     var optimalRange: OptimalRangeDTO?
     var potSize: PotSizeDTO?
+    var selectedFlower: VMSpecies?
     let sensorData: [SensorDataDTO]
     
     init(
@@ -26,6 +27,7 @@ struct FlowerDeviceDTO: Identifiable, Hashable {
         lastUpdate: Date = Date(),
         optimalRange: OptimalRangeDTO? = nil,
         potSize: PotSizeDTO? = nil,
+        selectedFlower: VMSpecies? = nil,
         sensorData: [SensorDataDTO] = []
     ) {
         self.id = id
@@ -39,6 +41,7 @@ struct FlowerDeviceDTO: Identifiable, Hashable {
         self.lastUpdate = lastUpdate
         self.optimalRange = optimalRange
         self.potSize = potSize
+        self.selectedFlower = selectedFlower
         self.sensorData = sensorData
     }
 }

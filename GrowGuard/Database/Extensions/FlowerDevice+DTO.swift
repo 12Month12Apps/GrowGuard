@@ -29,6 +29,33 @@ extension FlowerDevice {
         let optimalRangeDTO = self.optimalRange?.toDTO()
         let potSizeDTO = self.potSize?.toDTO()
         
+        // Create selected flower DTO if data exists - check if properties exist first
+        let selectedFlowerDTO: VMSpecies?
+        let entityDescription = self.entity
+        let hasFlowerProperties = entityDescription.attributesByName.keys.contains("selectedFlowerID")
+        
+        if hasFlowerProperties {
+            if let flowerName = self.selectedFlowerName,
+               !flowerName.isEmpty,
+               self.selectedFlowerID != 0 {
+                selectedFlowerDTO = VMSpecies(
+                    name: flowerName,
+                    id: self.selectedFlowerID,
+                    imageUrl: self.selectedFlowerImageUrl,
+                    minMoisture: self.selectedFlowerMinMoisture > 0 ? Int(self.selectedFlowerMinMoisture) : nil,
+                    maxMoisture: self.selectedFlowerMaxMoisture > 0 ? Int(self.selectedFlowerMaxMoisture) : nil
+                )
+                print("🔍 FlowerDevice.toDTO: Loading flower - ID: \(self.selectedFlowerID), Name: \(flowerName)")
+            } else {
+                selectedFlowerDTO = nil
+                print("🔍 FlowerDevice.toDTO: No flower data found - ID: \(self.selectedFlowerID), Name: \(self.selectedFlowerName ?? "nil")")
+            }
+        } else {
+            selectedFlowerDTO = nil
+            print("ℹ️ FlowerDevice.toDTO: Flower properties not available in Core Data model")
+            print("ℹ️ Available attributes: \(entityDescription.attributesByName.keys.sorted())")
+        }
+        
         return FlowerDeviceDTO(
             id: objectIdString,
             name: self.name ?? "Unknown Device",
@@ -41,6 +68,7 @@ extension FlowerDevice {
             lastUpdate: self.lastUpdate ?? Date(),
             optimalRange: optimalRangeDTO,
             potSize: potSizeDTO,
+            selectedFlower: selectedFlowerDTO,
             sensorData: sensorDataDTOs
         )
     }
@@ -54,5 +82,39 @@ extension FlowerDevice {
         isSensor = dto.isSensor
         added = dto.added
         lastUpdate = dto.lastUpdate
+        
+        // Update selected flower fields - use key-value approach for safety
+        if let selectedFlower = dto.selectedFlower {
+            // Check if the properties exist in the entity
+            let entityDescription = self.entity
+            let hasFlowerProperties = entityDescription.attributesByName.keys.contains("selectedFlowerID")
+            
+            if hasFlowerProperties {
+                selectedFlowerID = selectedFlower.id
+                selectedFlowerName = selectedFlower.name
+                selectedFlowerImageUrl = selectedFlower.imageUrl
+                selectedFlowerMinMoisture = selectedFlower.minMoisture != nil ? Int32(selectedFlower.minMoisture!) : 0
+                selectedFlowerMaxMoisture = selectedFlower.maxMoisture != nil ? Int32(selectedFlower.maxMoisture!) : 0
+                print("💾 FlowerDevice.updateFromDTO: Saving flower - ID: \(selectedFlowerID), Name: \(selectedFlowerName ?? "nil")")
+            } else {
+                print("❌ FlowerDevice.updateFromDTO: Flower properties not found in Core Data model")
+                print("❌ Available attributes: \(entityDescription.attributesByName.keys.sorted())")
+            }
+        } else {
+            // Check if the properties exist before clearing
+            let entityDescription = self.entity
+            let hasFlowerProperties = entityDescription.attributesByName.keys.contains("selectedFlowerID")
+            
+            if hasFlowerProperties {
+                selectedFlowerID = 0
+                selectedFlowerName = nil
+                selectedFlowerImageUrl = nil
+                selectedFlowerMinMoisture = 0
+                selectedFlowerMaxMoisture = 0
+                print("💾 FlowerDevice.updateFromDTO: Clearing flower data")
+            } else {
+                print("ℹ️ FlowerDevice.updateFromDTO: Flower properties not found in model, nothing to clear")
+            }
+        }
     }
 }
