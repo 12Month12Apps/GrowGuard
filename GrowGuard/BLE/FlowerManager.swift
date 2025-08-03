@@ -9,18 +9,6 @@ import Foundation
 import CoreBluetooth
 import Combine
 
-// MARK: - Data Gap Detection
-
-struct DataGap {
-    let startDate: Date
-    let endDate: Date
-    let missingIndexes: [Int]
-    let estimatedEntryCount: Int
-    
-    var timeRange: TimeInterval {
-        return endDate.timeIntervalSince(startDate)
-    }
-}
 
 class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     var centralManager: CBCentralManager!
@@ -296,7 +284,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         }
     }
     
-    // New method to handle the correct history data flow
+    // New method to handle the correct history data flow (from Beta-270325)
     private func startHistoryDataFlow() {
         print("Starting history data flow...")
         isCancelled = false  // Reset cancel flag when starting
@@ -336,6 +324,25 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                         self.discoveredPeripheral?.readValue(for: historyDataCharacteristic)
                     }
                 }
+            }
+        }
+    }
+    
+    func fetchEntryCount() {
+        guard let historyControlCharacteristic = historyControlCharacteristic else {
+            print("History control characteristic not found.")
+            return
+        }
+
+        // First, send the mode change command to activate history mode
+        let modeCommand: [UInt8] = [0xa0, 0x00, 0x00]
+        let modeData = Data(modeCommand)
+        discoveredPeripheral?.writeValue(modeData, for: historyControlCharacteristic, type: .withResponse)
+        
+        // After changing the mode, we'll read the entry count from the entry count characteristic
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if let entryCountCharacteristic = self.entryCountCharacteristic {
+                self.discoveredPeripheral?.readValue(for: entryCountCharacteristic)
             }
         }
     }
@@ -426,43 +433,10 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 // Update loading state
                 loadingStateSubject.send(.loading)
                 loadingProgressSubject.send((0, totalEntries))
-                
-                // Perform gap detection before starting to fetch data
-                Task {
-                    await performGapDetection()
-                    // Start fetching from index 0 regardless of gaps
-                    fetchHistoricalDataEntry(index: currentEntryIndex)
-                }
+                fetchHistoricalDataEntry(index: currentEntryIndex)
             } else {
                 print("No historical entries available.")
                 loadingStateSubject.send(.completed)
-            }
-        }
-    }
-    
-    @MainActor
-    private func performGapDetection() async {
-        guard let deviceUUID = self.deviceUUID,
-              let bootTime = self.deviceBootTime,
-              totalEntries > 0 else {
-            print("⚠️ Cannot perform gap detection: missing deviceUUID, bootTime, or totalEntries")
-            return
-        }
-        
-        print("🔍 Starting gap detection for device \(deviceUUID) with \(totalEntries) total entries")
-        let gaps = await identifyDataGaps(deviceUUID: deviceUUID, totalEntries: totalEntries, deviceBootTime: bootTime)
-        
-        // Store detected gaps
-        detectedGaps = gaps
-        
-        if gaps.isEmpty {
-            print("✅ Gap detection complete: No missing data found")
-        } else {
-            print("📊 Gap detection complete: Found \(gaps.count) gaps with \(gaps.reduce(0) { $0 + $1.missingIndexes.count }) missing entries")
-            
-            // Log gap details for debugging
-            for (i, gap) in gaps.enumerated() {
-                print("  Gap \(i+1): Indices \(gap.missingIndexes.first ?? 0)-\(gap.missingIndexes.last ?? 0) (\(gap.missingIndexes.count) entries)")
             }
         }
     }
@@ -538,9 +512,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     
     private var isCancelled = false
     
-    // MARK: - Memory-only state (no persistence)
-    // State is maintained during reconnections within the same app session
-    private var detectedGaps: [DataGap] = []
     
     // MARK: - Test Access Properties (Internal for testing)
     #if DEBUG
@@ -588,13 +559,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     }
     #endif
 
-    // MARK: - Simple completion handling (memory-only)
-    
-    func onHistoryLoadingCompleted() {
-        guard let deviceUUID = self.deviceUUID else { return }
-        print("✅ History loading completed for device \(deviceUUID)")
-        loadingStateSubject.send(.completed)
-    }
 
     func cancelHistoryDataLoading() {
         print("Cancelling history data loading")
@@ -629,14 +593,11 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     // Public method to request historical data
     func requestHistoricalData() {
         historicalDataRequested = true
-        isCancelled = false
-        
-        // Always start fresh - no persistence
-        print("🔄 Starting fresh historical data load from index 0")
+        // Reset any previous loading state
         loadingStateSubject.send(.idle)
         totalEntries = 0
         currentEntryIndex = 0
-        detectedGaps = [] // Clear previous gap detection results
+        isCancelled = false
         
         if isConnected && historyControlCharacteristic != nil && 
            historyDataCharacteristic != nil && deviceTimeCharacteristic != nil {
@@ -781,8 +742,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 currentEntryIndex = nextIndex
                 loadingProgressSubject.send((nextIndex, totalEntries))
                 
-                // Progress is maintained in memory only
-                
                 if nextIndex < totalEntries && !isCancelled {
                     // Add batch processing with longer delays between batches
                     let batchSize = 10
@@ -801,7 +760,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 } else if !isCancelled {
                     print("All historical data fetched successfully.")
                     loadingStateSubject.send(.completed)
-                    onHistoryLoadingCompleted()
                 }
             } else {
                 print("Failed to decode history entry \(currentEntryIndex)")
@@ -942,25 +900,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         }
     }
     
-    func fetchEntryCount() {
-        guard let historyControlCharacteristic = historyControlCharacteristic else {
-            print("History control characteristic not found.")
-            return
-        }
-
-        // First, send the mode change command to activate history mode
-        let modeCommand: [UInt8] = [0xa0, 0x00, 0x00]
-        let modeData = Data(modeCommand)
-        discoveredPeripheral?.writeValue(modeData, for: historyControlCharacteristic, type: .withResponse)
-        
-        // After changing the mode, we'll read the entry count from the entry count characteristic
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            if let entryCountCharacteristic = self.entryCountCharacteristic {
-                self.discoveredPeripheral?.readValue(for: entryCountCharacteristic)
-            }
-        }
-    }
-    
     // MARK: - Nested Types for Compatibility
     enum LoadingState: Equatable {
         case idle
@@ -983,160 +922,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             case .good: return "good"
             }
         }
-    }
-    
-    // MARK: - Gap Detection API
-    
-    /// Returns the gaps detected during the last historical data analysis
-    func getDetectedGaps() -> [DataGap] {
-        return detectedGaps
-    }
-    
-    /// Returns true if gaps were detected in the last analysis
-    func hasDataGaps() -> Bool {
-        return !detectedGaps.isEmpty
-    }
-    
-    /// Returns the total number of missing entries across all gaps
-    func getTotalMissingEntries() -> Int {
-        return detectedGaps.reduce(0) { $0 + $1.missingIndexes.count }
-    }
-    
-    // MARK: - Gap Detection Implementation
-    
-    func identifyDataGaps(deviceUUID: String, totalEntries: Int, deviceBootTime: Date) async -> [DataGap] {
-        let bootTime = deviceBootTime
-        guard totalEntries > 0 else {
-            print("⚠️ Cannot identify gaps: invalid totalEntries (\(totalEntries)) or missing bootTime")
-            return []
-        }
-        
-        do {
-            // Get existing sensor data from database
-            let sensorDataRepo = RepositoryManager.shared.sensorDataRepository
-            let existingData: [SensorDataDTO] = try await sensorDataRepo.getSensorData(for: deviceUUID, limit: nil)
-            print("🔍 Gap detection: Found \(existingData.count) existing entries for device \(deviceUUID)")
-            
-            // Analyze existing data to determine entry interval
-            let entryInterval = determineEntryInterval(from: existingData, bootTime: bootTime, totalEntries: totalEntries)
-            print("📊 Determined entry interval: \(entryInterval) seconds (\(entryInterval/3600) hours)")
-            
-            // Convert existing data to a set of indices based on timestamps
-            let existingIndices = Set(existingData.compactMap { sensorData -> Int? in
-                let timeSinceBoot = sensorData.date.timeIntervalSince(bootTime)
-                let estimatedIndex = Int(timeSinceBoot / entryInterval)
-                
-                // Validate the index is within expected range
-                guard estimatedIndex >= 0 && estimatedIndex < totalEntries else {
-                    return nil
-                }
-                return estimatedIndex
-            })
-            
-            // Find missing indices
-            let allIndices = Set(0..<totalEntries)
-            let missingIndices = Array(allIndices.subtracting(existingIndices)).sorted()
-            
-            if missingIndices.isEmpty {
-                print("✅ No data gaps found - all \(totalEntries) entries are present")
-                return []
-            }
-            
-            print("📊 Gap detection: Missing \(missingIndices.count) out of \(totalEntries) entries")
-            
-            // Group consecutive missing indices into gaps
-            var gaps: [DataGap] = []
-            var currentGapStart: Int?
-            var currentGapIndices: [Int] = []
-            
-            for index in missingIndices {
-                if let gapStart = currentGapStart {
-                    // Check if this index continues the current gap
-                    if index == currentGapIndices.last! + 1 {
-                        currentGapIndices.append(index)
-                    } else {
-                        // End current gap and start a new one
-                        let gap = createDataGap(startIndex: gapStart, endIndex: currentGapIndices.last!, 
-                                               indices: currentGapIndices, bootTime: bootTime, interval: entryInterval)
-                        gaps.append(gap)
-                        
-                        currentGapStart = index
-                        currentGapIndices = [index]
-                    }
-                } else {
-                    // Start first gap
-                    currentGapStart = index
-                    currentGapIndices = [index]
-                }
-            }
-            
-            // Add the last gap if exists
-            if let gapStart = currentGapStart, !currentGapIndices.isEmpty {
-                let gap = createDataGap(startIndex: gapStart, endIndex: currentGapIndices.last!, 
-                                       indices: currentGapIndices, bootTime: bootTime, interval: entryInterval)
-                gaps.append(gap)
-            }
-            
-            print("🔍 Identified \(gaps.count) data gaps:")
-            for (i, gap) in gaps.enumerated() {
-                print("  Gap \(i+1): \(gap.missingIndexes.count) missing entries from \(gap.startDate) to \(gap.endDate)")
-            }
-            
-            return gaps
-            
-        } catch {
-            print("❌ Error identifying data gaps: \(error)")
-            return []
-        }
-    }
-    
-    private func determineEntryInterval(from existingData: [SensorDataDTO], bootTime: Date, totalEntries: Int) -> TimeInterval {
-        guard existingData.count >= 2 else {
-            // Default to 1 hour if we don't have enough data to analyze
-            return 3600.0
-        }
-        
-        // Sort data by date
-        let sortedData = existingData.sorted { $0.date < $1.date }
-        
-        // Calculate intervals between consecutive entries
-        var intervals: [TimeInterval] = []
-        for i in 1..<sortedData.count {
-            let interval = sortedData[i].date.timeIntervalSince(sortedData[i-1].date)
-            if interval > 0 && interval < 86400 { // Ignore intervals > 24 hours (likely gaps)
-                intervals.append(interval)
-            }
-        }
-        
-        if intervals.isEmpty {
-            // Fallback: calculate average interval based on total time span
-            let totalTimeSpan = Date().timeIntervalSince(bootTime)
-            return totalEntries > 0 ? totalTimeSpan / Double(totalEntries) : 3600.0
-        }
-        
-        // Use median interval to avoid outliers
-        intervals.sort()
-        let medianInterval = intervals[intervals.count / 2]
-        
-        // Round to nearest common intervals (1h, 30min, 15min, etc.)
-        let commonIntervals: [TimeInterval] = [900, 1800, 3600, 7200] // 15min, 30min, 1h, 2h
-        let closestInterval = commonIntervals.min { 
-            abs($0 - medianInterval) < abs($1 - medianInterval) 
-        } ?? medianInterval
-        
-        return closestInterval
-    }
-    
-    private func createDataGap(startIndex: Int, endIndex: Int, indices: [Int], bootTime: Date, interval: TimeInterval) -> DataGap {
-        let startDate = bootTime.addingTimeInterval(Double(startIndex) * interval)
-        let endDate = bootTime.addingTimeInterval(Double(endIndex) * interval)
-        
-        return DataGap(
-            startDate: startDate,
-            endDate: endDate,
-            missingIndexes: indices,
-            estimatedEntryCount: indices.count
-        )
     }
     
 }
