@@ -30,6 +30,8 @@
 		56241CE12E03591C0012B18E /* FlowerPot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56241CE02E0359180012B18E /* FlowerPot.swift */; };
 		562629002C42E32700B5DB2A /* AppIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 562628FF2C42E32200B5DB2A /* AppIntent.swift */; };
 		565058C72E3A98A200CC6E2B /* FlowerSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565058C62E3A98A200CC6E2B /* FlowerSelectionView.swift */; };
+		565058CB2E3F64F900CC6E2B /* LogExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565058C82E3F64F900CC6E2B /* LogExportView.swift */; };
+		565058CC2E3F64F900CC6E2B /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565058C92E3F64F900CC6E2B /* Logger.swift */; };
 		5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2AB2CB44DA000EED3D3 /* Extensions.swift */; };
 		5654B2B92CB4575E00EED3D3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2B82CB4575C00EED3D3 /* SettingsView.swift */; };
 		5654B2BB2CB45C6E00EED3D3 /* SensorDataDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */; };
@@ -118,6 +120,8 @@
 		56241CE02E0359180012B18E /* FlowerPot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerPot.swift; sourceTree = "<group>"; };
 		562628FF2C42E32200B5DB2A /* AppIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntent.swift; sourceTree = "<group>"; };
 		565058C62E3A98A200CC6E2B /* FlowerSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerSelectionView.swift; sourceTree = "<group>"; };
+		565058C82E3F64F900CC6E2B /* LogExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogExportView.swift; sourceTree = "<group>"; };
+		565058C92E3F64F900CC6E2B /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
 		5654B2AB2CB44DA000EED3D3 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		5654B2B82CB4575C00EED3D3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataDecoderTests.swift; sourceTree = "<group>"; };
@@ -249,6 +253,15 @@
 				56241CE02E0359180012B18E /* FlowerPot.swift */,
 			);
 			path = "Manuell Water";
+			sourceTree = "<group>";
+		};
+		565058CA2E3F64F900CC6E2B /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				565058C82E3F64F900CC6E2B /* LogExportView.swift */,
+				565058C92E3F64F900CC6E2B /* Logger.swift */,
+			);
+			path = Utils;
 			sourceTree = "<group>";
 		};
 		5654B2B72CB4575700EED3D3 /* Settings */ = {
@@ -411,6 +424,7 @@
 				56B44CC22D6E7B3F00A6A75A /* BLE */,
 				5688920A2C84B4B9000E8FAE /* AppDelegate.swift */,
 				562628FF2C42E32200B5DB2A /* AppIntent.swift */,
+				565058CA2E3F64F900CC6E2B /* Utils */,
 				565DEC3E2C159868002D784A /* DeviceDetails */,
 				5684E2E52C0FA303005CD8B6 /* Database */,
 				5684E2E02C0FA143005CD8B6 /* OverviewList */,
@@ -609,6 +623,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				565058CB2E3F64F900CC6E2B /* LogExportView.swift in Sources */,
+				565058CC2E3F64F900CC6E2B /* Logger.swift in Sources */,
 				5684E2DB2C0F81C0005CD8B6 /* AddDeviceView.swift in Sources */,
 				5622B0CA2E3176F5002C7E74 /* PotSizeDTO.swift in Sources */,
 				5622B0CB2E3176F5002C7E74 /* SensorDataDTO.swift in Sources */,

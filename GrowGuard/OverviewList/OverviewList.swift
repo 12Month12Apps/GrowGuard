@@ -46,6 +46,10 @@ struct OverviewList: View {
                     }
                 }
                 
+                NavigationLink(destination: LogExportView()) {
+                    Text("Debug Menü")
+                }
+                
                 Section {
                     ForEach(viewModel.allSavedDevices) { device in
                         Button {
