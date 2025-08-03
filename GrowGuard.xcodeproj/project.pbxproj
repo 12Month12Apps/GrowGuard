@@ -844,7 +844,7 @@
 				CODE_SIGN_ENTITLEMENTS = GrowGuard/GrowGuard.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 03.08.2025;
 				DEVELOPMENT_ASSET_PATHS = "\"GrowGuard/Preview Content\"";
 				DEVELOPMENT_TEAM = G2PVUY2GRG;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -887,7 +887,7 @@
 				CODE_SIGN_ENTITLEMENTS = GrowGuard/GrowGuard.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 03.08.2025;
 				DEVELOPMENT_ASSET_PATHS = "\"GrowGuard/Preview Content\"";
 				DEVELOPMENT_TEAM = G2PVUY2GRG;
 				ENABLE_HARDENED_RUNTIME = YES;
