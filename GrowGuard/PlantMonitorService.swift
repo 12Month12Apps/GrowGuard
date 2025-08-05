@@ -160,6 +160,7 @@ class PlantMonitorService {
        let validMoistureRange = 0...100
        let validTemperatureRange = -10...60
        let validBrightnessRange = 0...100000
+       let validConductivityRange = 0...32767 // Int16 max value to prevent overflow
        
        // Check if values are in valid ranges
        if !validMoistureRange.contains(Int(data.moisture)) {
@@ -172,6 +173,10 @@ class PlantMonitorService {
        
        if !validBrightnessRange.contains(Int(data.brightness)) {
            validatedData.brightness = UInt32(max(validBrightnessRange.lowerBound, min(Int(data.brightness), validBrightnessRange.upperBound)))
+       }
+       
+       if !validConductivityRange.contains(Int(data.conductivity)) {
+           validatedData.conductivity = UInt16(max(validConductivityRange.lowerBound, min(Int(data.conductivity), validConductivityRange.upperBound)))
        }
         
         print(validatedData.moisture, validatedData.brightness, validatedData.temperature)
