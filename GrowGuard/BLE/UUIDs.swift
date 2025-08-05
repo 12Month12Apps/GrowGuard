@@ -21,3 +21,4 @@ let historicalSensorValuesCharacteristicUUID = CBUUID(string: "00001a11-0000-100
 let deviceTimeCharacteristicUUID = CBUUID(string: "00001a12-0000-1000-8000-00805f9b34fb")
 let historyControlCharacteristicUUID = CBUUID(string: "00001a10-0000-1000-8000-00805f9b34fb")
 let entryCountCharacteristicUUID = CBUUID(string: "00001a13-0000-1000-8000-00805f9b34fb")
+let authenticationCharacteristicUUID = CBUUID(string: "00000001-0000-1000-8000-00805f9b34fb")

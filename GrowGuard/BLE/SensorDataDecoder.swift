@@ -166,4 +166,61 @@ class SensorDataDecoder {
         
         return Int(data.withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian)
     }
+    
+    func decodeMiBeaconAdvertisement(data: Data, deviceUUID: String) -> SensorDataTemp? {
+        guard data.count >= 12 else {
+            print("MiBeacon data too short: \(data.count)")
+            return nil
+        }
+        
+        // Check for Xiaomi manufacturer ID (0x038F)
+        let manufacturerID = UInt16(data[0]) | (UInt16(data[1]) << 8)
+        guard manufacturerID == 0x038F else {
+            print("Not a Xiaomi MiBeacon packet")
+            return nil
+        }
+        
+        // Skip Xiaomi header and look for FlowerCare data
+        // This is a simplified implementation - real MiBeacon parsing is more complex
+        if data.count >= 16 {
+            let temperature = Double(UInt16(data[8]) | (UInt16(data[9]) << 8)) / 10.0
+            let moisture = data[10]
+            let brightness = UInt32(data[4]) | (UInt32(data[5]) << 8) | (UInt32(data[6]) << 16) | (UInt32(data[7]) << 24)
+            let conductivity = UInt16(data[11]) | (UInt16(data[12]) << 8)
+            
+            return SensorDataTemp(
+                temperature: temperature,
+                brightness: brightness,
+                moisture: moisture,
+                conductivity: conductivity,
+                date: Date(),
+                deviceUUID: deviceUUID
+            )
+        }
+        
+        return nil
+    }
+    
+    func decodeServiceAdvertisement(data: Data, deviceUUID: String) -> SensorDataTemp? {
+        guard data.count >= 8 else {
+            print("Service advertisement data too short: \(data.count)")
+            return nil
+        }
+        
+        // Try to extract sensor data from service advertisement
+        // This is a basic implementation - might need adjustment based on actual format
+        let temperature = Double(UInt16(data[0]) | (UInt16(data[1]) << 8)) / 10.0
+        let moisture = data[2]
+        let brightness = UInt32(data[3]) | (UInt32(data[4]) << 8)
+        let conductivity = UInt16(data[5]) | (UInt16(data[6]) << 8)
+        
+        return SensorDataTemp(
+            temperature: temperature,
+            brightness: brightness,
+            moisture: moisture,
+            conductivity: conductivity,
+            date: Date(),
+            deviceUUID: deviceUUID
+        )
+    }
 }

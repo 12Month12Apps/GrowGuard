@@ -10,6 +10,7 @@ struct FlowerDeviceDTO: Identifiable, Hashable {
     let isSensor: Bool
     let added: Date
     let lastUpdate: Date
+    let lastHistoryIndex: Int
     var optimalRange: OptimalRangeDTO?
     var potSize: PotSizeDTO?
     var selectedFlower: VMSpecies?
@@ -25,6 +26,7 @@ struct FlowerDeviceDTO: Identifiable, Hashable {
         isSensor: Bool = true,
         added: Date = Date(),
         lastUpdate: Date = Date(),
+        lastHistoryIndex: Int = 0,
         optimalRange: OptimalRangeDTO? = nil,
         potSize: PotSizeDTO? = nil,
         selectedFlower: VMSpecies? = nil,
@@ -39,6 +41,7 @@ struct FlowerDeviceDTO: Identifiable, Hashable {
         self.isSensor = isSensor
         self.added = added
         self.lastUpdate = lastUpdate
+        self.lastHistoryIndex = lastHistoryIndex
         self.optimalRange = optimalRange
         self.potSize = potSize
         self.selectedFlower = selectedFlower
