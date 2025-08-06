@@ -540,6 +540,15 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         
         // Start connection quality monitoring
         startConnectionQualityMonitoring()
+        
+        // Add overall timeout for history flow (10 minutes max)
+        let historyTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 600.0, repeats: false) { [weak self] timer in
+            guard let self = self, self.isHistoryFlowActive else { return }
+            AppLogger.ble.bleError("⏰ History flow timeout - taking too long, aborting")
+            self.loadingStateSubject.send(.error("History loading timed out after 10 minutes"))
+            self.cleanupHistoryFlow()
+        }
+        self.historyFlowTimers.append(historyTimeoutTimer)
 
         // Step 1: Send 0xa00000 to switch to history mode
         guard let historyControlCharacteristic = historyControlCharacteristic,
@@ -597,6 +606,15 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     AppLogger.ble.bleData("Reading history data characteristic")
                     if let historyDataCharacteristic = self.historyDataCharacteristic {
                         peripheral.readValue(for: historyDataCharacteristic)
+                        
+                        // Add timeout for metadata response
+                        let metadataTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
+                            guard let self = self, self.totalEntries == 0 && self.isHistoryFlowActive else { return }
+                            AppLogger.ble.bleError("⏰ Metadata timeout - no response after 10 seconds")
+                            self.loadingStateSubject.send(.error("No response from device for history metadata"))
+                            self.cleanupHistoryFlow()
+                        }
+                        self.historyFlowTimers.append(metadataTimeoutTimer)
                     }
                 }
                 self.historyFlowTimers.append(step4Timer)
@@ -1281,7 +1299,15 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     fetchHistoricalDataEntry(index: currentEntryIndex)
                 } else {
                     print("No historical entries available.")
+                    AppLogger.ble.info("✅ Historical data completed - device has no entries")
+                    loadingStateSubject.send(.completed)
+                    cleanupHistoryFlow()
                 }
+            } else {
+                // Failed to decode metadata
+                AppLogger.ble.bleError("❌ Failed to decode history metadata")
+                loadingStateSubject.send(.error("Failed to decode history metadata"))
+                cleanupHistoryFlow()
             }
         } else {
             // This is an actual history entry

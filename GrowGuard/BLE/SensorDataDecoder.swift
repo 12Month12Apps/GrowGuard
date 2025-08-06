@@ -95,12 +95,21 @@ class SensorDataDecoder {
     // Add this to your SensorDataDecoder class
     func decodeHistoryMetadata(data: Data) -> (entryCount: Int, additionalInfo: [String: Any])? {
         guard data.count >= 16 else {
-            print("History metadata data too short")
+            print("❌ History metadata data too short: \(data.count) bytes")
             return nil
         }
         
+        print("📊 Decoding history metadata from \(data.count) bytes: \(data.map { String(format: "%02x", $0) }.joined())")
+        
         // Extract entry count (first 2 bytes, little-endian)
         let entryCount = Int(data[0]) | (Int(data[1]) << 8)
+        print("📊 Extracted entry count: \(entryCount)")
+        
+        // Validate entry count is reasonable (not corrupted)
+        if entryCount < 0 || entryCount > 10000 {
+            print("❌ Invalid entry count: \(entryCount) - likely corrupted metadata")
+            return nil
+        }
         
         // Parse the remaining bytes - this is a best guess based on common patterns
         // Bytes 2-5 and 6-9 could be timestamps or indexes
