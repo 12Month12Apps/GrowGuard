@@ -20,6 +20,9 @@ class SettingsViewModel {
         }
     }
     var isLoading: Bool = false
+    var isCleaningDatabase: Bool = false
+    var cleanupStats: (totalEntries: Int, invalidEntries: Int)? = nil
+    var cleanupResult: String? = nil
     private var isLoadingData: Bool = false
     private let deviceUUID: String
     private let repositoryManager = RepositoryManager.shared
@@ -191,6 +194,34 @@ class SettingsViewModel {
             print("🌱 SettingsViewModel: Updated moisture range from flower - Min: \(minMoisture), Max: \(flower.maxMoisture ?? Int(optimalRange.maxMoisture))")
         }
     }
+    
+    @MainActor
+    func loadDatabaseStats() async {
+        do {
+            let stats = try await PlantMonitorService.shared.getInvalidDataStatistics()
+            self.cleanupStats = stats
+        } catch {
+            print("❌ Failed to load database stats: \(error)")
+        }
+    }
+    
+    @MainActor
+    func cleanupDatabase() async {
+        isCleaningDatabase = true
+        cleanupResult = nil
+        
+        do {
+            let deletedCount = try await PlantMonitorService.shared.cleanupInvalidSensorData()
+            cleanupResult = "✅ Cleaned up \(deletedCount) invalid entries"
+            
+            // Reload stats after cleanup
+            await loadDatabaseStats()
+        } catch {
+            cleanupResult = "❌ Cleanup failed: \(error.localizedDescription)"
+        }
+        
+        isCleaningDatabase = false
+    }
 }
 
 struct SettingsView: View {
@@ -219,7 +250,46 @@ struct SettingsView: View {
         NavigationView {
             ZStack {
                 List {
-                
+                Section(header: Text("Database Maintenance")) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let stats = viewModel.cleanupStats {
+                            Text("Total entries: \(stats.totalEntries)")
+                                .font(.caption)
+                            Text("Invalid entries: \(stats.invalidEntries)")
+                                .font(.caption)
+                                .foregroundColor(stats.invalidEntries > 0 ? .red : .green)
+                        }
+                        
+                        if let result = viewModel.cleanupResult {
+                            Text(result)
+                                .font(.caption)
+                                .foregroundColor(result.contains("✅") ? .green : .red)
+                        }
+                        
+                        Button(action: {
+                            Task {
+                                await viewModel.cleanupDatabase()
+                            }
+                        }) {
+                            HStack {
+                                if viewModel.isCleaningDatabase {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "trash.fill")
+                                }
+                                Text(viewModel.isCleaningDatabase ? "Cleaning..." : "Clean Invalid Data")
+                            }
+                        }
+                        .disabled(viewModel.isCleaningDatabase || viewModel.isLoading || isSaving)
+                        .foregroundColor(.red)
+                        
+                        Text("Removes impossible sensor values like moisture > 100%, extreme temperatures, etc.")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                    
                 Section(header: Text("Flower Pot")) {
                     HStack {
                         Text("Pot radius (cm)")
@@ -397,6 +467,7 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .task {
                 await viewModel.loadSettings()
+                await viewModel.loadDatabaseStats()
             }
             .alert("Save Error", isPresented: $showSaveError) {
                 Button("OK") { }

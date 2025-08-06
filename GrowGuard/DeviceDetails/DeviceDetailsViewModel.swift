@@ -94,6 +94,15 @@ import CoreData
                 await self.saveHistoricalSensorData(data)
             }
         }
+        
+        // Listen for historical data loading completion to refresh cache
+        NotificationCenter.default.addObserver(forName: NSNotification.Name("HistoricalDataLoadingCompleted"), object: nil, queue: .main) { [weak self] notification in
+            if let deviceUUID = notification.object as? String, deviceUUID == self?.device.uuid {
+                Task { @MainActor in
+                    await self?.refreshCurrentWeekSilently()
+                }
+            }
+        }
     }
     
     func loadDetails() {
@@ -142,11 +151,14 @@ import CoreData
     @MainActor
     private func saveHistoricalSensorData(_ data: HistoricalSensorData) async {
         do {
-            // Check for duplicates using repository
-            let existingSensorData = try await repositoryManager.sensorDataRepository.getSensorData(for: device.uuid, limit: nil)
+            // Fast duplicate check: only check recent entries within a small time window
+            // This avoids loading thousands of records for each historical entry
+            let startDate = data.date.addingTimeInterval(-3600) // 1 hour window
+            let endDate = data.date.addingTimeInterval(3600)
+            let recentData = try await repositoryManager.sensorDataRepository.getSensorDataInDateRange(for: device.uuid, startDate: startDate, endDate: endDate)
             
-            let isDuplicate = existingSensorData.contains(where: {
-                $0.date == data.date &&
+            let isDuplicate = recentData.contains(where: {
+                abs($0.date.timeIntervalSince(data.date)) < 60 && // Within 1 minute
                 $0.temperature == data.temperature &&
                 Int32($0.brightness) == data.brightness &&
                 Int16($0.moisture) == data.moisture &&
@@ -156,12 +168,8 @@ import CoreData
             if !isDuplicate {
                 _ = try await PlantMonitorService.shared.validateHistoricSensorData(data, deviceUUID: device.uuid)
                 
-                // Refresh current week data if this historical data falls within current week
-                let calendar = Calendar.current
-                let currentWeekInterval = calendar.dateInterval(of: .weekOfYear, for: sensorDataManager.currentWeek)
-                if let interval = currentWeekInterval, interval.contains(data.date) {
-                    await refreshCurrentWeekSilently()
-                }
+                // Note: Cache refresh moved to end of historical data loading for massive performance gain
+                // No need to clear cache and reload data after every single entry
             }
         } catch {
             print("Error saving historical sensor data: \(error.localizedDescription)")

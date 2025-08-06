@@ -123,4 +123,62 @@ class CoreDataSensorDataRepository: SensorDataRepository {
             }
         }
     }
+    
+    func getAllSensorData() async throws -> [SensorDataDTO] {
+        return try await withCheckedThrowingContinuation { continuation in
+            context.perform {
+                do {
+                    let request = NSFetchRequest<SensorData>(entityName: "SensorData")
+                    request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
+                    
+                    let sensorData = try self.context.fetch(request)
+                    let dtos = sensorData.compactMap { $0.toDTO() }
+                    continuation.resume(returning: dtos)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+    
+    func deleteInvalidSensorData() async throws -> Int {
+        return try await withCheckedThrowingContinuation { continuation in
+            context.perform {
+                do {
+                    let request = NSFetchRequest<SensorData>(entityName: "SensorData")
+                    
+                    // Define validation criteria for impossible values
+                    // Note: Direct sunlight can reach 120,000-130,000 lux, so we allow up to 200,000
+                    let invalidPredicate = NSPredicate(format: """
+                        moisture < 0 OR moisture > 100 OR 
+                        temperature < -30 OR temperature > 80 OR 
+                        conductivity < 0 OR conductivity > 10000 OR
+                        brightness < 0 OR brightness > 100000
+                    """)
+                    
+                    request.predicate = invalidPredicate
+                    
+                    let invalidSensorData = try self.context.fetch(request)
+                    let deleteCount = invalidSensorData.count
+                    
+                    print("🗑️ Found \(deleteCount) invalid sensor data entries to delete")
+                    
+                    // Delete invalid entries
+                    for data in invalidSensorData {
+                        print("🗑️ Deleting invalid entry: temp=\(data.temperature)°C, moisture=\(data.moisture)%, conductivity=\(data.conductivity)µS/cm, brightness=\(data.brightness)lx, date=\(data.date)")
+                        self.context.delete(data)
+                    }
+                    
+                    if self.context.hasChanges {
+                        try self.context.save()
+                        print("✅ Deleted \(deleteCount) invalid sensor data entries")
+                    }
+                    
+                    continuation.resume(returning: deleteCount)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
 }

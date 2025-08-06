@@ -556,7 +556,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         peripheral.writeValue(modeData, for: historyControlCharacteristic, type: .withResponse)
         
         // Step 2: Read device time (give device more time to process mode change)
-        let step2Timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak self] timer in
+        let step2Timer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { [weak self] timer in
             guard let self = self, 
                   let peripheral = self.discoveredPeripheral,
                   peripheral.state == .connected else {
@@ -571,7 +571,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             }
             
             // Step 3: Get entry count (more conservative timing)
-            let step3Timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { [weak self] timer in
+            let step3Timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { [weak self] timer in
                 guard let self = self,
                       let peripheral = self.discoveredPeripheral,
                       peripheral.state == .connected else {
@@ -585,7 +585,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 peripheral.writeValue(Data(entryCountCommand), for: historyControlCharacteristic, type: .withResponse)
                 
                 // After sending the command, read the history data characteristic (longer delay)
-                let step4Timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { [weak self] timer in
+                let step4Timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { [weak self] timer in
                     guard let self = self,
                           let peripheral = self.discoveredPeripheral,
                           peripheral.state == .connected else {
@@ -1299,18 +1299,18 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     // Update the last synced index after each successful entry
                     updateLastHistoryIndex(nextIndex)
                     
-                    // Add batch processing with longer delays between batches
-                    let batchSize = 10
+                    // Fast batch processing with minimal delays
+                    let batchSize = 20 // Larger batches for better performance  
                     if nextIndex % batchSize == 0 {
-                        print("Completed batch. Taking a break before next batch...")
-                        // Take a longer break between batches to avoid disconnection
-                        let batchTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak self] timer in
+                        print("Completed batch of \(batchSize). Brief pause...")
+                        // Very short pause to avoid overwhelming the device
+                        let batchTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] timer in
                             self?.fetchHistoricalDataEntry(index: nextIndex)
                         }
                         self.historyFlowTimers.append(batchTimer)
                     } else {
                         // Increased delay between individual entries
-                        let nextEntryTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] timer in
+                        let nextEntryTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: false) { [weak self] timer in
                             self?.fetchHistoricalDataEntry(index: nextIndex)
                         }
                         self.historyFlowTimers.append(nextEntryTimer)
@@ -1320,6 +1320,10 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     updateLastHistoryIndex(totalEntries)
                     AppLogger.ble.info("✅ All historical data fetched successfully - \(self.totalEntries) entries loaded")
                     loadingStateSubject.send(.completed)
+                    
+                    // Notify UI that historical loading is complete for cache refresh
+                    NotificationCenter.default.post(name: NSNotification.Name("HistoricalDataLoadingCompleted"), object: self.deviceUUID)
+                    
                     cleanupHistoryFlow()
                 }
             } else {
@@ -1332,7 +1336,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 if (nextIndex < totalEntries) {
                     AppLogger.ble.info("⏭️ Skipping corrupted entry \(self.currentEntryIndex), continuing with next")
                     currentEntryIndex = nextIndex
-                    let skipTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] timer in
+                    let skipTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: false) { [weak self] timer in
                         self?.fetchHistoricalDataEntry(index: nextIndex)
                     }
                     self.historyFlowTimers.append(skipTimer)
@@ -1366,7 +1370,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         peripheral.writeValue(entryAddress, for: historyControlCharacteristic, type: .withResponse)
         
         // Increased delay to give the device more time to respond
-        let readTimer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: false) { [weak self] timer in
+        let readTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: false) { [weak self] timer in
             guard let self = self,
                   let peripheral = self.discoveredPeripheral,
                   peripheral.state == .connected,

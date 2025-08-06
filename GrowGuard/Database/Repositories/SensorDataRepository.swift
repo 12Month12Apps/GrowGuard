@@ -7,4 +7,6 @@ protocol SensorDataRepository {
     func saveSensorData(_ sensorData: SensorDataDTO) async throws
     func deleteSensorData(id: String) async throws
     func deleteAllSensorData(for deviceUUID: String) async throws
+    func getAllSensorData() async throws -> [SensorDataDTO]
+    func deleteInvalidSensorData() async throws -> Int
 }

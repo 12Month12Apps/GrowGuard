@@ -156,19 +156,25 @@ class PlantMonitorService {
     func validateHistoricSensorData(_ data: HistoricalSensorData, deviceUUID: String) async throws -> SensorDataDTO? {
         var validatedData = data
         
-       // Define reasonable sensor ranges
+       // Define realistic sensor ranges for FlowerCare devices
        let validMoistureRange = 0...100
-       let validTemperatureRange = -10...60
-       let validBrightnessRange = 0...100000
-       let validConductivityRange = 0...32767 // Int16 max value to prevent overflow
+       let validTemperatureRange = -20.0...70.0  // More realistic temperature range
+       let validBrightnessRange = 0...100000     // Allow up to 100k lux for extreme sunlight
+       let validConductivityRange = 0...10000    // Extended range for various soil types
        
-       // Check if values are in valid ranges
+       // Log original values for debugging impossible numbers
+       if data.moisture > 100 || data.temperature < -20 || data.temperature > 70 || 
+          data.conductivity > 10000 || data.brightness > 100000 {
+           print("🚨 Clamping invalid historic data - Original: temp=\(data.temperature)°C, moisture=\(data.moisture)%, conductivity=\(data.conductivity)µS/cm, brightness=\(data.brightness)lx")
+       }
+       
+       // Clamp values to valid ranges
        if !validMoistureRange.contains(Int(data.moisture)) {
            validatedData.moisture = UInt8(max(validMoistureRange.lowerBound, min(Int(data.moisture), validMoistureRange.upperBound)))
        }
        
-       if !validTemperatureRange.contains(Int(data.temperature)) {
-           validatedData.temperature = Double(max(validTemperatureRange.lowerBound, min(Int(data.temperature), validTemperatureRange.upperBound)))
+       if !validTemperatureRange.contains(data.temperature) {
+           validatedData.temperature = max(validTemperatureRange.lowerBound, min(data.temperature, validTemperatureRange.upperBound))
        }
        
        if !validBrightnessRange.contains(Int(data.brightness)) {
@@ -192,6 +198,36 @@ class PlantMonitorService {
         
         try await repositoryManager.sensorDataRepository.saveSensorData(sensorDataDTO)
         return sensorDataDTO
+    }
+    
+    /// Clean invalid sensor data from the database
+    /// Removes entries with impossible values like moisture > 100%, negative conductivity, extreme temperatures, etc.
+    /// Returns the number of entries deleted
+    func cleanupInvalidSensorData() async throws -> Int {
+        let deletedCount = try await repositoryManager.sensorDataRepository.deleteInvalidSensorData()
+        
+        // Post notification to refresh UI
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: NSNotification.Name("DatabaseCleanupCompleted"), object: deletedCount)
+        }
+        
+        return deletedCount
+    }
+    
+    /// Get statistics about invalid data in the database without deleting it
+    func getInvalidDataStatistics() async throws -> (totalEntries: Int, invalidEntries: Int) {
+        // This could be optimized by adding a count-only method to the repository
+        let allData = try await repositoryManager.sensorDataRepository.getAllSensorData()
+        let totalEntries = allData.count
+        
+        let invalidEntries = allData.filter { data in
+            data.moisture < 0 || data.moisture > 100 ||
+            data.temperature < -30 || data.temperature > 80 ||
+            data.conductivity < 0 || data.conductivity > 10000 ||
+            data.brightness < 0 || data.brightness > 100000
+        }.count
+        
+        return (totalEntries: totalEntries, invalidEntries: invalidEntries)
     }
     
     private func scheduleWateringReminder(for device: FlowerDeviceDTO) {
