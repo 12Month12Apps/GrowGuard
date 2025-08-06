@@ -1355,14 +1355,22 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             } else {
                 AppLogger.ble.bleError("⚠️ Failed to decode history entry \(currentEntryIndex)")
                 
-                // Error handling when decoding fails
+                // Error handling when decoding fails - show error briefly then continue
                 loadingStateSubject.send(.error("Failed to decode history entry \(currentEntryIndex), trying to skip this"))
+                
                 // Try to recover from failed decoding by skipping to the next entry
                 let nextIndex = currentEntryIndex + 1
                 if (nextIndex < totalEntries) {
                     AppLogger.ble.info("⏭️ Skipping corrupted entry \(self.currentEntryIndex), continuing with next")
                     currentEntryIndex = nextIndex
-                    let skipTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: false) { [weak self] timer in
+                    
+                    // Reset to loading state after showing error briefly
+                    let resetTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in
+                        self?.loadingStateSubject.send(.loading)
+                    }
+                    self.historyFlowTimers.append(resetTimer)
+                    
+                    let skipTimer = Timer.scheduledTimer(withTimeInterval: 1.05, repeats: false) { [weak self] timer in
                         self?.fetchHistoricalDataEntry(index: nextIndex)
                     }
                     self.historyFlowTimers.append(skipTimer)

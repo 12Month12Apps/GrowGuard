@@ -154,45 +154,30 @@ class PlantMonitorService {
     
     // Add this method to your PlantMonitorService
     func validateHistoricSensorData(_ data: HistoricalSensorData, deviceUUID: String) async throws -> SensorDataDTO? {
-        var validatedData = data
-        
        // Define realistic sensor ranges for FlowerCare devices
        let validMoistureRange = 0...100
        let validTemperatureRange = -20.0...70.0  // More realistic temperature range
        let validBrightnessRange = 0...100000     // Allow up to 100k lux for extreme sunlight
        let validConductivityRange = 0...10000    // Extended range for various soil types
        
-       // Log original values for debugging impossible numbers
-       if data.moisture > 100 || data.temperature < -20 || data.temperature > 70 || 
-          data.conductivity > 10000 || data.brightness > 100000 {
-           print("🚨 Clamping invalid historic data - Original: temp=\(data.temperature)°C, moisture=\(data.moisture)%, conductivity=\(data.conductivity)µS/cm, brightness=\(data.brightness)lx")
-       }
-       
-       // Clamp values to valid ranges
-       if !validMoistureRange.contains(Int(data.moisture)) {
-           validatedData.moisture = UInt8(max(validMoistureRange.lowerBound, min(Int(data.moisture), validMoistureRange.upperBound)))
-       }
-       
-       if !validTemperatureRange.contains(data.temperature) {
-           validatedData.temperature = max(validTemperatureRange.lowerBound, min(data.temperature, validTemperatureRange.upperBound))
-       }
-       
-       if !validBrightnessRange.contains(Int(data.brightness)) {
-           validatedData.brightness = UInt32(max(validBrightnessRange.lowerBound, min(Int(data.brightness), validBrightnessRange.upperBound)))
-       }
-       
-       if !validConductivityRange.contains(Int(data.conductivity)) {
-           validatedData.conductivity = UInt16(max(validConductivityRange.lowerBound, min(Int(data.conductivity), validConductivityRange.upperBound)))
+       // Check for invalid values and REJECT the entire entry if any value is invalid
+       if !validMoistureRange.contains(Int(data.moisture)) ||
+          !validTemperatureRange.contains(data.temperature) ||
+          !validBrightnessRange.contains(Int(data.brightness)) ||
+          !validConductivityRange.contains(Int(data.conductivity)) {
+           
+           print("🚨 REJECTING invalid historic data - temp=\(data.temperature)°C, moisture=\(data.moisture)%, conductivity=\(data.conductivity)µS/cm, brightness=\(data.brightness)lx")
+           return nil // Don't save invalid data at all
        }
         
-        print(validatedData.moisture, validatedData.brightness, validatedData.temperature)
+        print("✅ Valid data:", data.moisture, data.brightness, data.temperature)
         
         let sensorDataDTO = SensorDataDTO(
-            temperature: validatedData.temperature,
-            brightness: Int32(validatedData.brightness),
-            moisture: Int16(validatedData.moisture),
-            conductivity: Int16(validatedData.conductivity),
-            date: validatedData.date,
+            temperature: data.temperature,
+            brightness: Int32(data.brightness),
+            moisture: Int16(data.moisture),
+            conductivity: Int16(data.conductivity),
+            date: data.date,
             deviceUUID: deviceUUID
         )
         

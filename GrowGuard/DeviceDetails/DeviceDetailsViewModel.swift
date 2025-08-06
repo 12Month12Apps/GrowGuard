@@ -166,7 +166,12 @@ import CoreData
             })
             
             if !isDuplicate {
-                _ = try await PlantMonitorService.shared.validateHistoricSensorData(data, deviceUUID: device.uuid)
+                // Try to validate and save the data - if validation returns nil, the data is invalid and rejected
+                if let validatedData = try await PlantMonitorService.shared.validateHistoricSensorData(data, deviceUUID: device.uuid) {
+                    print("✅ Saved valid historical entry")
+                } else {
+                    print("🚨 Rejected invalid historical entry - not saved to database")
+                }
                 
                 // Note: Cache refresh moved to end of historical data loading for massive performance gain
                 // No need to clear cache and reload data after every single entry

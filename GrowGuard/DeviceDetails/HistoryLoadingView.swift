@@ -13,80 +13,33 @@ struct HistoryLoadingView: View {
     @State private var currentCount: Int = 0
     @State private var totalCount: Int = 0
     @State private var loadingState: FlowerCareManager.LoadingState = .idle
-    @State private var errorMessage: String = ""
+    @State private var showingDetails: Bool = false
     @State private var connectionQuality: FlowerCareManager.ConnectionQuality = .unknown
     
     @Environment(\.presentationMode) var presentationMode
     
     @State private var cancellables = Set<AnyCancellable>()
     
+    // Time tracking for accurate speed calculation
+    @State private var loadingStartTime: Date?
+    @State private var lastProgressTime: Date?
+    @State private var recentSpeeds: [Double] = [] // Rolling average of recent speeds
+    @State private var lastCount: Int = 0
+    
     var body: some View {
-        VStack(spacing: 20) {
-            if loadingState == .loading {
-                Text("Loading Historical Data")
-                    .font(.headline)
-                
-                // Connection quality indicator
-                connectionQualityView
-                    .padding(.vertical, 8)
-                
-                ProgressView(value: progress)
-                    .progressViewStyle(LinearProgressViewStyle())
-                    .frame(width: 250)
-                
-                Text("\(currentCount) of \(totalCount) entries")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                Text("Please keep the app open")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.top, 8)
-            } else if loadingState == .completed {
-                VStack(spacing: 16) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(.green)
-                    
-                    Text("Loading Complete!")
-                        .font(.headline)
-                    
-                    Button("Close") {
-                        presentationMode.wrappedValue.dismiss()
-                    }
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                }
-            } else if case .error(let message) = loadingState {
-                VStack(spacing: 16) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(.orange)
-                    
-                    Text("Error Loading Data")
-                        .font(.headline)
-                    
-                    Text(message)
-                        .font(.subheadline)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                        .lineLimit(5)
-                        .frame(maxWidth: .infinity)
-                    
-                    Button("Close") {
-                        presentationMode.wrappedValue.dismiss()
-                    }
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                }
-            }
+        ZStack {
+            // Background with subtle gradient
+            LinearGradient(
+                gradient: Gradient(colors: [Color(.systemBackground), Color(.systemGray6)]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            
+            // Single unified view for all states
+            unifiedView
+            .padding(32)
         }
-        .padding()
-        .frame(width: 340, height: 300) // Increased size to accommodate connection info
         .onAppear {
             setupSubscribers()
         }
@@ -95,7 +48,231 @@ struct HistoryLoadingView: View {
         }
     }
     
-    // Connection quality view
+    // MARK: - Unified View (handles all states)
+    private var unifiedView: some View {
+        VStack(spacing: 24) {
+            // Dynamic icon based on state
+            Group {
+                if loadingState == .completed {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 72))
+                        .foregroundColor(.green)
+                        .scaleEffect(1.0)
+                } else {
+                    Image(systemName: "leaf.circle.fill")
+                        .font(.system(size: 64))
+                        .foregroundStyle(.green.gradient)
+                        .scaleEffect(1.0)
+                        .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: loadingState == .loading)
+                }
+            }
+            
+            // Dynamic title and subtitle
+            VStack(spacing: 8) {
+                Group {
+                    if loadingState == .completed {
+                        Text("History Loaded!")
+                    } else {
+                        Text("Loading Plant History")
+                    }
+                }
+                .font(.title2.bold())
+                .foregroundColor(.primary)
+                
+                Group {
+                    if loadingState == .completed {
+                        if totalCount > 0 {
+                            Text("\(totalCount) entries loaded successfully")
+                        } else {
+                            Text("Your plant history is up to date")
+                        }
+                    } else {
+                        if totalCount > 0 {
+                            Text("\(currentCount) of \(totalCount) entries")
+                        } else {
+                            Text("Connecting to your plant sensor...")
+                        }
+                    }
+                }
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            }
+            
+            // Dynamic content based on state
+            if loadingState == .completed {
+                // Completed state - just the done button
+                Button("Done") {
+                    presentationMode.wrappedValue.dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                
+            } else {
+                // Loading state - progress and details
+                VStack(spacing: 12) {
+                    ProgressView(value: progress)
+                        .progressViewStyle(LinearProgressViewStyle(tint: .green))
+                        .frame(height: 8)
+                        .scaleEffect(x: 1.0, y: 1.5)
+                    
+                    if progress > 0 {
+                        Text("\(Int(progress * 100))% complete")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    // Error message display (if there's an error)
+                    if case .error(let message) = loadingState {
+                        VStack(spacing: 4) {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.orange)
+                                    .font(.caption)
+                                Text("Issue detected - retrying automatically...")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                            }
+                            
+                            Text(message)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 8)
+                        }
+                        .padding(.vertical, 8)
+                        .background(Color.orange.opacity(0.1))
+                        .cornerRadius(8)
+                    }
+                }
+                
+                // Connection status
+                connectionStatusView
+                
+                // Expandable details
+                Button(action: {
+                    withAnimation(.spring()) {
+                        showingDetails.toggle()
+                    }
+                }) {
+                    HStack {
+                        Text(showingDetails ? "Hide Details" : "Show Details")
+                            .font(.caption)
+                            .foregroundColor(.accentColor)
+                        Image(systemName: "chevron.down")
+                            .font(.caption)
+                            .foregroundColor(.accentColor)
+                            .rotationEffect(.degrees(showingDetails ? 180 : 0))
+                    }
+                }
+                
+                if showingDetails {
+                    detailsView
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+        }
+    }
+    
+    
+    // MARK: - Connection Status (Simplified)
+    private var connectionStatusView: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(connectionColor)
+                .frame(width: 8, height: 8)
+                .scaleEffect(connectionQuality == .good ? 1.2 : 1.0)
+                .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true), value: connectionQuality == .good)
+            
+            Text(connectionStatusText)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color(.systemGray6))
+        .cornerRadius(20)
+    }
+    
+    private var connectionColor: Color {
+        switch connectionQuality {
+        case .unknown: return .gray
+        case .poor: return .red
+        case .fair: return .orange  
+        case .good: return .green
+        }
+    }
+    
+    private var connectionStatusText: String {
+        switch connectionQuality {
+        case .unknown: return "Connecting..."
+        case .poor: return "Weak signal"
+        case .fair: return "Fair connection"
+        case .good: return "Strong connection"
+        }
+    }
+    
+    // MARK: - Expandable Details
+    private var detailsView: some View {
+        VStack(spacing: 16) {
+            Divider()
+            
+            VStack(alignment: .leading, spacing: 12) {
+                DetailRow(title: "Progress", value: totalCount > 0 ? "\(currentCount)/\(totalCount)" : "Initializing...")
+                DetailRow(title: "Status", value: connectionStatusText)
+                DetailRow(title: "Speed", value: estimatedTimeRemaining)
+                
+                if connectionQuality == .poor {
+                    HStack {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundColor(.orange)
+                            .font(.caption)
+                        Text("Move closer to your plant sensor for better speed")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 4)
+                }
+            }
+        }
+        .padding(.top, 8)
+    }
+    
+    private var estimatedTimeRemaining: String {
+        guard totalCount > 0, currentCount > 0, progress > 0.01 else {
+            return "Calculating..."
+        }
+        
+        // Need at least some speed data to make an estimate
+        guard !recentSpeeds.isEmpty else {
+            return "Estimating..."
+        }
+        
+        let remainingEntries = totalCount - currentCount
+        
+        // Use rolling average of recent speeds for more accurate estimation
+        let averageSpeed = recentSpeeds.reduce(0, +) / Double(recentSpeeds.count)
+        
+        // Ensure we have a reasonable minimum speed to avoid infinite times
+        let effectiveSpeed = max(averageSpeed, 0.05) // At least 1 entry per 20 seconds
+        
+        let secondsRemaining = Double(remainingEntries) / effectiveSpeed
+        
+        // Cap maximum estimate at 30 minutes to avoid showing ridiculous times
+        let cappedSeconds = min(secondsRemaining, 1800) // 30 minutes max
+        
+        if cappedSeconds < 60 {
+            return "\(Int(cappedSeconds))s remaining"
+        } else {
+            let minutes = Int(cappedSeconds / 60)
+            if minutes == 1 {
+                return "1m remaining"
+            } else {
+                return "\(minutes)m remaining"
+            }
+        }
+    }
+    
+    // MARK: - Old Connection Quality View (keeping for compatibility)
     private var connectionQualityView: some View {
         VStack(spacing: 4) {
             HStack {
@@ -169,6 +346,33 @@ struct HistoryLoadingView: View {
     private func setupSubscribers() {
         FlowerCareManager.shared.loadingProgressPublisher
             .sink { current, total in
+                let now = Date()
+                
+                // Initialize timing if this is the first progress update
+                if self.loadingStartTime == nil && current > 0 {
+                    self.loadingStartTime = now
+                    self.lastProgressTime = now
+                    self.lastCount = current
+                }
+                
+                // Calculate speed if we have progress and time data
+                if let lastTime = self.lastProgressTime, current > self.lastCount {
+                    let timeDiff = now.timeIntervalSince(lastTime)
+                    if timeDiff > 0.5 { // Only update every 0.5 seconds to avoid noise
+                        let entriesDiff = current - self.lastCount
+                        let currentSpeed = Double(entriesDiff) / timeDiff // entries per second
+                        
+                        // Keep rolling average of recent speeds (last 10 measurements)
+                        self.recentSpeeds.append(currentSpeed)
+                        if self.recentSpeeds.count > 10 {
+                            self.recentSpeeds.removeFirst()
+                        }
+                        
+                        self.lastProgressTime = now
+                        self.lastCount = current
+                    }
+                }
+                
                 self.currentCount = current
                 self.totalCount = total
                 self.progress = total > 0 ? Double(current) / Double(total) : 0
@@ -177,10 +381,15 @@ struct HistoryLoadingView: View {
         
         FlowerCareManager.shared.loadingStatePublisher
             .sink { state in
-                self.loadingState = state
-                if case .error(let message) = state {
-                    self.errorMessage = message
+                // Reset timing when loading starts
+                if case .loading = state, case .idle = self.loadingState {
+                    self.loadingStartTime = nil
+                    self.lastProgressTime = nil
+                    self.recentSpeeds = []
+                    self.lastCount = 0
                 }
+                
+                self.loadingState = state
             }
             .store(in: &cancellables)
         
@@ -190,5 +399,39 @@ struct HistoryLoadingView: View {
                 self.connectionQuality = quality
             }
             .store(in: &cancellables)
+    }
+}
+
+// MARK: - Detail Row Component
+struct DetailRow: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            Spacer()
+            
+            Text(value)
+                .font(.caption.bold())
+                .foregroundColor(.primary)
+        }
+    }
+}
+
+// MARK: - Preview
+struct HistoryLoadingView_Previews: PreviewProvider {
+    static var previews: some View {
+        Group {
+            HistoryLoadingView()
+                .previewDisplayName("Loading")
+            
+            HistoryLoadingView()
+                .previewDisplayName("Dark Mode")
+                .preferredColorScheme(.dark)
+        }
     }
 }
