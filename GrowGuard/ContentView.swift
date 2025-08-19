@@ -47,26 +47,14 @@ struct ContentView: View {
             if showOnboarding {
                 OnbordingView(selectedTab: $navigationService.selectedTab, showOnboarding: $showOnboarding)
             } else {
-//                TabView(selection: $navigationService.selectedTab) {
-//                    Tab("Menu", systemImage: "leaf", value: .overview) {
-//                        OverviewList()
-//                    }
-//                    
-//                    Tab("Add", systemImage: "plus.app", value: .addDevice) {
-//                        AddDeviceView()
-//                    }
-//                }
-                TabView() {
-                    OverviewList()
-                        .tabItem {
-                                Label("Menu", systemImage: "leaf")
-                        }
-
+                TabView(selection: $navigationService.selectedTab) {
+                    Tab("Menu", systemImage: "leaf", value: .overview) {
+                        OverviewList()
+                    }
                     
-                    AddDeviceView()
-                        .tabItem {
-                                Label("Add", systemImage: "plus.app")
-                        }
+                    Tab("Add", systemImage: "plus.app", value: .addDevice) {
+                        AddDeviceView()
+                    }
                 }
             }
         }.onAppear {

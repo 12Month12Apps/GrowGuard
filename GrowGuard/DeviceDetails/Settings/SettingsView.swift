@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Foundation
+import UserNotifications
 
 @Observable
 class SettingsViewModel {
@@ -23,6 +24,15 @@ class SettingsViewModel {
     var isCleaningDatabase: Bool = false
     var cleanupStats: (totalEntries: Int, invalidEntries: Int)? = nil
     var cleanupResult: String? = nil
+    
+    // Debug: Test Notifications
+    var testNotificationDate: Date = Date().addingTimeInterval(30) // Default: 30 seconds from now
+    var testNotificationResult: String? = nil
+    var isSchedulingTestNotification: Bool = false
+    var notificationAuthorizationStatus: String = "Checking..."
+    var pendingNotificationsCount: Int = 0
+    var detailedNotificationInfo: String = ""
+    var isRunningOnSimulator: Bool = false
     private var isLoadingData: Bool = false
     private let deviceUUID: String
     private let repositoryManager = RepositoryManager.shared
@@ -222,6 +232,258 @@ class SettingsViewModel {
         
         isCleaningDatabase = false
     }
+    
+    @MainActor
+    func scheduleTestNotification() async {
+        print("🧪 SettingsViewModel: Starting scheduleTestNotification...")
+        isSchedulingTestNotification = true
+        testNotificationResult = nil
+        
+        do {
+            // Get the device info for the notification
+            guard let device = try await repositoryManager.flowerDeviceRepository.getDevice(by: deviceUUID) else {
+                testNotificationResult = "❌ Device not found"
+                isSchedulingTestNotification = false
+                return
+            }
+            
+            // Cancel any existing test notifications
+            await cancelTestNotifications()
+            
+            // Create test notification content
+            let content = UNMutableNotificationContent()
+            content.title = "🧪 TEST: \(device.name)"
+            content.body = "This is a test notification scheduled from debug menu."
+            content.sound = .default
+            content.categoryIdentifier = "WATERING_REMINDER"
+            content.userInfo = [
+                "deviceUUID": device.uuid,
+                "notificationType": "test"
+            ]
+            
+            // Create trigger based on selected time
+            let timeFromNow = testNotificationDate.timeIntervalSinceNow
+            
+            if timeFromNow <= 0 {
+                testNotificationResult = "❌ Selected time is in the past"
+                isSchedulingTestNotification = false
+                return
+            }
+            
+            let trigger: UNNotificationTrigger
+            if timeFromNow < 60 {
+                // For times less than 1 minute, use time interval trigger
+                trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, timeFromNow), repeats: false)
+            } else {
+                // For longer times, use calendar trigger for precision
+                let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: testNotificationDate)
+                trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            }
+            
+            let identifier = "test-notification-\(deviceUUID)"
+            let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+            
+            try await UNUserNotificationCenter.current().add(request)
+            print("✅ SettingsViewModel: Successfully added notification request with identifier: \(identifier)")
+            
+            // Immediately check if it was actually scheduled
+            let pendingAfter = await UNUserNotificationCenter.current().pendingNotificationRequests()
+            let wasScheduled = pendingAfter.contains { $0.identifier == identifier }
+            print("🔍 SettingsViewModel: Notification in pending list: \(wasScheduled)")
+            
+            let formatter = DateFormatter()
+            formatter.dateStyle = .none
+            formatter.timeStyle = .medium
+            
+            if timeFromNow < 60 {
+                testNotificationResult = "✅ Test notification scheduled in \(Int(timeFromNow)) seconds"
+            } else {
+                testNotificationResult = "✅ Test notification scheduled for \(formatter.string(from: testNotificationDate))"
+            }
+            
+            // Refresh status to show updated pending count
+            await checkNotificationStatus()
+            
+            print("🧪 SettingsViewModel: Scheduled test notification for \(device.name) at \(testNotificationDate)")
+            print("🧪 SettingsViewModel: Trigger details: \(trigger)")
+            
+        } catch {
+            testNotificationResult = "❌ Failed to schedule: \(error.localizedDescription)"
+            print("❌ SettingsViewModel: Failed to schedule test notification: \(error)")
+        }
+        
+        isSchedulingTestNotification = false
+    }
+    
+    func cancelTestNotifications() async {
+        let center = UNUserNotificationCenter.current()
+        let pendingRequests = await center.pendingNotificationRequests()
+        
+        let testIdentifiers = pendingRequests
+            .filter { $0.identifier.contains("test-notification") }
+            .map { $0.identifier }
+        
+        center.removeDeliveredNotifications(withIdentifiers: testIdentifiers)
+        center.removePendingNotificationRequests(withIdentifiers: testIdentifiers)
+        
+        if !testIdentifiers.isEmpty {
+            print("🧪 SettingsViewModel: Cancelled \(testIdentifiers.count) test notifications")
+        }
+    }
+    
+    @MainActor
+    func checkNotificationStatus() async {
+        let center = UNUserNotificationCenter.current()
+        
+        // Check authorization status
+        let settings = await center.notificationSettings()
+        switch settings.authorizationStatus {
+        case .notDetermined:
+            notificationAuthorizationStatus = "❓ Not Asked Yet"
+        case .denied:
+            notificationAuthorizationStatus = "❌ Denied - Check Settings"
+        case .authorized:
+            notificationAuthorizationStatus = "✅ Authorized"
+        case .provisional:
+            notificationAuthorizationStatus = "⚡ Provisional"
+        case .ephemeral:
+            notificationAuthorizationStatus = "🕐 Ephemeral"
+        @unknown default:
+            notificationAuthorizationStatus = "❓ Unknown Status"
+        }
+        
+        // Add additional status info
+        if settings.authorizationStatus == .authorized {
+            var statusDetails: [String] = []
+            if settings.alertSetting == .disabled {
+                statusDetails.append("No Alerts")
+            }
+            if settings.soundSetting == .disabled {
+                statusDetails.append("No Sound")
+            }
+            if settings.badgeSetting == .disabled {
+                statusDetails.append("No Badge")
+            }
+            if !statusDetails.isEmpty {
+                notificationAuthorizationStatus += " (\(statusDetails.joined(separator: ", ")))"
+            }
+        }
+        
+        // Count pending notifications
+        let pendingRequests = await center.pendingNotificationRequests()
+        pendingNotificationsCount = pendingRequests.count
+        
+        // Detailed device and system info
+        var deviceInfo: [String] = []
+        
+        #if targetEnvironment(simulator)
+        isRunningOnSimulator = true
+        deviceInfo.append("📱 iOS Simulator (notifications may not show)")
+        #else
+        isRunningOnSimulator = false
+        deviceInfo.append("📱 Physical Device")
+        #endif
+        
+        deviceInfo.append("iOS \(UIDevice.current.systemVersion)")
+        
+        // Detailed notification settings
+        var settingsInfo: [String] = []
+        settingsInfo.append("Alert: \(settings.alertSetting == .enabled ? "✅" : "❌")")
+        settingsInfo.append("Sound: \(settings.soundSetting == .enabled ? "🔊" : "🔇")")
+        settingsInfo.append("Badge: \(settings.badgeSetting == .enabled ? "🔴" : "⚪")")
+        settingsInfo.append("Lock Screen: \(settings.lockScreenSetting == .enabled ? "🔒" : "❌")")
+        settingsInfo.append("Notification Center: \(settings.notificationCenterSetting == .enabled ? "📋" : "❌")")
+        settingsInfo.append("Banner: \(settings.alertSetting == .enabled ? "🏷️" : "❌")")
+        
+        detailedNotificationInfo = "\(deviceInfo.joined(separator: ", "))\n\(settingsInfo.joined(separator: ", "))"
+        
+        // Log all pending notifications for debugging
+        print("🧪 SettingsViewModel: Current notification status:")
+        print("  Authorization: \(notificationAuthorizationStatus)")
+        print("  Pending notifications: \(pendingNotificationsCount)")
+        print("  Device: \(deviceInfo.joined(separator: ", "))")
+        print("  Settings: \(settingsInfo.joined(separator: ", "))")
+        
+        for request in pendingRequests {
+            print("  - \(request.identifier): \(request.content.title)")
+            if let trigger = request.trigger {
+                if let timeInterval = trigger as? UNTimeIntervalNotificationTrigger {
+                    print("    Fires in: \(timeInterval.timeInterval) seconds")
+                } else if let calendar = trigger as? UNCalendarNotificationTrigger {
+                    print("    Fires at: \(calendar.dateComponents)")
+                }
+            } else {
+                print("    ⚡ IMMEDIATE (no trigger - should fire now)")
+            }
+        }
+    }
+    
+    @MainActor
+    func requestNotificationPermission() async {
+        let center = UNUserNotificationCenter.current()
+        do {
+            let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
+            if granted {
+                testNotificationResult = "✅ Notification permission granted!"
+                print("🧪 SettingsViewModel: Notification permission granted")
+            } else {
+                testNotificationResult = "❌ Notification permission denied"
+                print("🧪 SettingsViewModel: Notification permission denied")
+            }
+            await checkNotificationStatus()
+        } catch {
+            testNotificationResult = "❌ Permission request failed: \(error.localizedDescription)"
+            print("🧪 SettingsViewModel: Permission request failed: \(error)")
+        }
+    }
+    
+    @MainActor
+    func sendImmediateTestNotification() async {
+        print("🚨 SettingsViewModel: Sending IMMEDIATE test notification...")
+        
+        do {
+            guard let device = try await repositoryManager.flowerDeviceRepository.getDevice(by: deviceUUID) else {
+                testNotificationResult = "❌ Device not found"
+                return
+            }
+            
+            // Create immediate notification (no trigger = immediate)
+            let content = UNMutableNotificationContent()
+            content.title = "🚨 IMMEDIATE TEST"
+            content.body = "This should appear RIGHT NOW if notifications work!"
+            content.sound = .default
+            content.badge = 1
+            content.categoryIdentifier = "WATERING_REMINDER"
+            content.userInfo = [
+                "deviceUUID": device.uuid,
+                "notificationType": "immediate-test"
+            ]
+            
+            let identifier = "immediate-test-\(deviceUUID)-\(Date().timeIntervalSince1970)"
+            let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
+            
+            print("🚨 SettingsViewModel: Adding immediate notification request...")
+            try await UNUserNotificationCenter.current().add(request)
+            print("✅ SettingsViewModel: Immediate notification request added successfully")
+            
+            testNotificationResult = "🚨 Immediate notification sent! Should appear NOW"
+            
+            // Check if it's actually in the system
+            let allPending = await UNUserNotificationCenter.current().pendingNotificationRequests()
+            let immediateFound = allPending.contains { $0.identifier == identifier }
+            print("🔍 SettingsViewModel: Immediate notification in pending list: \(immediateFound)")
+            
+            if !immediateFound {
+                print("⚠️ SettingsViewModel: Immediate notification NOT found in pending - it should have fired immediately")
+            }
+            
+            await checkNotificationStatus()
+            
+        } catch {
+            testNotificationResult = "❌ Immediate test failed: \(error.localizedDescription)"
+            print("❌ SettingsViewModel: Immediate notification failed: \(error)")
+        }
+    }
 }
 
 struct SettingsView: View {
@@ -285,6 +547,218 @@ struct SettingsView: View {
                         .foregroundColor(.red)
                         
                         Text("Removes impossible sensor values like moisture > 100%, extreme temperatures, etc.")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Section(header: Text("🧪 Debug: Test Notifications")) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Schedule a test notification to verify push messages work")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        // Notification Status Info
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text("Status: ")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text(viewModel.notificationAuthorizationStatus)
+                                    .font(.caption)
+                                    .foregroundColor(viewModel.notificationAuthorizationStatus.contains("✅") ? .green : .red)
+                            }
+                            
+                            HStack {
+                                Text("Pending: ")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("\(viewModel.pendingNotificationsCount) notifications")
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                                
+                                Spacer()
+                                
+                                Button("Refresh") {
+                                    Task {
+                                        await viewModel.checkNotificationStatus()
+                                    }
+                                }
+                                .font(.caption2)
+                                .foregroundColor(.blue)
+                            }
+                            
+                            if viewModel.notificationAuthorizationStatus.contains("❌") || viewModel.notificationAuthorizationStatus.contains("❓") {
+                                Button("Request Permission") {
+                                    Task {
+                                        await viewModel.requestNotificationPermission()
+                                    }
+                                }
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                                .padding(.top, 4)
+                            }
+                            
+                            // Show detailed info
+                            if !viewModel.detailedNotificationInfo.isEmpty {
+                                Text(viewModel.detailedNotificationInfo)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .padding(.top, 2)
+                            }
+                            
+                            // Simulator warning
+                            if viewModel.isRunningOnSimulator {
+                                Text("⚠️ WICHTIG: iOS Simulator zeigt oft keine Notifications an!")
+                                    .font(.caption2)
+                                    .foregroundColor(.red)
+                                    .padding(.top, 2)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                        
+                        DatePicker(
+                            "Notification Time",
+                            selection: $viewModel.testNotificationDate,
+                            in: Date()...,
+                            displayedComponents: [.date, .hourAndMinute]
+                        )
+                        .datePickerStyle(.compact)
+                        
+                        HStack {
+                            Text("Time from now: ")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            let timeFromNow = viewModel.testNotificationDate.timeIntervalSinceNow
+                            if timeFromNow > 0 {
+                                if timeFromNow < 60 {
+                                    Text("\(Int(timeFromNow))s")
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                } else if timeFromNow < 3600 {
+                                    Text("\(Int(timeFromNow / 60))m")
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                } else {
+                                    Text("\(Int(timeFromNow / 3600))h \(Int((timeFromNow.truncatingRemainder(dividingBy: 3600)) / 60))m")
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                }
+                            } else {
+                                Text("In the past!")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
+                        }
+                        
+                        if let result = viewModel.testNotificationResult {
+                            Text(result)
+                                .font(.caption)
+                                .foregroundColor(result.contains("✅") ? .green : .red)
+                                .padding(.vertical, 4)
+                        }
+                        
+                        HStack(spacing: 12) {
+                            Button(action: {
+                                Task {
+                                    await viewModel.scheduleTestNotification()
+                                }
+                            }) {
+                                HStack {
+                                    if viewModel.isSchedulingTestNotification {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                    } else {
+                                        Image(systemName: "bell.badge")
+                                    }
+                                    Text(viewModel.isSchedulingTestNotification ? "Scheduling..." : "Schedule Test")
+                                }
+                            }
+                            .disabled(viewModel.isSchedulingTestNotification || viewModel.isLoading || isSaving)
+                            .foregroundColor(.blue)
+                            
+                            Button(action: {
+                                viewModel.testNotificationDate = Date().addingTimeInterval(30)
+                            }) {
+                                HStack {
+                                    Image(systemName: "clock")
+                                    Text("+30s")
+                                }
+                            }
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            
+                            Button(action: {
+                                viewModel.testNotificationDate = Date().addingTimeInterval(300)
+                            }) {
+                                HStack {
+                                    Image(systemName: "clock")
+                                    Text("+5m")
+                                }
+                            }
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            
+                            Button(action: {
+                                Task {
+                                    await viewModel.cancelTestNotifications()
+                                    viewModel.testNotificationResult = "🚫 Cancelled all test notifications"
+                                }
+                            }) {
+                                Image(systemName: "xmark.circle")
+                                    .foregroundColor(.red)
+                            }
+                            .font(.caption)
+                        }
+                        
+                        VStack(spacing: 8) {
+                            HStack {
+                                Button(action: {
+                                    Task {
+                                        await viewModel.sendImmediateTestNotification()
+                                    }
+                                }) {
+                                    HStack {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                        Text("SOFORT TESTEN")
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.red.opacity(0.2))
+                                    .cornerRadius(8)
+                                }
+                                .foregroundColor(.red)
+                                .disabled(viewModel.isSchedulingTestNotification)
+                                
+                                Button(action: {
+                                    viewModel.testNotificationDate = Date().addingTimeInterval(5)
+                                    Task {
+                                        await viewModel.scheduleTestNotification()
+                                    }
+                                }) {
+                                    HStack {
+                                        Image(systemName: "bolt.fill")
+                                        Text("Test 5s")
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.orange.opacity(0.2))
+                                    .cornerRadius(8)
+                                }
+                                .foregroundColor(.orange)
+                                .disabled(viewModel.isSchedulingTestNotification)
+                            }
+                            
+                            Text("🔴 SOFORT TESTEN: Notification erscheint JETZT ohne Verzögerung")
+                                .font(.caption2)
+                                .foregroundColor(.red)
+                        }
+                        
+                        Text("💡 Tips: Use 'Test Now' for immediate testing, +5m for realistic timing")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
@@ -468,6 +942,7 @@ struct SettingsView: View {
             .task {
                 await viewModel.loadSettings()
                 await viewModel.loadDatabaseStats()
+                await viewModel.checkNotificationStatus()
             }
             .alert("Save Error", isPresented: $showSaveError) {
                 Button("OK") { }

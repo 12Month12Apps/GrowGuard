@@ -12,7 +12,8 @@ struct DeviceDetailsView: View {
     @State var showSetting: Bool = false
     @State private var showCopyAlert = false
     @State private var showingLoadingScreen = false
-    @State private var nextWatering: Date? = nil
+    @State private var wateringPrediction: WateringPrediction? = nil
+    @State private var justWatered = false
 
 
     init(device: FlowerDeviceDTO) {
@@ -43,6 +44,7 @@ struct DeviceDetailsView: View {
                             
                             Button {
                                 viewModel.fetchHistoricalData()
+                            
                                 showingLoadingScreen = true
                             } label: {
                                 HStack {
@@ -96,15 +98,90 @@ struct DeviceDetailsView: View {
                 }
             }
 
-            if let nextWatering = nextWatering {
-                Section(header: Text("Prediction")) {
+            // Urgent watering alert at the top
+            if let prediction = wateringPrediction, prediction.isUrgent {
+                Section {
                     HStack {
-                        Image(systemName: "calendar.badge.clock")
-                        Text("Next watering needed:")
-                        Spacer()
-                        Text(nextWatering, style: .relative)
-                            .foregroundColor(.blue)
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.red)
+                        VStack(alignment: .leading) {
+                            Text("Urgent: Water Needed Now!")
+                                .font(.headline)
+                                .foregroundColor(.red)
+                            Text("Your plant needs water today")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
+                    .padding(.vertical, 8)
+                }
+                .listRowBackground(Color.red.opacity(0.1))
+            }
+            
+            if let prediction = wateringPrediction {
+                Section(header: Text("Watering Prediction")) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: prediction.isUrgent ? "exclamationmark.triangle.fill" : "calendar.badge.clock")
+                                .foregroundColor(prediction.isUrgent ? .red : .blue)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Next watering needed:")
+                                    .font(.subheadline)
+                                Text(prediction.predictedDate, style: .relative)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text(prediction.predictedDate, format: .dateTime.weekday(.wide).month(.abbreviated).day())
+                                    .font(.headline)
+                                    .foregroundColor(prediction.isUrgent ? .red : .blue)
+                                Text(prediction.predictedDate, format: .dateTime.hour().minute())
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
+                        // Prediction details
+                        HStack {
+                            Image(systemName: "drop.circle")
+                                .foregroundColor(.blue)
+                            Text("Current: \(Int(prediction.currentMoisture))%")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("Target: \(Int(prediction.targetMoisture))%")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        HStack {
+                            Image(systemName: "chart.line.uptrend.xyaxis")
+                                .foregroundColor(.secondary)
+                            Text("Confidence: \(prediction.confidenceLevel)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("\(prediction.dryingRatePerDay.rounded(toPlaces: 1))%/day drying")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        if let lastWatering = prediction.lastWateringEvent {
+                            HStack {
+                                Image(systemName: "drop.fill")
+                                    .foregroundColor(.blue)
+                                Text("Last watered:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text(lastWatering, style: .relative)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
                 }
             }
             
@@ -225,11 +302,7 @@ struct DeviceDetailsView: View {
             self.viewModel.loadDetails()
             
             Task {
-//                do {
-//                    self.nextWatering = try await PlantMonitorService.shared.predictNextWatering(for: viewModel.device)
-//                } catch {
-//                    self.nextWatering = nil
-//                }
+                await refreshPrediction()
             }
         }
         .refreshable {
@@ -238,11 +311,7 @@ struct DeviceDetailsView: View {
             }
             
             Task {
-//                do {
-//                    self.nextWatering = try await PlantMonitorService.shared.predictNextWatering(for: viewModel.device)
-//                } catch {
-//                    self.nextWatering = nil
-//                }
+                await refreshPrediction()
             }
         }
         .toolbar {
@@ -281,6 +350,32 @@ struct DeviceDetailsView: View {
         }
         .sheet(isPresented: $showingLoadingScreen) {
             HistoryLoadingView()
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    @MainActor
+    private func refreshPrediction() async {
+        guard viewModel.device.isSensor else {
+            wateringPrediction = nil
+            return
+        }
+        
+        // Debug logging for chart vs prediction moisture discrepancy
+        let latestChartData = viewModel.currentWeekData.sorted(by: { $0.date < $1.date }).last
+        if let chartData = latestChartData {
+            print("🔍 DeviceDetailsView: Latest chart data: \(chartData.moisture)% at \(chartData.date)")
+        }
+        
+        do {
+            wateringPrediction = try await PlantMonitorService.shared.predictNextWatering(for: viewModel.device)
+            if let prediction = wateringPrediction {
+                print("🔍 DeviceDetailsView: Prediction shows current moisture: \(Int(prediction.currentMoisture))%")
+            }
+        } catch {
+            print("Failed to get watering prediction: \(error)")
+            wateringPrediction = nil
         }
     }
 }

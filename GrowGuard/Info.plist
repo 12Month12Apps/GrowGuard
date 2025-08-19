@@ -4,7 +4,7 @@
 <dict>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>com.growguard.refresh</string>
+		<string>pro.veit.GrowGuard.plantMonitor</string>
 		<string>com.growguard.processing</string>
 	</array>
 	<key>NSUserActivityTypes</key>
@@ -16,5 +16,7 @@
 		<string>fetch</string>
 		<string>processing</string>
 	</array>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>GrowGuard sendet wichtige Benachrichtigungen über den Wasserbedarf Ihrer Pflanzen. Dringliche Benachrichtigungen stellen sicher, dass Sie kritische Pflegeerinnerungen auch im "Nicht stören"-Modus erhalten.</string>
 </dict>
 </plist>

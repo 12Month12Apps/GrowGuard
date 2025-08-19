@@ -179,9 +179,7 @@ enum NavigationDestination: Hashable {
         }
         NavigationService.shared.switchToTab(.overview)
         
-        if let device = device {
-            NavigationService.shared.navigateToDeviceDetails(device: device)
-        }
+        NavigationService.shared.navigateToDeviceView(flowerDevice: flower)
     }
     
     @MainActor
