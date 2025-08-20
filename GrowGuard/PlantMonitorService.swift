@@ -169,7 +169,7 @@ class PlantMonitorService {
         if currentMoisture < minMoisture {
             print("🚨 PlantMonitorService: Immediate watering needed for \(device.name)")
             print("   Reason: Current \(currentMoisture)% is below minimum threshold \(minMoisture)%")
-            await scheduleImmediateNotification(for: device)
+            await scheduleWateringReminder(for: device)
         } else if currentMoisture >= minMoisture && currentMoisture <= maxMoisture {
             print("✅ PlantMonitorService: \(device.name) is within optimal range (\(minMoisture)%-\(maxMoisture)%)")
             // Plant is within optimal range - no immediate watering needed, but check predictions
@@ -522,32 +522,62 @@ class PlantMonitorService {
     
     // MARK: - Notification Methods
     
-    private func scheduleImmediateNotification(for device: FlowerDeviceDTO) async {
-        await cancelNotifications(for: device.uuid)
+    /// Schedules persistent watering reminders for plants below optimal moisture
+    private func scheduleWateringReminder(for device: FlowerDeviceDTO) async {
+        let center = UNUserNotificationCenter.current()
         
-        let content = UNMutableNotificationContent()
-        content.title = "💧 Water Your \(device.name)"
-        content.body = "Moisture level is below optimal range. Your plant needs water now!"
-        content.sound = .default
-        content.categoryIdentifier = "WATERING_REMINDER"
+        // Check if we already have pending watering notifications for this device
+        let pendingRequests = await center.pendingNotificationRequests()
+        let existingWateringNotifications = pendingRequests.filter { 
+            $0.identifier.contains(device.uuid) && 
+            ($0.identifier.contains("watering-immediate") || $0.identifier.contains("watering-reminder"))
+        }
         
-        // Configure as time-sensitive (urgent) notification
-        content.interruptionLevel = .timeSensitive
-        content.relevanceScore = 1.0 // Highest relevance
+        // If we already have a watering notification scheduled, don't spam with more
+        if !existingWateringNotifications.isEmpty {
+            print("⏭️ PlantMonitorService: Watering notification already exists for \(device.name), skipping duplicate")
+            return
+        }
         
-        content.userInfo = [
+        // Schedule immediate notification
+        let immediateContent = UNMutableNotificationContent()
+        immediateContent.title = "💧 Water Your \(device.name)"
+        immediateContent.body = "Moisture level is below optimal range. Your plant needs water now!"
+        immediateContent.sound = .default
+        immediateContent.categoryIdentifier = "WATERING_REMINDER"
+        immediateContent.interruptionLevel = .timeSensitive
+        immediateContent.relevanceScore = 1.0
+        immediateContent.userInfo = [
             "deviceUUID": device.uuid,
             "notificationType": "immediate"
         ]
         
-        let identifier = "watering-immediate-\(device.uuid)"
-        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
+        let immediateIdentifier = "watering-immediate-\(device.uuid)"
+        let immediateRequest = UNNotificationRequest(identifier: immediateIdentifier, content: immediateContent, trigger: nil)
+        
+        // Schedule first reminder in 8 hours
+        let reminderContent = UNMutableNotificationContent()
+        reminderContent.title = "🚨 Still Needs Water: \(device.name)"
+        reminderContent.body = "Your plant is still below optimal moisture. Please water it soon!"
+        reminderContent.sound = .default
+        reminderContent.categoryIdentifier = "WATERING_REMINDER"
+        reminderContent.interruptionLevel = .timeSensitive
+        reminderContent.relevanceScore = 1.0
+        reminderContent.userInfo = [
+            "deviceUUID": device.uuid,
+            "notificationType": "reminder"
+        ]
+        
+        let reminderTrigger = UNTimeIntervalNotificationTrigger(timeInterval: 8 * 60 * 60, repeats: false) // 8 hours
+        let reminderIdentifier = "watering-reminder-\(device.uuid)"
+        let reminderRequest = UNNotificationRequest(identifier: reminderIdentifier, content: reminderContent, trigger: reminderTrigger)
         
         do {
-            try await UNUserNotificationCenter.current().add(request)
-            print("📱 PlantMonitorService: Scheduled URGENT (time-sensitive) immediate notification for \(device.name)")
+            try await center.add(immediateRequest)
+            try await center.add(reminderRequest)
+            print("📱 PlantMonitorService: Scheduled immediate + 8h reminder notifications for \(device.name)")
         } catch {
-            print("❌ PlantMonitorService: Failed to schedule immediate notification: \(error)")
+            print("❌ PlantMonitorService: Failed to schedule watering reminders: \(error)")
         }
     }
     

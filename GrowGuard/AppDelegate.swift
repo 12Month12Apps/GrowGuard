@@ -190,8 +190,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             print("❌ AppDelegate: WATERING_REMINDER category is missing!")
         }
         
-        // 4. Send test notification to validate the system
-        await sendSystemValidationNotification()
+        // 4. Send test notification to validate the system (disabled for production)
+        // await sendSystemValidationNotification()
     }
     
     private func sendSystemValidationNotification() async {
