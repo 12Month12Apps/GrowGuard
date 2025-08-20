@@ -88,6 +88,7 @@ extension Double {
 class PlantMonitorService {
     static let shared = PlantMonitorService()
     private let repositoryManager = RepositoryManager.shared
+    private let anomalyService = MoistureAnomalyService.shared
     // Internal services - integrated into this class
     
     /// Gets watering prediction using the advanced prediction algorithm
@@ -136,7 +137,7 @@ class PlantMonitorService {
             print("🔍 PlantMonitorService: Second latest sensor data: \(secondLatest.moisture)% at \(secondLatest.date)")
         }
         
-        return try await generatePrediction(
+        return try await generateAnomalyAwarePrediction(
             sensorData: sensorData,
             wateringEvents: wateringEvents,
             optimalRange: optimalRange,
@@ -378,6 +379,59 @@ class PlantMonitorService {
             print("❌ PlantMonitorService: Failed to detect watering events: \(error)")
             return []
         }
+    }
+    
+    /// Generates prediction with anomaly detection and adjustment
+    private func generateAnomalyAwarePrediction(
+        sensorData: [SensorDataDTO],
+        wateringEvents: [WateringEventDTO],
+        optimalRange: OptimalRangeDTO,
+        deviceUUID: String
+    ) async throws -> WateringPrediction {
+        
+        // Generate base prediction using existing algorithm
+        let basePrediction = try await generatePrediction(
+            sensorData: sensorData,
+            wateringEvents: wateringEvents,
+            optimalRange: optimalRange,
+            deviceUUID: deviceUUID
+        )
+        
+        // Detect moisture anomalies from recent data
+        let anomalies = anomalyService.detectAnomalies(from: sensorData)
+        
+        // Calculate adjusted drying rate based on anomalies
+        let adjustment = anomalyService.calculateAdjustedDryingRate(
+            baseDryingRate: basePrediction.dryingRatePerDay,
+            anomalies: anomalies
+        )
+        
+        // Recalculate prediction with adjusted rate
+        let adjustedDaysUntilWatering = max(0, 
+            (basePrediction.currentMoisture - basePrediction.targetMoisture) / adjustment.adjustedDryingRate
+        )
+        
+        // Adjust confidence based on anomaly detection
+        let adjustedConfidence = basePrediction.confidence * adjustment.confidenceMultiplier
+        
+        // Log anomaly adjustments
+        if !adjustment.appliedAnomalies.isEmpty {
+            print("🔍 PlantMonitorService: Applied \(adjustment.appliedAnomalies.count) anomal\(adjustment.appliedAnomalies.count == 1 ? "y" : "ies"):")
+            print("   \(adjustment.explanation)")
+            print("   Drying rate: \(basePrediction.dryingRatePerDay.rounded(toPlaces: 1))%/day → \(adjustment.adjustedDryingRate.rounded(toPlaces: 1))%/day")
+            print("   Days until watering: \(basePrediction.daysUntilWatering.rounded(toPlaces: 1)) → \(adjustedDaysUntilWatering.rounded(toPlaces: 1))")
+        }
+        
+        return WateringPrediction(
+            deviceUUID: deviceUUID,
+            predictedDate: Date().addingTimeInterval(adjustedDaysUntilWatering * 24 * 60 * 60),
+            confidence: adjustedConfidence,
+            currentMoisture: basePrediction.currentMoisture,
+            targetMoisture: basePrediction.targetMoisture,
+            dryingRatePerDay: adjustment.adjustedDryingRate,
+            basedOnDataPoints: basePrediction.basedOnDataPoints,
+            lastWateringEvent: basePrediction.lastWateringEvent
+        )
     }
     
     private func generatePrediction(
