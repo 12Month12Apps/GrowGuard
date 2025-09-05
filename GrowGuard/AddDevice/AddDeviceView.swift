@@ -24,11 +24,11 @@ struct AddDeviceView: View {
                     Button {
                         NavigationService.shared.navigateToAddDeviceWithoutSensor()
                     } label: {
-                        Text("Add without Sensor")
+                        Text(L10n.Device.addWithoutSensor)
                     }
                 }
                 
-                Section(header: Text("Available Sensors")) {
+                Section(header: Text(L10n.Device.availableSensors)) {
                     if viewModel.loading {
                         ProgressView().foregroundStyle(.red)
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -38,7 +38,7 @@ struct AddDeviceView: View {
                             NavigationService.shared.navigateToDeviceDetails(device: device)
                         } label: {
                             HStack {
-                                Text(device.name ?? "error")
+                                Text(device.name ?? L10n.Common.error)
                                 Spacer()
                                 if viewModel.allSavedDevices.contains(where: { savedDevice in
                                     savedDevice.uuid == device.identifier.uuidString
@@ -59,6 +59,6 @@ struct AddDeviceView: View {
                 await viewModel.fetchSavedDevices()
             }
         }
-        .navigationTitle("Add Device")
+        .navigationTitle(L10n.Navigation.addDevice)
     }
 }

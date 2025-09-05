@@ -1,0 +1,161 @@
+/* GrowGuard Localized Strings */
+
+/* App Configuration */
+"userdefaults.showOnboarding" = "veit.pro.showOnboarding";
+
+/* App Intents */
+"appintent.doSomething" = "Do something with my app";
+"appintent.reloadDevice" = "Reload data for single device";
+"appintent.deviceId" = "Device ID:";
+
+/* Main Navigation */
+"navigation.menu" = "Menu";
+"navigation.add" = "Add";
+"navigation.overview" = "Overview";
+"navigation.addDevice" = "Add Device";
+"navigation.settings" = "Settings";
+"navigation.addDeviceDetails" = "Add Device Details";
+"navigation.selectFlower" = "Select Flower";
+"navigation.debugTools" = "Debug Tools";
+
+/* Onboarding */
+"onboarding.welcome" = "Welcome to GrowGuard";
+"onboarding.description" = "This app is designed to help you take care of your plants.";
+"onboarding.features" = "Features";
+"onboarding.feature1" = "See your current environment conditions of your plants";
+"onboarding.feature2" = "Get notified when something is wrong";
+"onboarding.feature3" = "Add multiple devices to monitor multiple plants";
+"onboarding.getStarted" = "To get started, please add a new device.";
+"onboarding.addDevice" = "Add Device";
+
+/* Device Management */
+"device.addWithoutSensor" = "Add without Sensor";
+"device.availableSensors" = "Available Sensors";
+"device.unknownDevice" = "Unknown Device";
+"device.name" = "Device Name";
+"device.searchFlower" = "Search Flower";
+"device.lastUpdate" = "Last Update: ";
+"device.loadHistoricalData" = "Load Historical Data";
+"device.noSensorMessage" = "This plant does not have a sensor attached. You need to manage the watering manually.";
+"device.blink" = "Blink";
+"device.shortcutInfo" = "You can use this ID to setup a shortcut to this device in the Shortcuts app. This will allow you to quickly refresh the device's data and setup automations without having to open the app.";
+"device.id" = "ID: ";
+"device.delete" = "Delete Device";
+"device.deleteConfirmation" = "Are you sure you want to delete '%@'? This will also delete all associated sensor data and cannot be undone.";
+
+/* Device Errors */
+"device.error.alreadyAdded" = "The Device is already added!";
+"device.error.nameExists" = "The Device name already exists, please pick a unique one";
+"device.error.bluetoothUnavailable" = "Bluetooth is not available.";
+"device.error.notFound" = "Device not found";
+"device.error.saveFailed" = "Failed to save data";
+"device.error.deleteFailed" = "Failed to delete data";
+"device.error.fetchFailed" = "Failed to fetch data";
+"device.error.fetchingDevices" = "Error fetching devices: %@";
+
+/* Alerts */
+"alert.info" = "Info";
+"alert.error" = "Error";
+"alert.cancel" = "Cancel";
+"alert.delete" = "Delete";
+"alert.ok" = "OK";
+"alert.save" = "Save";
+"alert.copied" = "Copied";
+"alert.saveError" = "Save Error";
+"alert.exportSuccessful" = "Export Successful";
+"alert.exportError" = "Export Error";
+
+/* Pot Configuration */
+"pot.section" = "Flower Pot";
+"pot.radius" = "Pot radius (cm)";
+"pot.height" = "Pot height (cm)";
+"pot.volume" = "Pot volume";
+"pot.volumeDescription" = "Volume can be automatically calculated, but if you know yours please enter it here to be more precise";
+"pot.calculatedVolume" = "Automatically calculated volume: %.1f cm³";
+"pot.acceptCalculation" = "Accept calculation";
+"pot.maxVolume" = "Max pot volume: %.1fl";
+"pot.currentFill" = "Current fill volume: %.1fl";
+"pot.volumeUnit" = "100ml";
+
+/* Sensor Parameters */
+"sensor.brightness" = "Brightness";
+"sensor.minBrightness" = "Min Brightness";
+"sensor.maxBrightness" = "Max Brightness";
+"sensor.temperature" = "Temperature";
+"sensor.minTemperature" = "Min Temperature";
+"sensor.maxTemperature" = "Max Temperature";
+"sensor.moisture" = "Moisture";
+"sensor.minMoisture" = "Min Moisture";
+"sensor.maxMoisture" = "Max Moisture";
+"sensor.conductivity" = "Conductivity";
+"sensor.minConductivity" = "Min Conductivity";
+"sensor.maxConductivity" = "Max Conductivity";
+"sensor.data" = "Sensor Data";
+"sensor.noData" = "No data available";
+"sensor.noDataWeek" = "No data available for this week";
+"sensor.loadingWeekData" = "Loading week data...";
+"sensor.currentValue" = "Current Value: %@";
+"sensor.range" = "%@ Range";
+"sensor.unit.lux" = "lux";
+"sensor.unit.percent" = "%";
+"sensor.unit.celsius" = "C";
+
+/* Watering */
+"watering.urgentNow" = "Urgent: Water Needed Now!";
+"watering.neededToday" = "Your plant needs water today";
+"watering.prediction" = "Watering Prediction";
+"watering.nextNeeded" = "Next watering needed:";
+"watering.current" = "Current: %d%%";
+"watering.target" = "Target: %d%%";
+"watering.confidence" = "Confidence: %@";
+"watering.dryingRate" = "%.1f%%/day drying";
+"watering.lastWatered" = "Last watered:";
+
+/* Plant Selection */
+"plant.addFlower" = "Add Flower";
+"plant.selectPlant" = "Select Plant";
+"plant.change" = "Change";
+"plant.removePlant" = "Remove Plant";
+"plant.currentlySelected" = "Currently Selected:";
+"plant.remove" = "Remove";
+"plant.recommendedMoisture" = "Recommended Moisture: %d%% - %d%%";
+"plant.updateSettings" = "Will update your moisture settings";
+"plant.searchResults" = "Search Results";
+"plant.searchPrompt" = "Search for a flower";
+"plant.searchDescription" = "Enter a flower name to find optimal growing conditions and care recommendations.";
+"plant.autoValues" = "Values automatically set from selected plant";
+"plant.selectedPlant" = "Plant: %@";
+"plant.selection" = "Plant Selection";
+"plant.soilMoisture" = "Soil Moisture: %d%% - %d%%";
+
+/* Settings */
+"settings.databaseMaintenance" = "Database Maintenance";
+"settings.totalEntries" = "Total entries: %d";
+"settings.invalidEntries" = "Invalid entries: %d";
+"settings.cleanInvalidData" = "Clean Invalid Data";
+"settings.cleaning" = "Cleaning...";
+"settings.cleanDescription" = "Removes impossible sensor values like moisture > 100%, extreme temperatures, etc.";
+"settings.loading" = "Loading...";
+"settings.saving" = "Saving...";
+
+/* Notifications */
+"notification.debugTest" = "🧪 Debug: Test Notifications";
+"notification.scheduleTest" = "Schedule a test notification to verify push messages work";
+"notification.status" = "Status: ";
+"notification.pending" = "Pending: ";
+"notification.pendingCount" = "%d notifications";
+"notification.refresh" = "Refresh";
+"notification.requestPermission" = "Request Permission";
+"notification.simulatorWarning" = "⚠️ IMPORTANT: iOS Simulator often doesn't show notifications!";
+"notification.time" = "Notification Time";
+"notification.timeFromNow" = "Time from now: ";
+
+/* Debug Tools */
+"debug.menu" = "Debug Menu";
+
+/* Clipboard */
+"clipboard.idCopied" = "ID copied to clipboard";
+
+/* Common */
+"common.error" = "error";
+"common.defaultDevice" = "Unknown Device";

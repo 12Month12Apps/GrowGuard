@@ -26,7 +26,7 @@ class ContentViewModel: Observable {
         do {
             allSavedDevices = try await repositoryManager.flowerDeviceRepository.getAllDevices()
         } catch {
-            print("Error fetching devices: \(error.localizedDescription)")
+            print(L10n.Device.Error.fetchingDevices(error.localizedDescription))
         }
     }
 }
@@ -48,18 +48,18 @@ struct ContentView: View {
                 OnbordingView(selectedTab: $navigationService.selectedTab, showOnboarding: $showOnboarding)
             } else {
                 TabView(selection: $navigationService.selectedTab) {
-                    Tab("Menu", systemImage: "leaf", value: .overview) {
+                    Tab(L10n.Navigation.menu, systemImage: "leaf", value: .overview) {
                         OverviewList()
                     }
                     
-                    Tab("Add", systemImage: "plus.app", value: .addDevice) {
+                    Tab(L10n.Navigation.add, systemImage: "plus.app", value: .addDevice) {
                         AddDeviceView()
                     }
                 }
             }
         }.onAppear {
             let defaults = UserDefaults.standard
-            showOnboarding = !defaults.bool(forKey: UserDefaultsKeys.showOnboarding.rawValue)
+            showOnboarding = !defaults.bool(forKey: L10n.Userdefaults.showOnboarding)
         }
     }
 }

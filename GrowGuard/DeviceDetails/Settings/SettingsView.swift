@@ -512,12 +512,12 @@ struct SettingsView: View {
         NavigationView {
             ZStack {
                 List {
-                Section(header: Text("Database Maintenance")) {
+                Section(header: Text(L10n.Settings.databaseMaintenance)) {
                     VStack(alignment: .leading, spacing: 8) {
                         if let stats = viewModel.cleanupStats {
-                            Text("Total entries: \(stats.totalEntries)")
+                            Text(L10n.Settings.totalEntries(stats.totalEntries))
                                 .font(.caption)
-                            Text("Invalid entries: \(stats.invalidEntries)")
+                            Text(L10n.Settings.invalidEntries(stats.invalidEntries))
                                 .font(.caption)
                                 .foregroundColor(stats.invalidEntries > 0 ? .red : .green)
                         }
@@ -540,28 +540,28 @@ struct SettingsView: View {
                                 } else {
                                     Image(systemName: "trash.fill")
                                 }
-                                Text(viewModel.isCleaningDatabase ? "Cleaning..." : "Clean Invalid Data")
+                                Text(viewModel.isCleaningDatabase ? L10n.Settings.cleaning : L10n.Settings.cleanInvalidData)
                             }
                         }
                         .disabled(viewModel.isCleaningDatabase || viewModel.isLoading || isSaving)
                         .foregroundColor(.red)
                         
-                        Text("Removes impossible sensor values like moisture > 100%, extreme temperatures, etc.")
+                        Text(L10n.Settings.cleanDescription)
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
                 }
                 
-                Section(header: Text("🧪 Debug: Test Notifications")) {
+                Section(header: Text(L10n.Notification.debugTest)) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Schedule a test notification to verify push messages work")
+                        Text(L10n.Notification.scheduleTest)
                             .font(.caption)
                             .foregroundColor(.secondary)
                         
                         // Notification Status Info
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
-                                Text("Status: ")
+                                Text(L10n.Notification.status)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 Text(viewModel.notificationAuthorizationStatus)
@@ -570,16 +570,16 @@ struct SettingsView: View {
                             }
                             
                             HStack {
-                                Text("Pending: ")
+                                Text(L10n.Notification.pending)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
-                                Text("\(viewModel.pendingNotificationsCount) notifications")
+                                Text(L10n.Notification.pendingCount(viewModel.pendingNotificationsCount))
                                     .font(.caption)
                                     .foregroundColor(.blue)
                                 
                                 Spacer()
                                 
-                                Button("Refresh") {
+                                Button(L10n.Notification.refresh) {
                                     Task {
                                         await viewModel.checkNotificationStatus()
                                     }
@@ -589,7 +589,7 @@ struct SettingsView: View {
                             }
                             
                             if viewModel.notificationAuthorizationStatus.contains("❌") || viewModel.notificationAuthorizationStatus.contains("❓") {
-                                Button("Request Permission") {
+                                Button(L10n.Notification.requestPermission) {
                                     Task {
                                         await viewModel.requestNotificationPermission()
                                     }
@@ -609,7 +609,7 @@ struct SettingsView: View {
                             
                             // Simulator warning
                             if viewModel.isRunningOnSimulator {
-                                Text("⚠️ WICHTIG: iOS Simulator zeigt oft keine Notifications an!")
+                                Text(L10n.Notification.simulatorWarning)
                                     .font(.caption2)
                                     .foregroundColor(.red)
                                     .padding(.top, 2)
@@ -621,7 +621,7 @@ struct SettingsView: View {
                         .cornerRadius(8)
                         
                         DatePicker(
-                            "Notification Time",
+                            L10n.Notification.time,
                             selection: $viewModel.testNotificationDate,
                             in: Date()...,
                             displayedComponents: [.date, .hourAndMinute]
@@ -629,7 +629,7 @@ struct SettingsView: View {
                         .datePickerStyle(.compact)
                         
                         HStack {
-                            Text("Time from now: ")
+                            Text(L10n.Notification.timeFromNow)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             

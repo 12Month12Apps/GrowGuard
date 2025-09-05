@@ -113,7 +113,7 @@ enum NavigationDestination: Hashable {
     init(device: CBPeripheral) {
         self.device = device
         self.flower = FlowerDeviceDTO(
-            name: device.name ?? "Unknown Device",
+            name: device.name ?? L10n.Device.unknownDevice,
             uuid: device.identifier.uuidString,
             peripheralID: device.identifier,
             isSensor: true,
@@ -150,15 +150,15 @@ enum NavigationDestination: Hashable {
             device.uuid == self.device?.identifier.uuidString
         })
         if isSaved {
-            self.alertView = Alert(title: Text("Info"),
-                                   message: Text("The Device is already added!"))
+            self.alertView = Alert(title: Text(L10n.Alert.info),
+                                   message: Text(L10n.Device.Error.alreadyAdded))
             self.showAlert = true
         } else {
             if allSavedDevices.contains(where: { device in
                 device.name == self.flower.name
             }) {
-                self.alertView = Alert(title: Text("Info"),
-                                       message: Text("The Device name already exists, please pick an unquie one"))
+                self.alertView = Alert(title: Text(L10n.Alert.info),
+                                       message: Text(L10n.Device.Error.nameExists))
                 self.showAlert = true
                 return
             }
@@ -172,7 +172,7 @@ enum NavigationDestination: Hashable {
                 }
                 
             } catch {
-                self.alertView = Alert(title: Text("Error"), message: Text(error.localizedDescription))
+                self.alertView = Alert(title: Text(L10n.Alert.error), message: Text(error.localizedDescription))
                 self.showAlert = true
                 return
             }
@@ -212,19 +212,19 @@ struct AddDeviceDetails:  View {
                 NavigationLink {
                     AddWithoutSensor(flower: $viewModel.searchedFlower, searchMode: true)
                 } label: {
-                    Text("Search Flower")
+                    Text(L10n.Device.searchFlower)
                 }
                 
                 Section {
-                    TextField("Device Name", text: Binding(
+                    TextField(L10n.Device.name, text: Binding(
                         get: { viewModel.flower.name ?? "" },
                         set: { viewModel.flower.name = $0 }
                     ))
                 }
                 
-                Section(header: Text("Flower Pot")) {
+                Section(header: Text(L10n.Pot.section)) {
                     HStack {
-                        Text("Pot radius (cm)")
+                        Text(L10n.Pot.radius)
                         TextField("0", value: Binding(
                             get: { viewModel.flower.potSize?.width ?? 0},
                             set: { viewModel.flower.potSize?.width = $0 }
@@ -233,7 +233,7 @@ struct AddDeviceDetails:  View {
                     }
                     
                     HStack {
-                        Text("Pot height (cm)")
+                        Text(L10n.Pot.height)
                         TextField("0", value: Binding(
                             get: { viewModel.flower.potSize?.height ?? 0},
                             set: { viewModel.flower.potSize?.height = $0 }
@@ -242,10 +242,10 @@ struct AddDeviceDetails:  View {
                     }
                     
                     VStack {
-                        Text("Volume can be automaticily be calculated, but if you know yours please enter it here to be more precise")
+                        Text(L10n.Pot.volumeDescription)
                             .font(.caption)
                         HStack {
-                            Text("Pot volume")
+                            Text(L10n.Pot.volume)
                             TextField("0", value: Binding(
                                 get: { viewModel.flower.potSize?.volume ?? 0},
                                 set: { viewModel.flower.potSize?.volume = $0 }
@@ -253,22 +253,22 @@ struct AddDeviceDetails:  View {
                                 .keyboardType(.decimalPad)
                         }
                         if let calculated = calculatedVolume {
-                            Text("Automatisch berechnetes Volumen: \(String(format: "%.1f", calculated)) cm³")
+                            Text(L10n.Pot.calculatedVolume(Float(calculated)))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             Button {
                                 viewModel.flower.potSize?.volume = calculated
                             } label: {
-                                Text("Accpet calculation")
+                                Text(L10n.Pot.acceptCalculation)
                             }
 
                         }
                     }
                 }
                 
-                Section(header: Text("Brigtness")) {
+                Section(header: Text(L10n.Sensor.brightness)) {
                     HStack {
-                        Text("Min Brigtness")
+                        Text(L10n.Sensor.minBrightness)
                         TextField("0", value: Binding(
                             get: { viewModel.flower.optimalRange?.minBrightness ?? 0 },
                             set: { viewModel.flower.optimalRange?.minBrightness = $0 }
@@ -277,7 +277,7 @@ struct AddDeviceDetails:  View {
                     }
                     
                     HStack {
-                        Text("Max Brigtness")
+                        Text(L10n.Sensor.maxBrightness)
                         TextField("0", value: Binding(
                             get: { viewModel.flower.optimalRange?.maxBrightness ?? 0 },
                             set: { viewModel.flower.optimalRange?.maxBrightness = $0 }
@@ -286,9 +286,9 @@ struct AddDeviceDetails:  View {
                     }
                 }
 
-                Section(header: Text("Temperature")) {
+                Section(header: Text(L10n.Sensor.temperature)) {
                     HStack {
-                        Text("Min Temperature")
+                        Text(L10n.Sensor.minTemperature)
                         TextField("0", value: Binding(
                             get: { viewModel.flower.optimalRange?.minTemperature ?? 0 },
                             set: { viewModel.flower.optimalRange?.minTemperature = $0 }
@@ -297,7 +297,7 @@ struct AddDeviceDetails:  View {
                     }
                     
                     HStack {
-                        Text("Max Temperature")
+                        Text(L10n.Sensor.maxTemperature)
                         TextField("0", value: Binding(
                             get: { viewModel.flower.optimalRange?.maxTemperature ?? 0 },
                             set: { viewModel.flower.optimalRange?.maxTemperature = $0 }
@@ -307,9 +307,9 @@ struct AddDeviceDetails:  View {
                 }
                 
                 
-                Section(header: Text("Moisture")) {
+                Section(header: Text(L10n.Sensor.moisture)) {
                     HStack {
-                        Text("Min Moisture")
+                        Text(L10n.Sensor.minMoisture)
                         TextField("0", value: Binding(
                             get: { viewModel.flower.optimalRange?.minMoisture ?? 0 },
                             set: { viewModel.flower.optimalRange?.minMoisture = $0 }
@@ -318,7 +318,7 @@ struct AddDeviceDetails:  View {
                     }
                     
                     HStack {
-                        Text("Max Moisture")
+                        Text(L10n.Sensor.maxMoisture)
                         TextField("0", value: Binding(
                             get: { viewModel.flower.optimalRange?.maxMoisture ?? 0 },
                             set: { viewModel.flower.optimalRange?.maxMoisture = $0 }
@@ -327,9 +327,9 @@ struct AddDeviceDetails:  View {
                     }
                 }
 
-                Section(header: Text("Conductivity")) {
+                Section(header: Text(L10n.Sensor.conductivity)) {
                     HStack {
-                        Text("Min Conductivity")
+                        Text(L10n.Sensor.minConductivity)
                         TextField("0", value: Binding(
                             get: { viewModel.flower.optimalRange?.minConductivity ?? 0 },
                             set: { viewModel.flower.optimalRange?.minConductivity = $0 }
@@ -338,7 +338,7 @@ struct AddDeviceDetails:  View {
                     }
                     
                     HStack {
-                        Text("Max Conductivity")
+                        Text(L10n.Sensor.maxConductivity)
                         TextField("0", value: Binding(
                             get: { viewModel.flower.optimalRange?.maxConductivity ?? 0 },
                             set: { viewModel.flower.optimalRange?.maxConductivity = $0 }
@@ -352,12 +352,12 @@ struct AddDeviceDetails:  View {
                         await viewModel.save()
                     }
                 } label: {
-                    Text("Save")
+                    Text(L10n.Alert.save)
                 }
                 .buttonStyle(BorderedButtonStyle())
 
             }
-            .navigationTitle("Add Device Details")
+            .navigationTitle(L10n.Navigation.addDeviceDetails)
         }.alert(isPresented: $viewModel.showAlert, content: { viewModel.alertView })
     }
 }

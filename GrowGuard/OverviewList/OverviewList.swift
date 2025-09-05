@@ -47,7 +47,7 @@ struct OverviewList: View {
                 }
                 
                 NavigationLink(destination: LogExportView()) {
-                    Text("Debug Menü")
+                    Text(L10n.Debug.menu)
                 }
                 
                 Section {
@@ -66,7 +66,7 @@ struct OverviewList: View {
                 }
             }
         }
-        .navigationTitle("Overview")
+        .navigationTitle(L10n.Navigation.overview)
         .toolbar {
             EditButton()
         }
@@ -82,20 +82,20 @@ struct OverviewList: View {
                 ProgressView()
             }
         }
-        .alert("Delete Device", isPresented: $showDeleteConfirmation) {
-            Button("Cancel", role: .cancel) {
+        .alert(L10n.Device.delete, isPresented: $showDeleteConfirmation) {
+            Button(L10n.Alert.cancel, role: .cancel) {
                 deviceToDelete = nil
             }
-            Button("Delete", role: .destructive) {
+            Button(L10n.Alert.delete, role: .destructive) {
                 confirmDelete()
             }
         } message: {
             if let offsets = deviceToDelete, let index = offsets.first {
-                Text("Are you sure you want to delete '\(viewModel.allSavedDevices[index].name ?? "this device")'? This will also delete all associated sensor data and cannot be undone.")
+                Text(L10n.Device.deleteConfirmation(viewModel.allSavedDevices[index].name ?? "this device"))
             }
         }
-        .alert("Error", isPresented: $showDeleteError) {
-            Button("OK") {
+        .alert(L10n.Alert.error, isPresented: $showDeleteError) {
+            Button(L10n.Alert.ok) {
                 viewModel.deleteError = nil
             }
         } message: {

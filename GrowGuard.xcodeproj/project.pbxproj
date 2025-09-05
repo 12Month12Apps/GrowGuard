@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		560FAA5B2E6B43E900BFFC6D /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 560FAA5A2E6B43E900BFFC6D /* Localizable.strings */; };
+		560FAA5D2E6B440500BFFC6D /* Strings+Generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 560FAA5C2E6B440500BFFC6D /* Strings+Generated.swift */; };
 		5622B0CA2E3176F5002C7E74 /* PotSizeDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0C72E3176F5002C7E74 /* PotSizeDTO.swift */; };
 		5622B0CB2E3176F5002C7E74 /* SensorDataDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0C82E3176F5002C7E74 /* SensorDataDTO.swift */; };
 		5622B0CC2E3176F5002C7E74 /* OptimalRangeDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0C62E3176F5002C7E74 /* OptimalRangeDTO.swift */; };
@@ -99,6 +101,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		560FAA5A2E6B43E900BFFC6D /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = Localizable.strings; sourceTree = "<group>"; };
+		560FAA5C2E6B440500BFFC6D /* Strings+Generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Strings+Generated.swift"; sourceTree = "<group>"; };
 		5622B0C52E3176F5002C7E74 /* FlowerDeviceDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerDeviceDTO.swift; sourceTree = "<group>"; };
 		5622B0C62E3176F5002C7E74 /* OptimalRangeDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptimalRangeDTO.swift; sourceTree = "<group>"; };
 		5622B0C72E3176F5002C7E74 /* PotSizeDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PotSizeDTO.swift; sourceTree = "<group>"; };
@@ -204,6 +208,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		560FAA592E6B43D800BFFC6D /* Strings */ = {
+			isa = PBXGroup;
+			children = (
+				560FAA5C2E6B440500BFFC6D /* Strings+Generated.swift */,
+				560FAA5A2E6B43E900BFFC6D /* Localizable.strings */,
+			);
+			path = Strings;
+			sourceTree = "<group>";
+		};
 		5622B0C92E3176F5002C7E74 /* DTOs */ = {
 			isa = PBXGroup;
 			children = (
@@ -421,6 +434,7 @@
 		56AF11172BDED05900887073 /* GrowGuard */ = {
 			isa = PBXGroup;
 			children = (
+				560FAA592E6B43D800BFFC6D /* Strings */,
 				56241CDD2DFD1E6A0012B18E /* CircularProgress.swift */,
 				56DC56492DD9251C00041DBA /* flower.db */,
 				56A8C6EB2D8EF1DD004021C0 /* Extensions */,
@@ -603,6 +617,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				56DC564A2DD9251C00041DBA /* flower.db in Resources */,
+				560FAA5B2E6B43E900BFFC6D /* Localizable.strings in Resources */,
 				56AF11232BDED05B00887073 /* Preview Assets.xcassets in Resources */,
 				56AF111F2BDED05B00887073 /* Assets.xcassets in Resources */,
 			);
@@ -666,6 +681,7 @@
 				5622B0DE2E317710002C7E74 /* CoreDataOptimalRangeRepository.swift in Sources */,
 				5622B0DF2E317710002C7E74 /* CoreDataFlowerDeviceRepository.swift in Sources */,
 				56FD6C862E34194C00905984 /* SensorDataManager.swift in Sources */,
+				560FAA5D2E6B440500BFFC6D /* Strings+Generated.swift in Sources */,
 				5622B0E02E317710002C7E74 /* CoreDataSensorDataRepository.swift in Sources */,
 				5622B0E12E317710002C7E74 /* FlowerDeviceRepository.swift in Sources */,
 				565058C72E3A98A200CC6E2B /* FlowerSelectionView.swift in Sources */,

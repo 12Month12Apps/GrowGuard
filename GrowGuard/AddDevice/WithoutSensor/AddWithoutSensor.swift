@@ -19,7 +19,7 @@ struct AddWithoutSensor: View {
             Section {
                 HStack {
                     TextField(text: $viewModel.searchName, label: {
-                        Label("Search Flower", systemImage: "camera.macro") //TODO: Why is icon not shown?
+                        Label(L10n.Device.searchFlower, systemImage: "camera.macro") //TODO: Why is icon not shown?
                     })
                     .submitLabel(.search)
                     .onSubmit {
@@ -45,7 +45,7 @@ struct AddWithoutSensor: View {
                         .font(.headline)
                     
                     if flower.minMoisture != nil {
-                        Text("Soil Moisture: \(flower.minMoisture ?? 0)% - \(flower.maxMoisture ?? 100)%")
+                        Text(L10n.Plant.soilMoisture(flower.minMoisture ?? 0, flower.maxMoisture ?? 100))
                     }
                 }.onTapGesture {
                     if searchMode {
@@ -57,7 +57,7 @@ struct AddWithoutSensor: View {
                 }
             }
         }
-        .navigationTitle("Add Flower")
+        .navigationTitle(L10n.Plant.addFlower)
         .onAppear {
 //                Task {
 //                    let instructions = """

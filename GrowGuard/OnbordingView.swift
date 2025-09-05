@@ -21,41 +21,41 @@ struct OnbordingView: View {
                         .frame(width: 200, height: 200)
                         .cornerRadius(19)
                     
-                    Text("Welcome to GrowGuard")
+                    Text(L10n.Onboarding.welcome)
                         .font(.title)
                         .padding()
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .bold()
                     
-                    Text("This app is designed to help you take care of your plants.")
+                    Text(L10n.Onboarding.description)
                         .padding()
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity, alignment: .center)
                     
-                    Text("Features")
+                    Text(L10n.Onboarding.features)
                         .padding()
                         .bold()
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity, alignment: .center)
                     
-                    Text("See your current envoirment conditions of your plants")
-                    Text("Get notified when something is wrong")
-                    Text("Add multiple devices to monitor multiple plants")
+                    Text(L10n.Onboarding.feature1)
+                    Text(L10n.Onboarding.feature2)
+                    Text(L10n.Onboarding.feature3)
                     
-                    Text("To get started, please add a new device.")
+                    Text(L10n.Onboarding.getStarted)
                         .padding()
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity, alignment: .center)
                     
                     Button(action: {
                         let defaults = UserDefaults.standard
-                        defaults.setValue(true, forKey: UserDefaultsKeys.showOnboarding.rawValue)
+                        defaults.setValue(true, forKey: L10n.Userdefaults.showOnboarding)
                         selectedTab = .addDevice
                         self.showOnboarding = false
                         print("Add new device")
                     }) {
-                        Text("Add Device")
+                        Text(L10n.Onboarding.addDevice)
                     }
                 }
             }

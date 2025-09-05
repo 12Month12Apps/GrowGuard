@@ -25,11 +25,11 @@ struct DeviceDetailsView: View {
             Section {
                 HStack {
                     VStack(alignment: .leading) {
-                        TextField("Device Name", text: Binding(
+                        TextField(L10n.Device.name, text: Binding(
                             get: { viewModel.device.name },
                             set: { _ in /* Read-only for now */ }
                         ))
-                        Text("Last Update: ") + Text(viewModel.device.lastUpdate, format: .dateTime)
+                        Text(L10n.Device.lastUpdate) + Text(viewModel.device.lastUpdate, format: .dateTime)
                         
                         if viewModel.device.isSensor {
                             // Connection quality hint
@@ -49,14 +49,14 @@ struct DeviceDetailsView: View {
                             } label: {
                                 HStack {
                                     Image(systemName: "clock.arrow.circlepath")
-                                    Text("Load Historical Data")
+                                    Text(L10n.Device.loadHistoricalData)
                                 }
                             }
                             .padding(.vertical, 5)
                             .buttonStyle(.plain)
                             .foregroundColor(.blue)
                         } else {
-                            Text("This plant does not have a sensor attached. You need to manage the watering manually.")
+                            Text(L10n.Device.noSensorMessage)
                                 .font(.caption)
                                 .padding([.top], 5)
                         }
@@ -74,7 +74,7 @@ struct DeviceDetailsView: View {
                                 viewModel.blinkLED()
                             } label: {
                                 HStack(spacing: 2) {
-                                    Text("Blink")
+                                    Text(L10n.Device.blink)
                                     Image(systemName: "flashlight.off.fill")
                                         .frame(width: 30, alignment: .center)
                                 }
@@ -87,7 +87,7 @@ struct DeviceDetailsView: View {
                             
                         } label: {
                             HStack(spacing: 2) {
-                                Text("Info")
+                                Text(L10n.Alert.info)
                                 Image(systemName: "info.circle")
                                     .frame(width: 30, alignment: .center)
                             }
@@ -105,10 +105,10 @@ struct DeviceDetailsView: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.red)
                         VStack(alignment: .leading) {
-                            Text("Urgent: Water Needed Now!")
+                            Text(L10n.Watering.urgentNow)
                                 .font(.headline)
                                 .foregroundColor(.red)
-                            Text("Your plant needs water today")
+                            Text(L10n.Watering.neededToday)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -119,13 +119,13 @@ struct DeviceDetailsView: View {
             }
             
             if let prediction = wateringPrediction {
-                Section(header: Text("Watering Prediction")) {
+                Section(header: Text(L10n.Watering.prediction)) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Image(systemName: prediction.isUrgent ? "exclamationmark.triangle.fill" : "calendar.badge.clock")
                                 .foregroundColor(prediction.isUrgent ? .red : .blue)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Next watering needed:")
+                                Text(L10n.Watering.nextNeeded)
                                     .font(.subheadline)
                                 Text(prediction.predictedDate, style: .relative)
                                     .font(.caption)
@@ -146,11 +146,11 @@ struct DeviceDetailsView: View {
                         HStack {
                             Image(systemName: "drop.circle")
                                 .foregroundColor(.blue)
-                            Text("Current: \(Int(prediction.currentMoisture))%")
+                            Text(L10n.Watering.current(Int(prediction.currentMoisture)))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Text("Target: \(Int(prediction.targetMoisture))%")
+                            Text(L10n.Watering.target(Int(prediction.targetMoisture)))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -158,11 +158,11 @@ struct DeviceDetailsView: View {
                         HStack {
                             Image(systemName: "chart.line.uptrend.xyaxis")
                                 .foregroundColor(.secondary)
-                            Text("Confidence: \(prediction.confidenceLevel)")
+                            Text(L10n.Watering.confidence(prediction.confidence))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Text("\(prediction.dryingRatePerDay.rounded(toPlaces: 1))%/day drying")
+                            Text(L10n.Watering.dryingRate(Float(prediction.dryingRatePerDay.rounded(toPlaces: 1))))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -171,7 +171,7 @@ struct DeviceDetailsView: View {
                             HStack {
                                 Image(systemName: "drop.fill")
                                     .foregroundColor(.blue)
-                                Text("Last watered:")
+                                Text(L10n.Watering.lastWatered)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 Spacer()
@@ -189,7 +189,7 @@ struct DeviceDetailsView: View {
                 // Week navigation controls
                 Section(header: 
                     HStack {
-                        Text("Sensor Data")
+                        Text(L10n.Sensor.data)
                         Spacer()
                         HStack {
                             Button("‹", action: {
@@ -218,7 +218,7 @@ struct DeviceDetailsView: View {
                         HStack {
                             ProgressView()
                                 .scaleEffect(0.8)
-                            Text("Loading week data...")
+                            Text(L10n.Sensor.loadingWeekData)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -230,8 +230,8 @@ struct DeviceDetailsView: View {
                                 componet: viewModel.groupingOption,
                                 data: .constant(viewModel.currentWeekData),
                                 keyPath: \.brightness,
-                                title: "Brightness",
-                                dataType: "lux",
+                                title: L10n.Sensor.brightness,
+                                dataType: L10n.Sensor.Unit.lux,
                                 selectedChartType: .bars,
                                 minRange: Int(viewModel.device.optimalRange?.minBrightness ?? 0),
                                 maxRange: Int(viewModel.device.optimalRange?.maxBrightness ?? 0))
@@ -240,8 +240,8 @@ struct DeviceDetailsView: View {
                                 componet: viewModel.groupingOption,
                                 data: .constant(viewModel.currentWeekData),
                                 keyPath: \.moisture,
-                                title: "Moisture",
-                                dataType: "%",
+                                title: L10n.Sensor.moisture,
+                                dataType: L10n.Sensor.Unit.percent,
                                 selectedChartType: .water,
                                 minRange: Int(viewModel.device.optimalRange?.minMoisture ?? 0),
                                 maxRange: Int(viewModel.device.optimalRange?.maxMoisture ?? 0))
@@ -250,18 +250,18 @@ struct DeviceDetailsView: View {
                                 componet: viewModel.groupingOption,
                                 data: .constant(viewModel.currentWeekData),
                                 keyPath: \.temperature,
-                                title: "Temperature",
-                                dataType: "C",
+                                title: L10n.Sensor.temperature,
+                                dataType: L10n.Sensor.Unit.celsius,
                                 selectedChartType: .bars,
                                 minRange: Int(viewModel.device.optimalRange?.minTemperature ?? 0),
                                 maxRange: Int(viewModel.device.optimalRange?.maxTemperature ?? 0))
                 
                 
                 Section {
-                    Text("You cann use this ID to setup an shortcut to this device in the Shortcuts app. This will allow you to quickly refresh the devices data and setup automations without having to open the app.")
+                    Text(L10n.Device.shortcutInfo)
                     
                     HStack {
-                        Text("ID: ") + Text(viewModel.device.uuid ?? "")
+                        Text(L10n.Device.id) + Text(viewModel.device.uuid ?? "")
                         
                         Spacer()
                         
@@ -273,7 +273,7 @@ struct DeviceDetailsView: View {
                                 .foregroundColor(.blue)
                         }
                         .alert(isPresented: $showCopyAlert) {
-                            Alert(title: Text("Copied"), message: Text("ID copied to clipboard"), dismissButton: .default(Text("OK")))
+                            Alert(title: Text(L10n.Alert.copied), message: Text(L10n.Clipboard.idCopied), dismissButton: .default(Text(L10n.Alert.ok)))
                         }
                     }
                 }
@@ -290,7 +290,7 @@ struct DeviceDetailsView: View {
                     componet: viewModel.groupingOption,
                     data: .constant(viewModel.currentWeekData),
                     keyPath: \.moisture,
-                    title: "Moisture",
+                    title: L10n.Sensor.moisture,
                     dataType: "%",
                     selectedChartType: .water,
                     minRange: Int(viewModel.device.optimalRange?.minMoisture ?? 0),
