@@ -214,8 +214,9 @@ class PlantMonitorService {
         
        // Define reasonable sensor ranges
        let validMoistureRange = 0...100
-       let validTemperatureRange = -10...60
-       let validBrightnessRange = 0...100000
+       let validTemperatureRange = -40...100
+       let validBrightnessRange = 0...200000
+       let validConductivityRange = 0...32767  // Limit to Int16 max value to prevent crash
        
        // Check if values are in valid ranges
        if !validMoistureRange.contains(Int(data.moisture)) {
@@ -228,6 +229,12 @@ class PlantMonitorService {
        
        if !validBrightnessRange.contains(Int(data.brightness)) {
            validatedData.brightness = UInt32(max(validBrightnessRange.lowerBound, min(Int(data.brightness), validBrightnessRange.upperBound)))
+       }
+       
+       // Validate and clamp conductivity to Int16 range to prevent crash
+       if !validConductivityRange.contains(Int(data.conductivity)) {
+           validatedData.conductivity = UInt16(max(validConductivityRange.lowerBound, min(Int(data.conductivity), validConductivityRange.upperBound)))
+           print("⚠️ Conductivity value \(data.conductivity) was clamped to \(validatedData.conductivity)")
        }
         
         print(validatedData.moisture, validatedData.brightness, validatedData.temperature)
