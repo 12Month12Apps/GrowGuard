@@ -104,6 +104,20 @@ internal enum L10n {
       internal static let saveFailed = L10n.tr("Localizable", "device.error.saveFailed", fallback: "Failed to save data")
     }
   }
+  internal enum Error {
+    /// Error Messages
+    internal static let loadingData = L10n.tr("Localizable", "error.loadingData", fallback: "Failed to load data")
+  }
+  internal enum History {
+    /// No Data Available
+    internal static let noData = L10n.tr("Localizable", "history.noData", fallback: "No Data Available")
+    /// Start collecting sensor data to see historical entries here.
+    internal static let noDataDescription = L10n.tr("Localizable", "history.noDataDescription", fallback: "Start collecting sensor data to see historical entries here.")
+    /// History
+    internal static let title = L10n.tr("Localizable", "history.title", fallback: "History")
+    /// View All History
+    internal static let viewAll = L10n.tr("Localizable", "history.viewAll", fallback: "View All History")
+  }
   internal enum Navigation {
     /// Add
     internal static let add = L10n.tr("Localizable", "navigation.add", fallback: "Add")

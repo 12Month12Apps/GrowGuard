@@ -2,10 +2,10 @@
 ## See: https://github.com/SwiftGen/SwiftGen/blob/main/Documentation/swiftgen.yml.md
 
 strings:
-  inputs: GrowGuard/Localizable.strings
+  inputs: GrowGuard/Strings/Localizable.strings
   outputs:
     templateName: structured-swift5
-    output: GrowGuard/Generated/Strings+Generated.swift
+    output: GrowGuard/Strings/Strings+Generated.swift
     params:
       enumName: L10n
       publicAccess: false

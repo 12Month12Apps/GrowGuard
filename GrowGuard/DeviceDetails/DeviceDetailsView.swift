@@ -42,19 +42,30 @@ struct DeviceDetailsView: View {
                                 .padding(.vertical, 2)
                             }
                             
-                            Button {
-                                viewModel.fetchHistoricalData()
-                            
-                                showingLoadingScreen = true
-                            } label: {
-                                HStack {
-                                    Image(systemName: "clock.arrow.circlepath")
-                                    Text(L10n.Device.loadHistoricalData)
+                            VStack(spacing: 8) {
+                                Button {
+                                    viewModel.fetchHistoricalData()
+                                
+                                    showingLoadingScreen = true
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "clock.arrow.circlepath")
+                                        Text(L10n.Device.loadHistoricalData)
+                                    }
                                 }
+                                .padding(.vertical, 5)
+                                .buttonStyle(.plain)
+                                .foregroundColor(.blue)
+                                
+                                NavigationLink(destination: HistoryListView(device: viewModel.device)) {
+                                    HStack {
+                                        Image(systemName: "list.bullet.clipboard")
+                                        Text(L10n.History.viewAll)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .foregroundColor(.blue)
                             }
-                            .padding(.vertical, 5)
-                            .buttonStyle(.plain)
-                            .foregroundColor(.blue)
                         } else {
                             Text(L10n.Device.noSensorMessage)
                                 .font(.caption)

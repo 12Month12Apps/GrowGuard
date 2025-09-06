@@ -156,6 +156,15 @@
 /* Clipboard */
 "clipboard.idCopied" = "ID copied to clipboard";
 
+/* History */
+"history.title" = "History";
+"history.noData" = "No Data Available";
+"history.noDataDescription" = "Start collecting sensor data to see historical entries here.";
+"history.viewAll" = "View All History";
+
+/* Error Messages */
+"error.loadingData" = "Failed to load data";
+
 /* Common */
 "common.error" = "error";
 "common.defaultDevice" = "Unknown Device";

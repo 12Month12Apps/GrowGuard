@@ -55,6 +55,7 @@
 		56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6EC2D8EF1E5004021C0 /* Alert.swift */; };
 		56A8C6EF2D8F38CD004021C0 /* Button.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6EE2D8F38C9004021C0 /* Button.swift */; };
 		56A8C6F12D90095B004021C0 /* HistoryLoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6F02D900954004021C0 /* HistoryLoadingView.swift */; };
+		3F13B333BDA24182B72236B6 /* HistoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F13B333BDA24182B72236B7 /* HistoryListView.swift */; };
 		56A948F72DE3A4790010575F /* FlowerSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A948F62DE3A4710010575F /* FlowerSearch.swift */; };
 		56A948F92DE3A5370010575F /* SpeciesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A948F82DE3A5310010575F /* SpeciesModel.swift */; };
 		56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11182BDED05900887073 /* GrowGuardApp.swift */; };
@@ -150,6 +151,7 @@
 		56A8C6EC2D8EF1E5004021C0 /* Alert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alert.swift; sourceTree = "<group>"; };
 		56A8C6EE2D8F38C9004021C0 /* Button.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Button.swift; sourceTree = "<group>"; };
 		56A8C6F02D900954004021C0 /* HistoryLoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryLoadingView.swift; sourceTree = "<group>"; };
+		3F13B333BDA24182B72236B7 /* HistoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryListView.swift; sourceTree = "<group>"; };
 		56A948F62DE3A4710010575F /* FlowerSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerSearch.swift; sourceTree = "<group>"; };
 		56A948F82DE3A5310010575F /* SpeciesModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeciesModel.swift; sourceTree = "<group>"; };
 		56AF11152BDED05900887073 /* GrowGuard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GrowGuard.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -314,6 +316,7 @@
 			children = (
 				56241CDF2E03590C0012B18E /* Manuell Water */,
 				56A8C6F02D900954004021C0 /* HistoryLoadingView.swift */,
+				3F13B333BDA24182B72236B7 /* HistoryListView.swift */,
 				5654B2B72CB4575700EED3D3 /* Settings */,
 				568892062C83292D000E8FAE /* Componetns */,
 				565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */,
@@ -688,6 +691,7 @@
 				56A948F92DE3A5370010575F /* SpeciesModel.swift in Sources */,
 				5684E2DD2C0F81E7005CD8B6 /* AddDeviceViewModel.swift in Sources */,
 				56A8C6F12D90095B004021C0 /* HistoryLoadingView.swift in Sources */,
+				3F13B333BDA24182B72236B6 /* HistoryListView.swift in Sources */,
 				56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */,
 				5684E2E22C0FA2EE005CD8B6 /* OverviewList.swift in Sources */,
 				562629002C42E32700B5DB2A /* AppIntent.swift in Sources */,
