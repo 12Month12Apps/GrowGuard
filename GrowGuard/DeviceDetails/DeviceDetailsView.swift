@@ -362,6 +362,15 @@ struct DeviceDetailsView: View {
         .sheet(isPresented: $showingLoadingScreen) {
             HistoryLoadingView()
         }
+        .onChange(of: showingLoadingScreen) { isShowing in
+            // Ensure cleanup when sheet is dismissed
+            if !isShowing {
+                // Give a brief delay to allow proper cleanup
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    FlowerCareManager.shared.forceResetHistoryState()
+                }
+            }
+        }
     }
     
     // MARK: - Helper Methods

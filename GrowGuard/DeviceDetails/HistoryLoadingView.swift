@@ -20,6 +20,9 @@ struct HistoryLoadingView: View {
     
     @State private var cancellables = Set<AnyCancellable>()
     
+    // Track the device UUID for this loading session to prevent cross-contamination
+    @State private var loadingDeviceUUID: String?
+    
     // Time tracking for accurate speed calculation
     @State private var loadingStartTime: Date?
     @State private var lastProgressTime: Date?
@@ -42,9 +45,11 @@ struct HistoryLoadingView: View {
         }
         .onAppear {
             setupSubscribers()
+            // Capture the current device UUID when loading starts
+            loadingDeviceUUID = FlowerCareManager.shared.currentDeviceUUID
         }
         .onDisappear {
-            FlowerCareManager.shared.cancelHistoryDataLoading()
+            cleanupLoadingSession()
         }
     }
     
@@ -102,6 +107,7 @@ struct HistoryLoadingView: View {
             if loadingState == .completed {
                 // Completed state - just the done button
                 Button("Done") {
+                    cleanupLoadingSession()
                     presentationMode.wrappedValue.dismiss()
                 }
                 .buttonStyle(.borderedProminent)
@@ -343,9 +349,37 @@ struct HistoryLoadingView: View {
         }
     }
     
+    // MARK: - Cleanup and Session Management
+    
+    private func cleanupLoadingSession() {
+        AppLogger.ble.info("🧹 HistoryLoadingView: Cleaning up loading session")
+        
+        // Cancel all subscribers immediately to prevent further updates
+        cancellables.removeAll()
+        
+        // Cancel any ongoing history data loading
+        FlowerCareManager.shared.cancelHistoryDataLoading()
+        
+        // Force complete cleanup to prevent data cross-contamination
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            // Ensure all pending history data processing is stopped
+            FlowerCareManager.shared.forceResetHistoryState()
+        }
+    }
+    
     private func setupSubscribers() {
+        AppLogger.ble.info("📡 HistoryLoadingView: Setting up subscribers for device UUID: \(loadingDeviceUUID ?? "unknown")")
+        
         FlowerCareManager.shared.loadingProgressPublisher
             .sink { current, total in
+                
+                // Safety check: Only process updates for the device we're loading for
+                guard let expectedDeviceUUID = self.loadingDeviceUUID,
+                      FlowerCareManager.shared.currentDeviceUUID == expectedDeviceUUID else {
+                    AppLogger.ble.warning("⚠️ HistoryLoadingView: Ignoring progress update for different device")
+                    return
+                }
+                
                 let now = Date()
                 
                 // Initialize timing if this is the first progress update
@@ -381,6 +415,14 @@ struct HistoryLoadingView: View {
         
         FlowerCareManager.shared.loadingStatePublisher
             .sink { state in
+                
+                // Safety check: Only process state updates for our device
+                guard let expectedDeviceUUID = self.loadingDeviceUUID,
+                      FlowerCareManager.shared.currentDeviceUUID == expectedDeviceUUID else {
+                    AppLogger.ble.warning("⚠️ HistoryLoadingView: Ignoring state update for different device")
+                    return
+                }
+                
                 // Reset timing when loading starts
                 if case .loading = state, case .idle = self.loadingState {
                     self.loadingStartTime = nil
@@ -396,6 +438,13 @@ struct HistoryLoadingView: View {
         // Add subscriber for connection quality updates
         FlowerCareManager.shared.connectionQualityPublisher
             .sink { quality in
+                
+                // Safety check: Only process quality updates for our device
+                guard let expectedDeviceUUID = self.loadingDeviceUUID,
+                      FlowerCareManager.shared.currentDeviceUUID == expectedDeviceUUID else {
+                    return
+                }
+                
                 self.connectionQuality = quality
             }
             .store(in: &cancellables)

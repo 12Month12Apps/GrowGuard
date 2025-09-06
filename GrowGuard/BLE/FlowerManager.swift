@@ -1115,7 +1115,40 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         
         disconnect()
     }
+    
+    func forceResetHistoryState() {
+        AppLogger.ble.info("🔄 Force resetting history state to prevent cross-contamination")
+        
+        // Mark as cancelled to stop any ongoing processing
+        isCancelled = true
+        
+        // Reset all history-related state
+        historicalDataRequested = false
+        totalEntries = 0
+        currentEntryIndex = 0
+        
+        // Clear the device UUID to prevent processing data for wrong device
+        let previousDeviceUUID = deviceUUID
+        deviceUUID = nil
+        
+        // Reset loading state
+        loadingStateSubject.send(.idle)
+        loadingProgressSubject.send((0, 0))
+        
+        // Force disconnect if still connected
+        if isConnected {
+            AppLogger.ble.info("🔌 Force disconnecting to clean state")
+            disconnect()
+        }
+        
+        AppLogger.ble.info("✅ Force reset complete for device: \(previousDeviceUUID ?? "unknown")")
+    }
 
+    // Public getter for current device UUID
+    var currentDeviceUUID: String? {
+        return deviceUUID
+    }
+    
     // Public method to request live sensor data
     func requestLiveData() {
         resetErrorState()
@@ -1313,6 +1346,12 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             // This is an actual history entry
             if let historicalData = decoder.decodeHistoricalSensorData(data: data) {
                 print("Decoded history entry \(currentEntryIndex): temp=\(historicalData.temperature)°C, moisture=\(historicalData.moisture)%, conductivity=\(historicalData.conductivity)µS/cm")
+                
+                // Safety check: Only send data if loading hasn't been cancelled and we're still loading for the same device
+                guard !isCancelled && historicalDataRequested else {
+                    AppLogger.ble.warning("⚠️ Ignoring historical data - loading cancelled or not requested")
+                    return
+                }
                 
                 historicalDataSubject.send(historicalData)
                 
