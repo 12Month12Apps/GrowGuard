@@ -165,6 +165,15 @@
 /* Error Messages */
 "error.loadingData" = "Failed to load data";
 
+/* Sensor Data Management */
+"sensorData.deleteAll" = "Delete All Sensor Data";
+"sensorData.deleteAllDescription" = "Permanently delete all historical sensor data for this device";
+"sensorData.deleting" = "Deleting...";
+"sensorData.confirmDelete" = "Are you sure?";
+"sensorData.confirmDeleteMessage" = "This will permanently delete all sensor data for this device. This action cannot be undone.";
+"sensorData.deleteSuccess" = "✅ Successfully deleted %d sensor data entries";
+"sensorData.deleteError" = "❌ Failed to delete sensor data";
+
 /* Common */
 "common.error" = "error";
 "common.defaultDevice" = "Unknown Device";

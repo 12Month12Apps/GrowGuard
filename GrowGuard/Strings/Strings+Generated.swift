@@ -294,6 +294,24 @@ internal enum L10n {
       internal static let percent = L10n.tr("Localizable", "sensor.unit.percent", fallback: "%")
     }
   }
+  internal enum SensorData {
+    /// Are you sure?
+    internal static let confirmDelete = L10n.tr("Localizable", "sensorData.confirmDelete", fallback: "Are you sure?")
+    /// This will permanently delete all sensor data for this device. This action cannot be undone.
+    internal static let confirmDeleteMessage = L10n.tr("Localizable", "sensorData.confirmDeleteMessage", fallback: "This will permanently delete all sensor data for this device. This action cannot be undone.")
+    /// Sensor Data Management
+    internal static let deleteAll = L10n.tr("Localizable", "sensorData.deleteAll", fallback: "Delete All Sensor Data")
+    /// Permanently delete all historical sensor data for this device
+    internal static let deleteAllDescription = L10n.tr("Localizable", "sensorData.deleteAllDescription", fallback: "Permanently delete all historical sensor data for this device")
+    /// ❌ Failed to delete sensor data
+    internal static let deleteError = L10n.tr("Localizable", "sensorData.deleteError", fallback: "❌ Failed to delete sensor data")
+    /// ✅ Successfully deleted %d sensor data entries
+    internal static func deleteSuccess(_ p1: Int) -> String {
+      return L10n.tr("Localizable", "sensorData.deleteSuccess", p1, fallback: "✅ Successfully deleted %d sensor data entries")
+    }
+    /// Deleting...
+    internal static let deleting = L10n.tr("Localizable", "sensorData.deleting", fallback: "Deleting...")
+  }
   internal enum Settings {
     /// Removes impossible sensor values like moisture > 100%, extreme temperatures, etc.
     internal static let cleanDescription = L10n.tr("Localizable", "settings.cleanDescription", fallback: "Removes impossible sensor values like moisture > 100%, extreme temperatures, etc.")

@@ -25,6 +25,11 @@ class SettingsViewModel {
     var cleanupStats: (totalEntries: Int, invalidEntries: Int)? = nil
     var cleanupResult: String? = nil
     
+    // Sensor data deletion
+    var isDeletingSensorData: Bool = false
+    var sensorDataCount: Int = 0
+    var sensorDataDeleteResult: String? = nil
+    
     // Debug: Test Notifications
     var testNotificationDate: Date = Date().addingTimeInterval(30) // Default: 30 seconds from now
     var testNotificationResult: String? = nil
@@ -213,6 +218,42 @@ class SettingsViewModel {
         } catch {
             print("❌ Failed to load database stats: \(error)")
         }
+    }
+    
+    @MainActor
+    func loadSensorDataCount() async {
+        do {
+            let sensorData = try await repositoryManager.sensorDataRepository.getSensorData(for: deviceUUID, limit: nil)
+            self.sensorDataCount = sensorData.count
+            print("📊 SettingsViewModel: Loaded sensor data count: \(sensorDataCount)")
+        } catch {
+            print("❌ Failed to load sensor data count: \(error)")
+            self.sensorDataCount = 0
+        }
+    }
+    
+    @MainActor
+    func deleteAllSensorData() async {
+        isDeletingSensorData = true
+        sensorDataDeleteResult = nil
+        
+        do {
+            // Get count before deletion for success message
+            let countBeforeDelete = sensorDataCount
+            
+            try await repositoryManager.sensorDataRepository.deleteAllSensorData(for: deviceUUID)
+            sensorDataDeleteResult = L10n.SensorData.deleteSuccess(countBeforeDelete)
+            
+            // Update count after deletion
+            await loadSensorDataCount()
+            
+            print("✅ SettingsViewModel: Successfully deleted all sensor data for device \(deviceUUID)")
+        } catch {
+            sensorDataDeleteResult = L10n.SensorData.deleteError + ": \(error.localizedDescription)"
+            print("❌ SettingsViewModel: Failed to delete sensor data: \(error)")
+        }
+        
+        isDeletingSensorData = false
     }
     
     @MainActor
@@ -492,6 +533,7 @@ struct SettingsView: View {
     @State private var saveError: Error?
     @State private var showSaveError = false
     @State private var showFlowerSelection = false
+    @State private var showDeleteConfirmation = false
     let isSensor: Bool
     let onSave: (OptimalRangeDTO, PotSizeDTO) -> Void
     @Environment(\.dismiss) private var dismiss
@@ -549,6 +591,56 @@ struct SettingsView: View {
                         Text(L10n.Settings.cleanDescription)
                             .font(.caption2)
                             .foregroundColor(.secondary)
+                    }
+                }
+                
+                if isSensor {
+                    Section(header: Text(L10n.SensorData.deleteAll)) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(L10n.SensorData.deleteAllDescription)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            HStack {
+                                Text("Current sensor data entries:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("\(viewModel.sensorDataCount)")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(viewModel.sensorDataCount > 0 ? .blue : .secondary)
+                            }
+                            
+                            if let result = viewModel.sensorDataDeleteResult {
+                                Text(result)
+                                    .font(.caption)
+                                    .foregroundColor(result.contains("✅") ? .green : .red)
+                            }
+                            
+                            Button(action: {
+                                if viewModel.sensorDataCount > 0 {
+                                    showDeleteConfirmation = true
+                                }
+                            }) {
+                                HStack {
+                                    if viewModel.isDeletingSensorData {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                    } else {
+                                        Image(systemName: "trash.fill")
+                                    }
+                                    Text(viewModel.isDeletingSensorData ? L10n.SensorData.deleting : L10n.SensorData.deleteAll)
+                                }
+                            }
+                            .disabled(viewModel.isDeletingSensorData || viewModel.isLoading || isSaving || viewModel.sensorDataCount == 0)
+                            .foregroundColor(viewModel.sensorDataCount > 0 ? .red : .secondary)
+                            
+                            if viewModel.sensorDataCount == 0 {
+                                Text("No sensor data to delete")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                     }
                 }
                 
@@ -942,6 +1034,7 @@ struct SettingsView: View {
             .task {
                 await viewModel.loadSettings()
                 await viewModel.loadDatabaseStats()
+                await viewModel.loadSensorDataCount()
                 await viewModel.checkNotificationStatus()
             }
             .alert("Save Error", isPresented: $showSaveError) {
@@ -951,6 +1044,16 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showFlowerSelection) {
                 FlowerSelectionView(selectedFlower: $viewModel.selectedFlower)
+            }
+            .alert(L10n.SensorData.confirmDelete, isPresented: $showDeleteConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    Task {
+                        await viewModel.deleteAllSensorData()
+                    }
+                }
+            } message: {
+                Text(L10n.SensorData.confirmDeleteMessage)
             }
         }
     }
