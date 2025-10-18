@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3F13B333BDA24182B72236B6 /* HistoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F13B333BDA24182B72236B7 /* HistoryListView.swift */; };
 		560FAA5B2E6B43E900BFFC6D /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 560FAA5A2E6B43E900BFFC6D /* Localizable.strings */; };
 		560FAA5D2E6B440500BFFC6D /* Strings+Generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 560FAA5C2E6B440500BFFC6D /* Strings+Generated.swift */; };
 		5622B0CA2E3176F5002C7E74 /* PotSizeDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0C72E3176F5002C7E74 /* PotSizeDTO.swift */; };
@@ -55,7 +56,6 @@
 		56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6EC2D8EF1E5004021C0 /* Alert.swift */; };
 		56A8C6EF2D8F38CD004021C0 /* Button.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6EE2D8F38C9004021C0 /* Button.swift */; };
 		56A8C6F12D90095B004021C0 /* HistoryLoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6F02D900954004021C0 /* HistoryLoadingView.swift */; };
-		3F13B333BDA24182B72236B6 /* HistoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F13B333BDA24182B72236B7 /* HistoryListView.swift */; };
 		56A948F72DE3A4790010575F /* FlowerSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A948F62DE3A4710010575F /* FlowerSearch.swift */; };
 		56A948F92DE3A5370010575F /* SpeciesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A948F82DE3A5310010575F /* SpeciesModel.swift */; };
 		56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11182BDED05900887073 /* GrowGuardApp.swift */; };
@@ -102,6 +102,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		3F13B333BDA24182B72236B7 /* HistoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryListView.swift; sourceTree = "<group>"; };
 		560FAA5A2E6B43E900BFFC6D /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = Localizable.strings; sourceTree = "<group>"; };
 		560FAA5C2E6B440500BFFC6D /* Strings+Generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Strings+Generated.swift"; sourceTree = "<group>"; };
 		5622B0C52E3176F5002C7E74 /* FlowerDeviceDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerDeviceDTO.swift; sourceTree = "<group>"; };
@@ -151,7 +152,6 @@
 		56A8C6EC2D8EF1E5004021C0 /* Alert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alert.swift; sourceTree = "<group>"; };
 		56A8C6EE2D8F38C9004021C0 /* Button.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Button.swift; sourceTree = "<group>"; };
 		56A8C6F02D900954004021C0 /* HistoryLoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryLoadingView.swift; sourceTree = "<group>"; };
-		3F13B333BDA24182B72236B7 /* HistoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryListView.swift; sourceTree = "<group>"; };
 		56A948F62DE3A4710010575F /* FlowerSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerSearch.swift; sourceTree = "<group>"; };
 		56A948F82DE3A5310010575F /* SpeciesModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeciesModel.swift; sourceTree = "<group>"; };
 		56AF11152BDED05900887073 /* GrowGuard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GrowGuard.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1086,8 +1086,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/groue/GRDB.swift.git";
 			requirement = {
-				branch = master;
-				kind = branch;
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.8.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

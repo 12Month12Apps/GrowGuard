@@ -140,7 +140,14 @@ struct FlowerSelectionView: View {
         isLoading = true
         do {
             searchResult = try await flowerSearch.seach(flower: searchName).map { spec in
-                VMSpecies(name: spec.scientificNname, id: spec.id, imageUrl: spec.imageUrl, minMoisture: spec.minMoisture, maxMoisture: spec.maxMoisture)
+                VMSpecies(
+                    name: spec.scientificNname,
+                    id: spec.id,
+                    imageUrl: spec.imageUrl,
+                    minMoisture: spec.minMoisture,
+                    maxMoisture: spec.maxMoisture,
+                    commonNames: spec.commonNames
+                )
             }
         } catch {
             print("Error searching flowers: \(error)")
