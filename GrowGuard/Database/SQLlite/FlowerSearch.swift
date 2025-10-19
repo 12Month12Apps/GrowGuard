@@ -10,9 +10,11 @@ import Foundation
 
 struct FlowerSearch {
     func seach(flower: String) async throws -> [Species] {
-        let dbQueue = try databaseQueue()
+        let trimmed = flower.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return [] }
+        let searchTerm = "%\(trimmed)%"
         do {
-            return try await dbQueue.read { db in
+            return try await Self.databaseQueue.read { db in
                 let request = SQLRequest<Species>(
                     sql: """
                         SELECT DISTINCT
@@ -35,7 +37,7 @@ struct FlowerSearch {
                         ORDER BY flowers.scientific_name
                         LIMIT 10
                     """,
-                    arguments: ["search": "%\(flower)%"]
+                    arguments: ["search": searchTerm]
                 )
                 
                 return try request.fetchAll(db)
@@ -48,9 +50,8 @@ struct FlowerSearch {
     }
     
     func seachFamiles() async throws {
-        let dbQueue = try databaseQueue()
         do {
-            try await dbQueue.read { db in
+            try await Self.databaseQueue.read { db in
                 let families = try Row
                     .fetchAll(db, sql: "SELECT name FROM families WHERE name IS NOT NULL ORDER BY name")
                     .compactMap { $0["name"] as? String }
@@ -65,16 +66,23 @@ struct FlowerSearch {
 }
 
 private extension FlowerSearch {
-    func databaseQueue() throws -> DatabaseQueue {
+    static let databaseQueue: DatabaseQueue = {
+        do {
+            return try makeDatabaseQueue()
+        } catch {
+            fatalError("Failed to set up flower search database: \(error)")
+        }
+    }()
+    
+    static func makeDatabaseQueue() throws -> DatabaseQueue {
         let dbURL = try writableDatabaseURL()
         var dbConfig = Configuration()
         dbConfig.journalMode = .wal
-        
-        // The database lives in Application Support so SQLite can create WAL files freely.
+        dbConfig.readonly = true
         return try DatabaseQueue(path: dbURL.path, configuration: dbConfig)
     }
     
-    func writableDatabaseURL() throws -> URL {
+    static func writableDatabaseURL() throws -> URL {
         guard let bundledURL = Bundle.main.url(forResource: "flower", withExtension: "db") else {
             fatalError("DB not found in bundle")
         }

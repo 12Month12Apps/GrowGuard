@@ -208,154 +208,321 @@ struct AddDeviceDetails:  View {
     var body: some View {
         VStack {
             Form {
-                
-                NavigationLink {
-                    AddWithoutSensor(flower: $viewModel.searchedFlower, searchMode: true)
-                } label: {
-                    Text(L10n.Device.searchFlower)
-                }
-                
-                Section {
-                    TextField(L10n.Device.name, text: Binding(
-                        get: { viewModel.flower.name ?? "" },
-                        set: { viewModel.flower.name = $0 }
-                    ))
-                }
-                
-                Section(header: Text(L10n.Pot.section)) {
-                    HStack {
-                        Text(L10n.Pot.radius)
-                        TextField("0", value: Binding(
-                            get: { viewModel.flower.potSize?.width ?? 0},
-                            set: { viewModel.flower.potSize?.width = $0 }
-                        ), format: .number)
-                            .keyboardType(.decimalPad)
-                    }
-                    
-                    HStack {
-                        Text(L10n.Pot.height)
-                        TextField("0", value: Binding(
-                            get: { viewModel.flower.potSize?.height ?? 0},
-                            set: { viewModel.flower.potSize?.height = $0 }
-                        ), format: .number)
-                            .keyboardType(.decimalPad)
-                    }
-                    
-                    VStack {
-                        Text(L10n.Pot.volumeDescription)
-                            .font(.caption)
+                Section(header: Text("Plant Selection")) {
+                    NavigationLink {
+                        AddWithoutSensor(flower: $viewModel.searchedFlower, searchMode: true)
+                    } label: {
                         HStack {
-                            Text(L10n.Pot.volume)
-                            TextField("0", value: Binding(
-                                get: { viewModel.flower.potSize?.volume ?? 0},
-                                set: { viewModel.flower.potSize?.volume = $0 }
-                            ), format: .number)
-                                .keyboardType(.decimalPad)
-                        }
-                        if let calculated = calculatedVolume {
-                            Text(L10n.Pot.calculatedVolume(Float(calculated)))
+                            Image(systemName: "magnifyingglass")
+                                .foregroundColor(.blue)
+                            Text(L10n.Device.searchFlower)
+                            Spacer()
+                            Image(systemName: "chevron.right")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            Button {
-                                viewModel.flower.potSize?.volume = calculated
-                            } label: {
-                                Text(L10n.Pot.acceptCalculation)
+                        }
+                    }
+
+                    if let selectedFlower = viewModel.searchedFlower {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.green.opacity(0.15))
+                                    .frame(width: 50, height: 50)
+
+                                Image(systemName: "leaf.fill")
+                                    .font(.title3)
+                                    .foregroundColor(.green)
                             }
 
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(selectedFlower.name)
+                                    .font(.headline)
+
+                                if let minMoisture = selectedFlower.minMoisture,
+                                   let maxMoisture = selectedFlower.maxMoisture {
+                                    Text("Moisture: \(minMoisture)% - \(maxMoisture)%")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            Spacer()
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+
+                Section(header: Text("Device Name")) {
+                    HStack {
+                        Image(systemName: "textformat")
+                            .foregroundColor(.blue)
+                            .frame(width: 30)
+                        TextField(L10n.Device.name, text: Binding(
+                            get: { viewModel.flower.name ?? "" },
+                            set: { viewModel.flower.name = $0 }
+                        ))
+                    }
+                }
+
+                Section(header: Text("Pot Size")) {
+                    VStack(spacing: 16) {
+                        HStack {
+                            Image(systemName: "arrow.left.and.right")
+                                .foregroundColor(.blue)
+                                .frame(width: 30)
+                            Text(L10n.Pot.radius)
+                            Spacer()
+                            TextField("0", value: Binding(
+                                get: { viewModel.flower.potSize?.width ?? 0},
+                                set: { viewModel.flower.potSize?.width = $0 }
+                            ), format: .number)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 80)
+                        }
+
+                        HStack {
+                            Image(systemName: "arrow.up.and.down")
+                                .foregroundColor(.blue)
+                                .frame(width: 30)
+                            Text(L10n.Pot.height)
+                            Spacer()
+                            TextField("0", value: Binding(
+                                get: { viewModel.flower.potSize?.height ?? 0},
+                                set: { viewModel.flower.potSize?.height = $0 }
+                            ), format: .number)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 80)
+                        }
+
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "cube")
+                                    .foregroundColor(.blue)
+                                    .frame(width: 30)
+                                Text(L10n.Pot.volume)
+                                Spacer()
+                                TextField("0", value: Binding(
+                                    get: { viewModel.flower.potSize?.volume ?? 0},
+                                    set: { viewModel.flower.potSize?.volume = $0 }
+                                ), format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 80)
+                            }
+
+                            if let calculated = calculatedVolume {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Calculated: \(String(format: "%.1f", calculated)) cm³")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+
+                                    Button {
+                                        viewModel.flower.potSize?.volume = calculated
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "checkmark.circle")
+                                            Text(L10n.Pot.acceptCalculation)
+                                        }
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                    }
+                                }
+                                .padding(.leading, 30)
+                            }
                         }
                     }
                 }
-                
-                Section(header: Text(L10n.Sensor.brightness)) {
-                    HStack {
-                        Text(L10n.Sensor.minBrightness)
-                        TextField("0", value: Binding(
-                            get: { viewModel.flower.optimalRange?.minBrightness ?? 0 },
-                            set: { viewModel.flower.optimalRange?.minBrightness = $0 }
-                        ), format: .number)
-                            .keyboardType(.decimalPad)
+
+                Section(header: Text("Optimal Ranges")) {
+                    if let selectedFlower = viewModel.searchedFlower,
+                       selectedFlower.minMoisture != nil || selectedFlower.maxMoisture != nil {
+                        HStack(spacing: 8) {
+                            Image(systemName: "info.circle.fill")
+                                .foregroundColor(.blue)
+                            Text("Values from \(selectedFlower.name)")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                        }
+                        .padding(.vertical, 4)
                     }
-                    
-                    HStack {
-                        Text(L10n.Sensor.maxBrightness)
-                        TextField("0", value: Binding(
-                            get: { viewModel.flower.optimalRange?.maxBrightness ?? 0 },
-                            set: { viewModel.flower.optimalRange?.maxBrightness = $0 }
-                        ), format: .number)
-                            .keyboardType(.decimalPad)
+
+                    VStack(spacing: 16) {
+                        // Moisture
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label(L10n.Sensor.moisture, systemImage: "drop.fill")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.blue)
+
+                            HStack {
+                                Text("Min")
+                                    .frame(width: 50, alignment: .leading)
+                                TextField("0", value: Binding(
+                                    get: { viewModel.flower.optimalRange?.minMoisture ?? 0 },
+                                    set: { viewModel.flower.optimalRange?.minMoisture = $0 }
+                                ), format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 60)
+                                Text("%")
+                                    .foregroundColor(.secondary)
+
+                                Spacer()
+
+                                Text("Max")
+                                    .frame(width: 50, alignment: .leading)
+                                TextField("0", value: Binding(
+                                    get: { viewModel.flower.optimalRange?.maxMoisture ?? 0 },
+                                    set: { viewModel.flower.optimalRange?.maxMoisture = $0 }
+                                ), format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 60)
+                                Text("%")
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+
+                        Divider()
+
+                        // Temperature
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label(L10n.Sensor.temperature, systemImage: "thermometer")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.orange)
+
+                            HStack {
+                                Text("Min")
+                                    .frame(width: 50, alignment: .leading)
+                                TextField("0", value: Binding(
+                                    get: { viewModel.flower.optimalRange?.minTemperature ?? 0 },
+                                    set: { viewModel.flower.optimalRange?.minTemperature = $0 }
+                                ), format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 60)
+                                Text("°C")
+                                    .foregroundColor(.secondary)
+
+                                Spacer()
+
+                                Text("Max")
+                                    .frame(width: 50, alignment: .leading)
+                                TextField("0", value: Binding(
+                                    get: { viewModel.flower.optimalRange?.maxTemperature ?? 0 },
+                                    set: { viewModel.flower.optimalRange?.maxTemperature = $0 }
+                                ), format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 60)
+                                Text("°C")
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+
+                        Divider()
+
+                        // Brightness
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label(L10n.Sensor.brightness, systemImage: "sun.max.fill")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.yellow)
+
+                            HStack {
+                                Text("Min")
+                                    .frame(width: 50, alignment: .leading)
+                                TextField("0", value: Binding(
+                                    get: { viewModel.flower.optimalRange?.minBrightness ?? 0 },
+                                    set: { viewModel.flower.optimalRange?.minBrightness = $0 }
+                                ), format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 60)
+                                Text("lux")
+                                    .foregroundColor(.secondary)
+
+                                Spacer()
+
+                                Text("Max")
+                                    .frame(width: 50, alignment: .leading)
+                                TextField("0", value: Binding(
+                                    get: { viewModel.flower.optimalRange?.maxBrightness ?? 0 },
+                                    set: { viewModel.flower.optimalRange?.maxBrightness = $0 }
+                                ), format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 60)
+                                Text("lux")
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+
+                        Divider()
+
+                        // Conductivity
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label(L10n.Sensor.conductivity, systemImage: "bolt.fill")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.green)
+
+                            HStack {
+                                Text("Min")
+                                    .frame(width: 50, alignment: .leading)
+                                TextField("0", value: Binding(
+                                    get: { viewModel.flower.optimalRange?.minConductivity ?? 0 },
+                                    set: { viewModel.flower.optimalRange?.minConductivity = $0 }
+                                ), format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 60)
+                                Text("µS/cm")
+                                    .foregroundColor(.secondary)
+                                    .font(.caption)
+
+                                Spacer()
+
+                                Text("Max")
+                                    .frame(width: 50, alignment: .leading)
+                                TextField("0", value: Binding(
+                                    get: { viewModel.flower.optimalRange?.maxConductivity ?? 0 },
+                                    set: { viewModel.flower.optimalRange?.maxConductivity = $0 }
+                                ), format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 60)
+                                Text("µS/cm")
+                                    .foregroundColor(.secondary)
+                                    .font(.caption)
+                            }
+                        }
                     }
                 }
 
-                Section(header: Text(L10n.Sensor.temperature)) {
-                    HStack {
-                        Text(L10n.Sensor.minTemperature)
-                        TextField("0", value: Binding(
-                            get: { viewModel.flower.optimalRange?.minTemperature ?? 0 },
-                            set: { viewModel.flower.optimalRange?.minTemperature = $0 }
-                        ), format: .number)
-                            .keyboardType(.decimalPad)
+                Section {
+                    Button {
+                        Task {
+                            await viewModel.save()
+                        }
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Image(systemName: "checkmark.circle.fill")
+                            Text(L10n.Alert.save)
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                        .padding(.vertical, 8)
                     }
-                    
-                    HStack {
-                        Text(L10n.Sensor.maxTemperature)
-                        TextField("0", value: Binding(
-                            get: { viewModel.flower.optimalRange?.maxTemperature ?? 0 },
-                            set: { viewModel.flower.optimalRange?.maxTemperature = $0 }
-                        ), format: .number)
-                            .keyboardType(.decimalPad)
-                    }
+                    .buttonStyle(.borderedProminent)
+                    .listRowBackground(Color.clear)
                 }
-                
-                
-                Section(header: Text(L10n.Sensor.moisture)) {
-                    HStack {
-                        Text(L10n.Sensor.minMoisture)
-                        TextField("0", value: Binding(
-                            get: { viewModel.flower.optimalRange?.minMoisture ?? 0 },
-                            set: { viewModel.flower.optimalRange?.minMoisture = $0 }
-                        ), format: .number)
-                            .keyboardType(.decimalPad)
-                    }
-                    
-                    HStack {
-                        Text(L10n.Sensor.maxMoisture)
-                        TextField("0", value: Binding(
-                            get: { viewModel.flower.optimalRange?.maxMoisture ?? 0 },
-                            set: { viewModel.flower.optimalRange?.maxMoisture = $0 }
-                        ), format: .number)
-                            .keyboardType(.decimalPad)
-                    }
-                }
-
-                Section(header: Text(L10n.Sensor.conductivity)) {
-                    HStack {
-                        Text(L10n.Sensor.minConductivity)
-                        TextField("0", value: Binding(
-                            get: { viewModel.flower.optimalRange?.minConductivity ?? 0 },
-                            set: { viewModel.flower.optimalRange?.minConductivity = $0 }
-                        ), format: .number)
-                            .keyboardType(.decimalPad)
-                    }
-                    
-                    HStack {
-                        Text(L10n.Sensor.maxConductivity)
-                        TextField("0", value: Binding(
-                            get: { viewModel.flower.optimalRange?.maxConductivity ?? 0 },
-                            set: { viewModel.flower.optimalRange?.maxConductivity = $0 }
-                        ), format: .number)
-                            .keyboardType(.decimalPad)
-                    }
-                }
-                
-                Button {
-                    Task {
-                        await viewModel.save()
-                    }
-                } label: {
-                    Text(L10n.Alert.save)
-                }
-                .buttonStyle(BorderedButtonStyle())
-
             }
             .navigationTitle(L10n.Navigation.addDeviceDetails)
         }.alert(isPresented: $viewModel.showAlert, content: { viewModel.alertView })

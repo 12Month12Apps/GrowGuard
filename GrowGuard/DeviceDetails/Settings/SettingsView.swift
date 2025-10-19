@@ -533,7 +533,6 @@ struct SettingsView: View {
     @State private var saveError: Error?
     @State private var showSaveError = false
     @State private var showFlowerSelection = false
-    @State private var showDeleteConfirmation = false
     let isSensor: Bool
     let onSave: (OptimalRangeDTO, PotSizeDTO) -> Void
     @Environment(\.dismiss) private var dismiss
@@ -554,450 +553,279 @@ struct SettingsView: View {
         NavigationView {
             ZStack {
                 List {
-                Section(header: Text(L10n.Settings.databaseMaintenance)) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        if let stats = viewModel.cleanupStats {
-                            Text(L10n.Settings.totalEntries(stats.totalEntries))
-                                .font(.caption)
-                            Text(L10n.Settings.invalidEntries(stats.invalidEntries))
-                                .font(.caption)
-                                .foregroundColor(stats.invalidEntries > 0 ? .red : .green)
-                        }
-                        
-                        if let result = viewModel.cleanupResult {
-                            Text(result)
-                                .font(.caption)
-                                .foregroundColor(result.contains("✅") ? .green : .red)
-                        }
-                        
-                        Button(action: {
-                            Task {
-                                await viewModel.cleanupDatabase()
+                Section(header: Text("Plant Selection")) {
+                    if let selectedFlower = viewModel.selectedFlower {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.green.opacity(0.15))
+                                    .frame(width: 50, height: 50)
+
+                                Image(systemName: "leaf.fill")
+                                    .font(.title3)
+                                    .foregroundColor(.green)
                             }
-                        }) {
-                            HStack {
-                                if viewModel.isCleaningDatabase {
-                                    ProgressView()
-                                        .scaleEffect(0.8)
-                                } else {
-                                    Image(systemName: "trash.fill")
-                                }
-                                Text(viewModel.isCleaningDatabase ? L10n.Settings.cleaning : L10n.Settings.cleanInvalidData)
-                            }
-                        }
-                        .disabled(viewModel.isCleaningDatabase || viewModel.isLoading || isSaving)
-                        .foregroundColor(.red)
-                        
-                        Text(L10n.Settings.cleanDescription)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                if isSensor {
-                    Section(header: Text(L10n.SensorData.deleteAll)) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(L10n.SensorData.deleteAllDescription)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            HStack {
-                                Text("Current sensor data entries:")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text("\(viewModel.sensorDataCount)")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(viewModel.sensorDataCount > 0 ? .blue : .secondary)
-                            }
-                            
-                            if let result = viewModel.sensorDataDeleteResult {
-                                Text(result)
-                                    .font(.caption)
-                                    .foregroundColor(result.contains("✅") ? .green : .red)
-                            }
-                            
-                            Button(action: {
-                                if viewModel.sensorDataCount > 0 {
-                                    showDeleteConfirmation = true
-                                }
-                            }) {
-                                HStack {
-                                    if viewModel.isDeletingSensorData {
-                                        ProgressView()
-                                            .scaleEffect(0.8)
-                                    } else {
-                                        Image(systemName: "trash.fill")
-                                    }
-                                    Text(viewModel.isDeletingSensorData ? L10n.SensorData.deleting : L10n.SensorData.deleteAll)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(selectedFlower.name)
+                                    .font(.headline)
+
+                                if let minMoisture = selectedFlower.minMoisture,
+                                   let maxMoisture = selectedFlower.maxMoisture {
+                                    Text("Moisture: \(minMoisture)% - \(maxMoisture)%")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                 }
                             }
-                            .disabled(viewModel.isDeletingSensorData || viewModel.isLoading || isSaving || viewModel.sensorDataCount == 0)
-                            .foregroundColor(viewModel.sensorDataCount > 0 ? .red : .secondary)
-                            
-                            if viewModel.sensorDataCount == 0 {
-                                Text("No sensor data to delete")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                }
-                
-                Section(header: Text(L10n.Notification.debugTest)) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(L10n.Notification.scheduleTest)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        // Notification Status Info
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(L10n.Notification.status)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text(viewModel.notificationAuthorizationStatus)
-                                    .font(.caption)
-                                    .foregroundColor(viewModel.notificationAuthorizationStatus.contains("✅") ? .green : .red)
-                            }
-                            
-                            HStack {
-                                Text(L10n.Notification.pending)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text(L10n.Notification.pendingCount(viewModel.pendingNotificationsCount))
-                                    .font(.caption)
-                                    .foregroundColor(.blue)
-                                
-                                Spacer()
-                                
-                                Button(L10n.Notification.refresh) {
-                                    Task {
-                                        await viewModel.checkNotificationStatus()
-                                    }
-                                }
-                                .font(.caption2)
-                                .foregroundColor(.blue)
-                            }
-                            
-                            if viewModel.notificationAuthorizationStatus.contains("❌") || viewModel.notificationAuthorizationStatus.contains("❓") {
-                                Button(L10n.Notification.requestPermission) {
-                                    Task {
-                                        await viewModel.requestNotificationPermission()
-                                    }
-                                }
-                                .font(.caption)
-                                .foregroundColor(.orange)
-                                .padding(.top, 4)
-                            }
-                            
-                            // Show detailed info
-                            if !viewModel.detailedNotificationInfo.isEmpty {
-                                Text(viewModel.detailedNotificationInfo)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                    .padding(.top, 2)
-                            }
-                            
-                            // Simulator warning
-                            if viewModel.isRunningOnSimulator {
-                                Text(L10n.Notification.simulatorWarning)
-                                    .font(.caption2)
-                                    .foregroundColor(.red)
-                                    .padding(.top, 2)
+
+                            Spacer()
+
+                            Button {
+                                showFlowerSelection = true
+                            } label: {
+                                Text("Change")
+                                    .font(.subheadline)
                             }
                         }
                         .padding(.vertical, 4)
-                        .padding(.horizontal, 8)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
-                        
-                        DatePicker(
-                            L10n.Notification.time,
-                            selection: $viewModel.testNotificationDate,
-                            in: Date()...,
-                            displayedComponents: [.date, .hourAndMinute]
-                        )
-                        .datePickerStyle(.compact)
-                        
-                        HStack {
-                            Text(L10n.Notification.timeFromNow)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            let timeFromNow = viewModel.testNotificationDate.timeIntervalSinceNow
-                            if timeFromNow > 0 {
-                                if timeFromNow < 60 {
-                                    Text("\(Int(timeFromNow))s")
-                                        .font(.caption)
-                                        .foregroundColor(.blue)
-                                } else if timeFromNow < 3600 {
-                                    Text("\(Int(timeFromNow / 60))m")
-                                        .font(.caption)
-                                        .foregroundColor(.blue)
-                                } else {
-                                    Text("\(Int(timeFromNow / 3600))h \(Int((timeFromNow.truncatingRemainder(dividingBy: 3600)) / 60))m")
-                                        .font(.caption)
-                                        .foregroundColor(.blue)
-                                }
-                            } else {
-                                Text("In the past!")
-                                    .font(.caption)
-                                    .foregroundColor(.red)
-                            }
-                        }
-                        
-                        if let result = viewModel.testNotificationResult {
-                            Text(result)
-                                .font(.caption)
-                                .foregroundColor(result.contains("✅") ? .green : .red)
-                                .padding(.vertical, 4)
-                        }
-                        
-                        HStack(spacing: 12) {
-                            Button(action: {
-                                Task {
-                                    await viewModel.scheduleTestNotification()
-                                }
-                            }) {
-                                HStack {
-                                    if viewModel.isSchedulingTestNotification {
-                                        ProgressView()
-                                            .scaleEffect(0.8)
-                                    } else {
-                                        Image(systemName: "bell.badge")
-                                    }
-                                    Text(viewModel.isSchedulingTestNotification ? "Scheduling..." : "Schedule Test")
-                                }
-                            }
-                            .disabled(viewModel.isSchedulingTestNotification || viewModel.isLoading || isSaving)
-                            .foregroundColor(.blue)
-                            
-                            Button(action: {
-                                viewModel.testNotificationDate = Date().addingTimeInterval(30)
-                            }) {
-                                HStack {
-                                    Image(systemName: "clock")
-                                    Text("+30s")
-                                }
-                            }
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            
-                            Button(action: {
-                                viewModel.testNotificationDate = Date().addingTimeInterval(300)
-                            }) {
-                                HStack {
-                                    Image(systemName: "clock")
-                                    Text("+5m")
-                                }
-                            }
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            
-                            Button(action: {
-                                Task {
-                                    await viewModel.cancelTestNotifications()
-                                    viewModel.testNotificationResult = "🚫 Cancelled all test notifications"
-                                }
-                            }) {
-                                Image(systemName: "xmark.circle")
-                                    .foregroundColor(.red)
-                            }
-                            .font(.caption)
-                        }
-                        
-                        VStack(spacing: 8) {
-                            HStack {
-                                Button(action: {
-                                    Task {
-                                        await viewModel.sendImmediateTestNotification()
-                                    }
-                                }) {
-                                    HStack {
-                                        Image(systemName: "exclamationmark.triangle.fill")
-                                        Text("SOFORT TESTEN")
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(Color.red.opacity(0.2))
-                                    .cornerRadius(8)
-                                }
-                                .foregroundColor(.red)
-                                .disabled(viewModel.isSchedulingTestNotification)
-                                
-                                Button(action: {
-                                    viewModel.testNotificationDate = Date().addingTimeInterval(5)
-                                    Task {
-                                        await viewModel.scheduleTestNotification()
-                                    }
-                                }) {
-                                    HStack {
-                                        Image(systemName: "bolt.fill")
-                                        Text("Test 5s")
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.orange.opacity(0.2))
-                                    .cornerRadius(8)
-                                }
-                                .foregroundColor(.orange)
-                                .disabled(viewModel.isSchedulingTestNotification)
-                            }
-                            
-                            Text("🔴 SOFORT TESTEN: Notification erscheint JETZT ohne Verzögerung")
-                                .font(.caption2)
-                                .foregroundColor(.red)
-                        }
-                        
-                        Text("💡 Tips: Use 'Test Now' for immediate testing, +5m for realistic timing")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                    
-                Section(header: Text("Flower Pot")) {
-                    HStack {
-                        Text("Pot radius (cm)")
-                        TextField("0", value: $viewModel.potSize.width, format: .number)
-                            .keyboardType(.decimalPad)
-                    }
-                    
-                    HStack {
-                        Text("Pot height (cm)")
-                        TextField("0", value: $viewModel.potSize.height, format: .number)
-                            .keyboardType(.decimalPad)
-                    }
-                    
-                    VStack {
-                        Text("Volume can be automaticily be calculated, but if you know yours please enter it here to be more precise")
-                            .font(.caption)
-                        HStack {
-                            Text("Pot volume")
-                            TextField("0", value: $viewModel.potSize.volume, format: .number)
-                                .keyboardType(.decimalPad)
-                        }
-                        if let calculated = calculatedVolume {
-                            Text("Automatisch berechnetes Volumen: \(String(format: "%.1f", calculated)) cm³")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Button {
-                                viewModel.potSize.volume = calculated
-                            } label: {
-                                Text("Accept calculation")
-                            }
 
-                        }
-                    }
-                }
-                
-                Section(header: Text("Plant Selection")) {
-                    if let selectedFlower = viewModel.selectedFlower {
-                        VStack(alignment: .leading, spacing: 8) {
+                        Button {
+                            viewModel.selectedFlower = nil
+                        } label: {
                             HStack {
-                                VStack(alignment: .leading) {
-                                    Text(selectedFlower.name)
-                                        .font(.headline)
-                                    
-                                    if let minMoisture = selectedFlower.minMoisture,
-                                       let maxMoisture = selectedFlower.maxMoisture {
-                                        Text("Recommended Moisture: \(minMoisture)% - \(maxMoisture)%")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
-                                
-                                Spacer()
-                                
-                                Button("Change") {
-                                    showFlowerSelection = true
-                                }
-                            }
-                            
-                            Button("Remove Plant") {
-                                viewModel.selectedFlower = nil
+                                Image(systemName: "trash")
+                                Text("Remove Plant")
                             }
                             .foregroundColor(.red)
                         }
                     } else {
-                        Button("Select Plant") {
+                        Button {
                             showFlowerSelection = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                Text("Select Plant")
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
+
+                Section(header: Text("Pot Size")) {
+                    VStack(spacing: 16) {
+                        HStack {
+                            Image(systemName: "arrow.left.and.right")
+                                .foregroundColor(.blue)
+                                .frame(width: 30)
+                            Text("Radius (cm)")
+                            Spacer()
+                            TextField("0", value: $viewModel.potSize.width, format: .number)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 80)
+                        }
+
+                        HStack {
+                            Image(systemName: "arrow.up.and.down")
+                                .foregroundColor(.blue)
+                                .frame(width: 30)
+                            Text("Height (cm)")
+                            Spacer()
+                            TextField("0", value: $viewModel.potSize.height, format: .number)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 80)
+                        }
+
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "cube")
+                                    .foregroundColor(.blue)
+                                    .frame(width: 30)
+                                Text("Volume (cm³)")
+                                Spacer()
+                                TextField("0", value: $viewModel.potSize.volume, format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 80)
+                            }
+
+                            if let calculated = calculatedVolume {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Calculated: \(String(format: "%.1f", calculated)) cm³")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+
+                                    Button {
+                                        viewModel.potSize.volume = calculated
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "checkmark.circle")
+                                            Text("Use calculated volume")
+                                        }
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                    }
+                                }
+                                .padding(.leading, 30)
+                            }
                         }
                     }
                 }
                 
-                Section(header: Text("Moisture")) {
+                Section(header: Text("Optimal Ranges")) {
                     if let selectedFlower = viewModel.selectedFlower,
                        selectedFlower.minMoisture != nil || selectedFlower.maxMoisture != nil {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Values automatically set from selected plant")
+                        HStack(spacing: 8) {
+                            Image(systemName: "info.circle.fill")
+                                .foregroundColor(.blue)
+                            Text("Values from \(selectedFlower.name)")
                                 .font(.caption)
                                 .foregroundColor(.blue)
-                            Text("Plant: \(selectedFlower.name)")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
                         }
+                        .padding(.vertical, 4)
                     }
-                    
-                    HStack {
-                        Text("Min Moisture")
-                        TextField("0", value: $viewModel.optimalRange.minMoisture, format: .number)
-                            .keyboardType(.decimalPad)
-                    }
-                    
-                    HStack {
-                        Text("Max Moisture")
-                        TextField("0", value: $viewModel.optimalRange.maxMoisture, format: .number)
-                            .keyboardType(.decimalPad)
-                    }
-                }
-                
-                if isSensor {
-                    Section(header: Text("Brightness")) {
-                        HStack {
-                            Text("Min Brightness")
-                            TextField("0", value: $viewModel.optimalRange.minBrightness, format: .number)
-                                .keyboardType(.decimalPad)
+
+                    VStack(spacing: 16) {
+                        // Moisture
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Moisture", systemImage: "drop.fill")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.blue)
+
+                            HStack {
+                                Text("Min")
+                                    .frame(width: 50, alignment: .leading)
+                                TextField("0", value: $viewModel.optimalRange.minMoisture, format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 60)
+                                Text("%")
+                                    .foregroundColor(.secondary)
+
+                                Spacer()
+
+                                Text("Max")
+                                    .frame(width: 50, alignment: .leading)
+                                TextField("0", value: $viewModel.optimalRange.maxMoisture, format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 60)
+                                Text("%")
+                                    .foregroundColor(.secondary)
+                            }
                         }
-                        
-                        HStack {
-                            Text("Max Brightness")
-                            TextField("0", value: $viewModel.optimalRange.maxBrightness, format: .number)
-                                .keyboardType(.decimalPad)
-                        }
-                    }
-                    
-                    Section(header: Text("Temperature")) {
-                        HStack {
-                            Text("Min Temperature")
-                            TextField("0", value: $viewModel.optimalRange.minTemperature, format: .number)
-                                .keyboardType(.decimalPad)
-                        }
-                        
-                        HStack {
-                            Text("Max Temperature")
-                            TextField("0", value: $viewModel.optimalRange.maxTemperature, format: .number)
-                                .keyboardType(.decimalPad)
-                        }
-                    }
-                    
-                    Section(header: Text("Conductivity")) {
-                        HStack {
-                            Text("Min Conductivity")
-                            TextField("0", value: $viewModel.optimalRange.minConductivity, format: .number)
-                                .keyboardType(.decimalPad)
-                        }
-                        
-                        HStack {
-                            Text("Max Conductivity")
-                            TextField("0", value: $viewModel.optimalRange.maxConductivity, format: .number)
-                                .keyboardType(.decimalPad)
+
+                        if isSensor {
+                            Divider()
+
+                            // Temperature
+                            VStack(alignment: .leading, spacing: 8) {
+                                Label("Temperature", systemImage: "thermometer")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.orange)
+
+                                HStack {
+                                    Text("Min")
+                                        .frame(width: 50, alignment: .leading)
+                                    TextField("0", value: $viewModel.optimalRange.minTemperature, format: .number)
+                                        .keyboardType(.decimalPad)
+                                        .multilineTextAlignment(.trailing)
+                                        .frame(width: 60)
+                                    Text("°C")
+                                        .foregroundColor(.secondary)
+
+                                    Spacer()
+
+                                    Text("Max")
+                                        .frame(width: 50, alignment: .leading)
+                                    TextField("0", value: $viewModel.optimalRange.maxTemperature, format: .number)
+                                        .keyboardType(.decimalPad)
+                                        .multilineTextAlignment(.trailing)
+                                        .frame(width: 60)
+                                    Text("°C")
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+
+                            Divider()
+
+                            // Brightness
+                            VStack(alignment: .leading, spacing: 8) {
+                                Label("Brightness", systemImage: "sun.max.fill")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.yellow)
+
+                                HStack {
+                                    Text("Min")
+                                        .frame(width: 50, alignment: .leading)
+                                    TextField("0", value: $viewModel.optimalRange.minBrightness, format: .number)
+                                        .keyboardType(.decimalPad)
+                                        .multilineTextAlignment(.trailing)
+                                        .frame(width: 60)
+                                    Text("lux")
+                                        .foregroundColor(.secondary)
+
+                                    Spacer()
+
+                                    Text("Max")
+                                        .frame(width: 50, alignment: .leading)
+                                    TextField("0", value: $viewModel.optimalRange.maxBrightness, format: .number)
+                                        .keyboardType(.decimalPad)
+                                        .multilineTextAlignment(.trailing)
+                                        .frame(width: 60)
+                                    Text("lux")
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+
+                            Divider()
+
+                            // Conductivity
+                            VStack(alignment: .leading, spacing: 8) {
+                                Label("Conductivity", systemImage: "bolt.fill")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.green)
+
+                                HStack {
+                                    Text("Min")
+                                        .frame(width: 50, alignment: .leading)
+                                    TextField("0", value: $viewModel.optimalRange.minConductivity, format: .number)
+                                        .keyboardType(.decimalPad)
+                                        .multilineTextAlignment(.trailing)
+                                        .frame(width: 60)
+                                    Text("µS/cm")
+                                        .foregroundColor(.secondary)
+                                        .font(.caption)
+
+                                    Spacer()
+
+                                    Text("Max")
+                                        .frame(width: 50, alignment: .leading)
+                                    TextField("0", value: $viewModel.optimalRange.maxConductivity, format: .number)
+                                        .keyboardType(.decimalPad)
+                                        .multilineTextAlignment(.trailing)
+                                        .frame(width: 60)
+                                    Text("µS/cm")
+                                        .foregroundColor(.secondary)
+                                        .font(.caption)
+                                }
+                            }
                         }
                     }
                 }
                 }
                 .disabled(viewModel.isLoading || isSaving)
-                
+
                 if viewModel.isLoading || isSaving {
                     Color.black.opacity(0.3)
                         .ignoresSafeArea()
@@ -1033,9 +861,6 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .task {
                 await viewModel.loadSettings()
-                await viewModel.loadDatabaseStats()
-                await viewModel.loadSensorDataCount()
-                await viewModel.checkNotificationStatus()
             }
             .alert("Save Error", isPresented: $showSaveError) {
                 Button("OK") { }
@@ -1044,16 +869,6 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showFlowerSelection) {
                 FlowerSelectionView(selectedFlower: $viewModel.selectedFlower)
-            }
-            .alert(L10n.SensorData.confirmDelete, isPresented: $showDeleteConfirmation) {
-                Button("Cancel", role: .cancel) { }
-                Button("Delete", role: .destructive) {
-                    Task {
-                        await viewModel.deleteAllSensorData()
-                    }
-                }
-            } message: {
-                Text(L10n.SensorData.confirmDeleteMessage)
             }
         }
     }
