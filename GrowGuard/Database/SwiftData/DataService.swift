@@ -20,11 +20,9 @@ class DataService {
             }
         }
         
-        // Optimize context settings for debug performance
-        #if DEBUG
-        persistentContainer.viewContext.automaticallyMergesChangesFromParent = false
+        // Enable automatic merging to keep view context in sync with background changes
+        persistentContainer.viewContext.automaticallyMergesChangesFromParent = true
         persistentContainer.viewContext.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy
-        #endif
     }
 
     var context: NSManagedObjectContext {

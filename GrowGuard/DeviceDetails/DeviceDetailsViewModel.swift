@@ -264,25 +264,27 @@ import CoreData
     ///   - optimalRange: The updated optimal range settings, or nil to remove
     ///   - potSize: The updated pot size settings, or nil to remove
     @MainActor
-    func saveSettings(optimalRange: OptimalRangeDTO?, potSize: PotSizeDTO?) async throws {
+    func saveSettings(deviceName: String, optimalRange: OptimalRangeDTO?, potSize: PotSizeDTO?) async throws {
         print("💾 DeviceDetailsViewModel: Saving settings for device \(device.uuid)")
+        print("  Current device name: '\(device.name)'")
+        print("  New device name: '\(deviceName)'")
         print("  Current device optimalRange: \(device.optimalRange != nil ? "exists" : "nil")")
         print("  Current device potSize: \(device.potSize != nil ? "exists" : "nil")")
         print("  New optimalRange: \(optimalRange != nil ? "exists" : "nil")")
         print("  New potSize: \(potSize != nil ? "exists" : "nil")")
-        
+
         if let optimalRange = optimalRange {
             print("  New OptimalRange - Min/Max Temp: \(optimalRange.minTemperature)/\(optimalRange.maxTemperature)")
         }
         if let potSize = potSize {
             print("  New PotSize - Width/Height/Volume: \(potSize.width)/\(potSize.height)/\(potSize.volume)")
         }
-        
+
         do {
             // Create updated device with new settings
             let updatedDevice = FlowerDeviceDTO(
                 id: device.id,
-                name: device.name,
+                name: deviceName, // Use the updated name
                 uuid: device.uuid,
                 peripheralID: device.peripheralID,
                 battery: device.battery,
@@ -295,18 +297,18 @@ import CoreData
                 selectedFlower: device.selectedFlower,
                 sensorData: device.sensorData
             )
-            
+
             print("🗃️ DeviceDetailsViewModel: Calling repository.updateDevice...")
             // Save to database
             try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
             print("✅ DeviceDetailsViewModel: Repository.updateDevice completed successfully")
-            
+
             // Update local device only after successful database save
             self.device = updatedDevice
-            print("📱 DeviceDetailsViewModel: Local device updated")
-            
+            print("📱 DeviceDetailsViewModel: Local device updated with name '\(self.device.name)'")
+
             print("✅ DeviceDetailsViewModel: Settings saved successfully")
-            
+
         } catch {
             print("❌ DeviceDetailsViewModel: Failed to save settings: \(error.localizedDescription)")
             print("❌ Error details: \(error)")

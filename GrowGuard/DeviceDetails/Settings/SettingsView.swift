@@ -555,10 +555,10 @@ struct SettingsView: View {
     @State private var showSaveError = false
     @State private var showFlowerSelection = false
     let isSensor: Bool
-    let onSave: (OptimalRangeDTO, PotSizeDTO) -> Void
+    let onSave: (String, OptimalRangeDTO, PotSizeDTO) -> Void
     @Environment(\.dismiss) private var dismiss
-    
-    init(deviceUUID: String, isSensor: Bool = true, onSave: @escaping (OptimalRangeDTO, PotSizeDTO) -> Void) {
+
+    init(deviceUUID: String, isSensor: Bool = true, onSave: @escaping (String, OptimalRangeDTO, PotSizeDTO) -> Void) {
         self.isSensor = isSensor
         self.onSave = onSave
         self._viewModel = State(initialValue: SettingsViewModel(deviceUUID: deviceUUID))
@@ -906,20 +906,21 @@ struct SettingsView: View {
     @MainActor
     private func saveSettings() async {
         isSaving = true
-        
+
         do {
             try await viewModel.saveSettings()
-            
+
+            let updatedDeviceName = viewModel.deviceName
             let updatedOptimalRange = viewModel.getUpdatedOptimalRange()
             let updatedPotSize = viewModel.getUpdatedPotSize()
-            
-            onSave(updatedOptimalRange, updatedPotSize)
+
+            onSave(updatedDeviceName, updatedOptimalRange, updatedPotSize)
             dismiss()
         } catch {
             saveError = error
             showSaveError = true
         }
-        
+
         isSaving = false
     }
 }

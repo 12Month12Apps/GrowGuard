@@ -71,11 +71,16 @@ class CoreDataFlowerDeviceRepository: FlowerDeviceRepository {
                     }
                     
                     coreDataDevice.updateFromDTO(device)
-                    
+
                     if self.context.hasChanges {
+                        print("💾 CoreDataFlowerDeviceRepository: Context has changes, saving...")
                         try self.context.save()
+                        print("✅ CoreDataFlowerDeviceRepository: Context saved successfully")
+                        print("  Device name in CoreData after save: '\(coreDataDevice.name ?? "nil")'")
+                    } else {
+                        print("ℹ️ CoreDataFlowerDeviceRepository: No changes to save")
                     }
-                    
+
                     continuation.resume()
                 } catch {
                     continuation.resume(throwing: error)

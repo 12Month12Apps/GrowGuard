@@ -84,7 +84,11 @@ extension FlowerDevice {
     }
     
     func updateFromDTO(_ dto: FlowerDeviceDTO) {
+        print("💾 FlowerDevice.updateFromDTO: Updating device")
+        print("  Current name: '\(self.name ?? "nil")'")
+        print("  New name from DTO: '\(dto.name)'")
         name = dto.name
+        print("  Name after update: '\(self.name ?? "nil")'")
         uuid = dto.uuid
         peripheralID = dto.peripheralID
         battery = dto.battery

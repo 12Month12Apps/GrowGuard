@@ -483,15 +483,17 @@ struct DeviceDetailsView: View {
             SettingsView(
                 deviceUUID: viewModel.device.uuid,
                 isSensor: viewModel.device.isSensor
-            ) { updatedOptimalRange, updatedPotSize in
+            ) { updatedDeviceName, updatedOptimalRange, updatedPotSize in
                 // Handle save callback
                 print("🔄 DeviceDetailsView: Received settings to save:")
+                print("  Device Name: '\(updatedDeviceName)'")
                 print("  OptimalRange - Min/Max Temp: \(updatedOptimalRange.minTemperature)/\(updatedOptimalRange.maxTemperature)")
                 print("  PotSize - Width/Height/Volume: \(updatedPotSize.width)/\(updatedPotSize.height)/\(updatedPotSize.volume)")
-                
+
                 Task {
                     do {
                         try await viewModel.saveSettings(
+                            deviceName: updatedDeviceName,
                             optimalRange: updatedOptimalRange,
                             potSize: updatedPotSize
                         )
