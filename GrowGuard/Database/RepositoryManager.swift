@@ -10,11 +10,10 @@ class RepositoryManager {
     let potSizeRepository: PotSizeRepository
     
     private init() {
-        let context = DataService.shared.context
-        
-        self.flowerDeviceRepository = CoreDataFlowerDeviceRepository(context: context)
-        self.sensorDataRepository = CoreDataSensorDataRepository(context: context)
-        self.optimalRangeRepository = CoreDataOptimalRangeRepository(context: context)
-        self.potSizeRepository = CoreDataPotSizeRepository(context: context)
+        // Use dedicated background contexts so Core Data work never blocks the main thread
+        self.flowerDeviceRepository = CoreDataFlowerDeviceRepository()
+        self.sensorDataRepository = CoreDataSensorDataRepository()
+        self.optimalRangeRepository = CoreDataOptimalRangeRepository()
+        self.potSizeRepository = CoreDataPotSizeRepository()
     }
 }

@@ -12,13 +12,36 @@ struct OverviewList: View {
     @State var viewModel: OverviewListViewModel
     @State var showAddFlowerSheet = false
     @State var loading: Bool = false
-    @State var progress: Double = 0
     @State private var deviceToDelete: IndexSet?
     @State private var showDeleteConfirmation = false
     @State private var showDeleteError = false
 
     init() {
         self.viewModel = OverviewListViewModel()
+    }
+
+    // Calculate next watering device
+    var nextWateringDevice: FlowerDeviceDTO? {
+        viewModel.allSavedDevices
+            .filter { !$0.sensorData.isEmpty }
+            .min { device1, device2 in
+                guard let moisture1 = device1.sensorData.first?.moisture,
+                      let moisture2 = device2.sensorData.first?.moisture else {
+                    return false
+                }
+                return moisture1 < moisture2
+            }
+    }
+
+    // Calculate average moisture
+    var averageMoisture: Double {
+        let devices = viewModel.allSavedDevices.filter { !$0.sensorData.isEmpty }
+        guard !devices.isEmpty else { return 0 }
+
+        let totalMoisture = devices.compactMap { $0.sensorData.first?.moisture }
+            .reduce(0) { $0 + Int($1) }
+
+        return Double(totalMoisture) / Double(devices.count) / 100.0
     }
     
     var body: some View {
@@ -31,29 +54,30 @@ struct OverviewList: View {
                         .fontWeight(.bold)
                         .padding(.horizontal)
 
-                    HStack(spacing: 16) {
-//                        SummaryCard(
-//                            value: progress,
-//                            color: .orange,
-//                            icon: "thermometer.variable.and.figure",
-//                            title: "Temperature"
-//                        )
-//
-//                        SummaryCard(
-//                            value: progress,
-//                            color: .yellow,
-//                            icon: "sun.max.fill",
-//                            title: "Light"
-//                        )
-                        
-                        SummaryCard(
-                            value: progress,
-                            color: .blue,
-                            icon: "drop.fill",
-                            title: "Moisture"
-                        )
+                    Group {
+                        if let device = nextWateringDevice {
+                            SummaryCard(
+                                device: device,
+                                averageMoisture: averageMoisture,
+                                color: .blue,
+                                icon: "drop.fill",
+                                title: "Moisture"
+                            )
+                            .padding(.horizontal)
+                        } else {
+                            HStack {
+                                Text("No plants with sensor data yet")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(20)
+                            .padding(.horizontal)
+                        }
                     }
-                    .padding(.horizontal)
+                    .id(viewModel.allSavedDevices.count)
 
                     // Debug slider (can be removed in production)
 //                    Slider(value: $progress, in: 0...1)
@@ -164,10 +188,30 @@ struct OverviewList: View {
 // MARK: - Supporting Views
 
 struct SummaryCard: View {
-    let value: Double
+    let device: FlowerDeviceDTO
+    let averageMoisture: Double
     let color: Color
     let icon: String
     let title: String
+
+    var currentMoisture: Double {
+        guard let moisture = device.sensorData.first?.moisture else { return 0 }
+        return Double(moisture) / 100.0
+    }
+
+    var daysUntilWatering: Int {
+        guard let moisture = device.sensorData.first?.moisture else { return 0 }
+        let optimalMoisture = Int(device.optimalRange?.minMoisture ?? 20)
+        let currentLevel = Int(moisture)
+
+        if currentLevel <= optimalMoisture {
+            return 0
+        }
+
+        // Estimate: assume ~5% moisture loss per day
+        let daysLeft = (currentLevel - optimalMoisture) / 5
+        return max(0, daysLeft)
+    }
 
     var body: some View {
         HStack(spacing: 16) {
@@ -179,15 +223,21 @@ struct SummaryCard: View {
                     .textCase(.uppercase)
                     .tracking(0.5)
 
-                Text("Next Plant Watering")
+                Text("Next Watering")
                     .font(.title3)
                     .fontWeight(.bold)
 
                 HStack(spacing: 4) {
                     Image(systemName: icon)
                         .font(.caption2)
-                    Text("Monstera · 5 days left")
-                        .font(.subheadline)
+                    if daysUntilWatering == 0 {
+                        Text("\(device.name) · water now!")
+                            .font(.subheadline)
+                            .foregroundColor(.red)
+                    } else {
+                        Text("\(device.name) · in \(daysUntilWatering) days")
+                            .font(.subheadline)
+                    }
                 }
                 .foregroundColor(.secondary)
             }
@@ -203,14 +253,14 @@ struct SummaryCard: View {
 
                 // Progress Circle
                 Circle()
-                    .trim(from: 0, to: value)
+                    .trim(from: 0, to: currentMoisture)
                     .stroke(color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                     .frame(width: 70, height: 70)
                     .rotationEffect(.degrees(-90))
-                    .animation(.easeOut, value: value)
+                    .animation(.easeOut, value: currentMoisture)
 
                 // Percentage Text
-                Text("\(Int(value * 100))%")
+                Text("\(Int(currentMoisture * 100))%")
                     .font(.headline)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)

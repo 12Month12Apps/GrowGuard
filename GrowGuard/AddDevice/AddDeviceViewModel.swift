@@ -14,37 +14,53 @@ import CoreData
 @Observable class AddDeviceViewModel {
     var devices: [CBPeripheral] = []
     var addDevice:  CBPeripheral?
-    var ble: AddDeviceBLE?
+    private var ble: AddDeviceBLE?
     var allSavedDevices: [FlowerDeviceDTO] = []
     var loading: Bool = false
     private var loadingTask: Task<Void, Never>? = nil
+    private var hasStartedScan = false
     private let repositoryManager = RepositoryManager.shared
     
-    init() {
+    init() {}
+    
+    @MainActor
+    func startScanningIfNeeded() {
+        guard hasStartedScan == false else { return }
+        hasStartedScan = true
         loading = true
-        self.devices = []
+        devices = []
 
-        self.ble = AddDeviceBLE { peripheral in
-            self.addToList(peripheral: peripheral)
-            self.loadingTask?.cancel()
-            self.loading = false
+        ble = AddDeviceBLE { [weak self] peripheral in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.addToList(peripheral: peripheral)
+                self.loadingTask?.cancel()
+                self.loading = false
+            }
         }
 
-        // Timeout-Task starten
-        self.loadingTask = Task { [weak self] in
+        ble?.startScanning()
+
+        loadingTask?.cancel()
+        loadingTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(10))
             await MainActor.run {
-                if let self = self, self.devices.isEmpty {
+                guard let self = self else { return }
+                if self.devices.isEmpty {
                     self.loading = false
                 }
             }
         }
+    }
 
-        Task {
-            await fetchSavedDevices()
-        }
+    @MainActor
+    func stopScanning() {
+        loadingTask?.cancel()
+        ble?.stopScanning()
+        hasStartedScan = false
     }
     
+    @MainActor
     func addToList(peripheral: CBPeripheral) {
         let exists = devices.first { element in
             element.identifier.uuidString == peripheral.identifier.uuidString

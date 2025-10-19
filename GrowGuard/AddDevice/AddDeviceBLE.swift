@@ -16,6 +16,7 @@ class AddDeviceBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     var historyDataCharacteristic: CBCharacteristic?
     var deviceTimeCharacteristic: CBCharacteristic?
     var entryCountCharacteristic: CBCharacteristic?
+    private var shouldScan = false
 
     var foundDevice: ((CBPeripheral) -> ())
     
@@ -29,13 +30,28 @@ class AddDeviceBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     // MARK: - CBCentralManagerDelegate Methods
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         if central.state == .poweredOn {
-            centralManager.scanForPeripherals(withServices: [flowerCareServiceUUID], options: nil)
+            if shouldScan {
+                centralManager.scanForPeripherals(withServices: [flowerCareServiceUUID], options: nil)
+            }
         } else {
+            centralManager.stopScan()
             print("Bluetooth is not available.")
         }
     }
 
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
         foundDevice(peripheral)
+    }
+
+    func startScanning() {
+        shouldScan = true
+        if centralManager.state == .poweredOn {
+            centralManager.scanForPeripherals(withServices: [flowerCareServiceUUID], options: nil)
+        }
+    }
+
+    func stopScanning() {
+        shouldScan = false
+        centralManager.stopScan()
     }
 }

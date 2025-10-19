@@ -675,7 +675,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         discoveredPeripheral?.writeValue(modeData, for: historyControlCharacteristic, type: .withResponse)
         
         // After changing the mode, we'll read the entry count from the entry count characteristic
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
             if let entryCountCharacteristic = self.entryCountCharacteristic {
                 self.discoveredPeripheral?.readValue(for: entryCountCharacteristic)
             }
@@ -719,7 +719,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             AppLogger.ble.bleData("✅ Mode change successful, reading sensor data...")
             
             // Verzögerung hinzufügen
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                 guard let peripheral = self.discoveredPeripheral,
                       peripheral.state == .connected,
                       let sensorChar = self.realTimeSensorValuesCharacteristic else {
@@ -1012,7 +1012,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             centralManager.connect(peripheral, options: nil)
             
             // Set a timeout for reconnection
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 if peripheral.state == .connected {
                     AppLogger.ble.info("✅ Reconnection successful")
                     completion()
@@ -1295,7 +1295,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         if (invalidDataRetryCount <= maxRetryAttempts) {
             print("Ungültige Sensordaten. Wiederhole... (Versuch \(invalidDataRetryCount)/\(maxRetryAttempts))")
             // Kurze Verzögerung vor erneutem Versuch
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
                 self.requestFreshSensorData()
             }
         } else {
@@ -1341,7 +1341,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 
                 if (self.invalidDataRetryCount <= self.maxRetryAttempts) {
                     print("Versuche erneut... (Versuch \(self.invalidDataRetryCount)/\(self.maxRetryAttempts))")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
                         self.requestFreshSensorData()
                     }
                 } else {
@@ -1407,7 +1407,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     updateLastHistoryIndex(nextIndex)
                     
                     // Optimized batch processing with minimal delays
-                    let batchSize = 30 // Larger batches for better performance
+                    let batchSize = 150 // Larger batches for better performance
                     if nextIndex % batchSize == 0 {
                         print("Completed batch of \(batchSize). Brief pause...")
                         // Very short pause to avoid overwhelming the device

@@ -6,30 +6,6 @@
 //
 
 import SwiftUI
-import SwiftData
-import CoreData
-
-class ContentViewModel: Observable {
-    var allSavedDevices: [FlowerDeviceDTO] = []
-    private let repositoryManager = RepositoryManager.shared
-
-    init(allSavedDevices: [FlowerDeviceDTO] = []) {
-        self.allSavedDevices = allSavedDevices
-        
-        Task {
-            await self.fetchSavedDevices()
-        }
-    }
-    
-    @MainActor
-    func fetchSavedDevices() async {
-        do {
-            allSavedDevices = try await repositoryManager.flowerDeviceRepository.getAllDevices()
-        } catch {
-            print(L10n.Device.Error.fetchingDevices(error.localizedDescription))
-        }
-    }
-}
 
 enum NavigationTabs {
     case overview
@@ -37,8 +13,6 @@ enum NavigationTabs {
 }
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @State var viewModel = ContentViewModel()
     @State var showOnboarding = true
     @State private var navigationService = NavigationService.shared
 

@@ -15,11 +15,7 @@ import CoreData
     var isDeleting = false
     private let repositoryManager = RepositoryManager.shared
 
-    init() {
-        Task {
-            await fetchSavedDevices()
-        }
-    }
+    init() {}
     
     @MainActor
     func fetchSavedDevices() async {

@@ -12,9 +12,19 @@ extension FlowerDevice {
         // CRITICAL FIX: Remove performAndWait to prevent deadlocks
         // These properties are already on the correct context when method is called
         
-        // Skip expensive sensor data conversion for better performance
-        // Only load basic device info, sensor data can be loaded separately when needed
-        let sensorDataDTOs: [SensorDataDTO] = []
+        // Load latest sensor data for overview display
+        // Only fetch the most recent entry to keep it performant
+        let sensorDataDTOs: [SensorDataDTO]
+        if let sensorDataSet = self.sensorData as? Set<SensorData> {
+            // Sort by date descending and take only the latest one
+            let latestSensorData = sensorDataSet
+                .sorted { ($0.date ?? Date.distantPast) > ($1.date ?? Date.distantPast) }
+                .prefix(1)
+                .compactMap { $0.toDTO() }
+            sensorDataDTOs = Array(latestSensorData)
+        } else {
+            sensorDataDTOs = []
+        }
         
         // Safely get object ID string
         let objectIdString: String

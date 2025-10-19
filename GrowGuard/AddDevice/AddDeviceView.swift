@@ -109,9 +109,13 @@ struct AddDeviceView: View {
         .navigationTitle(L10n.Navigation.addDevice)
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
+            viewModel.startScanningIfNeeded()
             Task {
                 await viewModel.fetchSavedDevices()
             }
+        }
+        .onDisappear {
+            viewModel.stopScanning()
         }
     }
 }
