@@ -311,6 +311,7 @@ struct LogExportView: View {
                         }
                         .disabled(viewModel.isDeletingSensorData || viewModel.sensorDataCount == 0)
                         .foregroundColor(viewModel.sensorDataCount > 0 ? .red : .secondary)
+                        .buttonStyle(.plain)
                     }
                 }
             }

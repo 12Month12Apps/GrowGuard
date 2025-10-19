@@ -48,7 +48,7 @@ class SensorDataDecoder {
         )
     }
 
-    func decodeHistoricalSensorData(data: Data) -> HistoricalSensorData? {
+    func decodeHistoricalSensorData(data: Data, deviceUUID: String) -> HistoricalSensorData? {
         // Check if data is at least 12 bytes long (4+2+4+1+2+1) 1 is skipped
         guard data.count >= 14 else {
             print("Historical data too short: \(data.count) bytes")
@@ -83,6 +83,7 @@ class SensorDataDecoder {
         print("Historic:", timestamp, moisture, temperature, conductivity, dateTime)
         
         return HistoricalSensorData(
+            deviceUUID: deviceUUID,
             timestamp: timestamp,
             temperature: temperature,
             brightness: brightness,

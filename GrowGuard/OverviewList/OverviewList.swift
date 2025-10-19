@@ -119,12 +119,20 @@ struct OverviewList: View {
                     if viewModel.allSavedDevices.isEmpty {
                         EmptyStateView()
                     } else {
-                        ForEach(viewModel.allSavedDevices) { device in
-                            DeviceCard(device: device) {
-                                NavigationService.shared.navigateToDeviceView(flowerDevice: device)
+                        List {
+                            ForEach(viewModel.allSavedDevices) { device in
+                                DeviceCard(device: device) {
+                                    NavigationService.shared.navigateToDeviceView(flowerDevice: device)
+                                }
+                                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                                .listRowBackground(Color.clear)
                             }
-                            .padding(.horizontal)
+                            .onDelete(perform: delete)
+                            .listRowSeparator(.hidden)
                         }
+                        .listStyle(.plain)
+                        .frame(height: CGFloat(viewModel.allSavedDevices.count) * 110)
+                        .scrollDisabled(true)
                     }
                 }
             }

@@ -851,7 +851,12 @@ extension ReliableFlowerManager {
         
         // Check if this is a history entry
         if case .readHistoryEntry(let index) = currentOperation {
-            if let historicalData = decoder.decodeHistoricalSensorData(data: data) {
+            guard let deviceUUID = self.deviceUUID else {
+                log("No device UUID available while decoding history entry")
+                completeOperation(success: false, error: "Missing device UUID")
+                return
+            }
+            if let historicalData = decoder.decodeHistoricalSensorData(data: data, deviceUUID: deviceUUID) {
                 log("Decoded history entry \(index): temp=\(historicalData.temperature)°C")
                 
                 // Publish historical data

@@ -193,6 +193,7 @@ struct FlowerManagerHistoryTests {
         
         // Arrange
         let mockHistoricalData = HistoricalSensorData(
+            deviceUUID: "mock-device",
             timestamp: 12345,
             temperature: 23.5,
             brightness: 1000,

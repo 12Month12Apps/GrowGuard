@@ -13,6 +13,7 @@ import UserNotifications
 class SettingsViewModel {
     var potSize: PotSizeDTO
     var optimalRange: OptimalRangeDTO
+    var deviceName: String = ""
     var selectedFlower: VMSpecies? {
         didSet {
             if !isLoadingData {
@@ -24,12 +25,12 @@ class SettingsViewModel {
     var isCleaningDatabase: Bool = false
     var cleanupStats: (totalEntries: Int, invalidEntries: Int)? = nil
     var cleanupResult: String? = nil
-    
+
     // Sensor data deletion
     var isDeletingSensorData: Bool = false
     var sensorDataCount: Int = 0
     var sensorDataDeleteResult: String? = nil
-    
+
     // Debug: Test Notifications
     var testNotificationDate: Date = Date().addingTimeInterval(30) // Default: 30 seconds from now
     var testNotificationResult: String? = nil
@@ -41,7 +42,7 @@ class SettingsViewModel {
     private var isLoadingData: Bool = false
     private let deviceUUID: String
     private let repositoryManager = RepositoryManager.shared
-    
+
     init(deviceUUID: String) {
         self.deviceUUID = deviceUUID
         // Initialize with default values, will be loaded in loadSettings()
@@ -55,25 +56,45 @@ class SettingsViewModel {
         isLoading = true
         isLoadingData = true
         print("🔧 SettingsViewModel: Loading settings for device \(deviceUUID)")
-        
+
         await withTaskGroup(of: Void.self) { group in
             // Load potSize and optimalRange concurrently
             group.addTask { [weak self] in
                 await self?.loadPotSize()
             }
-            
+
             group.addTask { [weak self] in
                 await self?.loadOptimalRange()
             }
-            
+
             group.addTask { [weak self] in
                 await self?.loadSelectedFlower()
             }
+
+            group.addTask { [weak self] in
+                await self?.loadDeviceName()
+            }
         }
-        
+
         isLoadingData = false
         isLoading = false
         print("✅ SettingsViewModel: Settings loaded successfully")
+    }
+
+    @MainActor
+    private func loadDeviceName() async {
+        do {
+            if let device = try await repositoryManager.flowerDeviceRepository.getDevice(by: deviceUUID) {
+                self.deviceName = device.name
+                print("  Loaded Device Name: \(device.name)")
+            } else {
+                print("  Device not found for UUID: \(deviceUUID)")
+                self.deviceName = ""
+            }
+        } catch {
+            print("❌ SettingsViewModel: Failed to load device name: \(error)")
+            self.deviceName = ""
+        }
     }
     
     @MainActor
@@ -159,10 +180,10 @@ class SettingsViewModel {
         try await repositoryManager.optimalRangeRepository.saveOptimalRange(optimalRange)
         print("  Saved OptimalRange - Min/Max Temp: \(optimalRange.minTemperature)/\(optimalRange.maxTemperature)")
         
-        // Now update the device with the selectedFlower in a single operation
+        // Now update the device with the selectedFlower and name in a single operation
         let updatedDevice = FlowerDeviceDTO(
             id: device.id,
-            name: device.name,
+            name: deviceName, // Use the updated name
             uuid: device.uuid,
             peripheralID: device.peripheralID,
             battery: device.battery,
@@ -175,8 +196,8 @@ class SettingsViewModel {
             selectedFlower: selectedFlower, // Only update the flower
             sensorData: device.sensorData
         )
-        
-        print("🔧 Saving device with flower: \(selectedFlower?.name ?? "nil") (ID: \(selectedFlower?.id ?? 0))")
+
+        print("🔧 Saving device with name: \(deviceName) and flower: \(selectedFlower?.name ?? "nil") (ID: \(selectedFlower?.id ?? 0))")
         try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
         
         if let flower = selectedFlower {
@@ -553,6 +574,15 @@ struct SettingsView: View {
         NavigationView {
             ZStack {
                 List {
+                Section(header: Text("Device Name")) {
+                    HStack {
+                        Image(systemName: "textformat")
+                            .foregroundColor(.blue)
+                            .frame(width: 30)
+                        TextField("Device Name", text: $viewModel.deviceName)
+                    }
+                }
+
                 Section(header: Text("Plant Selection")) {
                     if let selectedFlower = viewModel.selectedFlower {
                         HStack(spacing: 12) {

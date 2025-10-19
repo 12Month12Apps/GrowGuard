@@ -150,6 +150,10 @@ import CoreData
     
     @MainActor
     private func saveHistoricalSensorData(_ data: HistoricalSensorData) async {
+        guard data.deviceUUID == device.uuid else {
+            print("⚠️ DeviceDetailsViewModel: Ignoring historical data for foreign device \(data.deviceUUID)")
+            return
+        }
         do {
             // Fast duplicate check: only check recent entries within a small time window
             // This avoids loading thousands of records for each historical entry
