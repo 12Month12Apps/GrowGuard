@@ -46,17 +46,6 @@ struct OverviewList: View {
 //                            title: "Light"
 //                        )
                         
-                        VStack {
-                            Text("Next Plant Warting")
-                            Text("Monstera")
-                                .font(.headline)
-                            Text("Days Left: 5")
-                            Text("water needed: 12.12.2025")
-                            Text("Last Watered: 10.12.2025")
-                        }
-                        
-                        Spacer()
-                        
                         SummaryCard(
                             value: progress,
                             color: .blue,
@@ -181,37 +170,55 @@ struct SummaryCard: View {
     let title: String
 
     var body: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .stroke(color.opacity(0.2), lineWidth: 6)
-                    .frame(width: 60, height: 60)
+        HStack(spacing: 16) {
+            // Text links
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
 
+                Text("Next Plant Watering")
+                    .font(.title3)
+                    .fontWeight(.bold)
+
+                HStack(spacing: 4) {
+                    Image(systemName: icon)
+                        .font(.caption2)
+                    Text("Monstera · 5 days left")
+                        .font(.subheadline)
+                }
+                .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            // Progress Circle rechts
+            ZStack {
+                // Background Circle
+                Circle()
+                    .stroke(color.opacity(0.15), lineWidth: 8)
+                    .frame(width: 70, height: 70)
+
+                // Progress Circle
                 Circle()
                     .trim(from: 0, to: value)
-                    .stroke(color, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                    .frame(width: 60, height: 60)
+                    .stroke(color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .frame(width: 70, height: 70)
                     .rotationEffect(.degrees(-90))
                     .animation(.easeOut, value: value)
 
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundColor(color)
+                // Percentage Text
+                Text("\(Int(value * 100))%")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
             }
-
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            Text("\(Int(value * 100))%")
-                .font(.headline)
-                .fontWeight(.semibold)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
+        .padding(20)
         .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .cornerRadius(20)
     }
 }
 
@@ -280,7 +287,6 @@ struct DeviceCard: View {
             .padding()
             .background(Color(.systemBackground))
             .cornerRadius(16)
-            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         }
         .buttonStyle(PlainButtonStyle())
     }
