@@ -28,8 +28,16 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             intentIdentifiers: [],
             options: .customDismissAction
         )
-        
-        UNUserNotificationCenter.current().setNotificationCategories([wateringCategory])
+
+        // Add sensor update reminder category
+        let sensorUpdateCategory = UNNotificationCategory(
+            identifier: "SENSOR_UPDATE_REMINDER",
+            actions: [],
+            intentIdentifiers: [],
+            options: .customDismissAction
+        )
+
+        UNUserNotificationCenter.current().setNotificationCategories([wateringCategory, sensorUpdateCategory])
         
         // ⚠️ CRITICAL: Set the notification delegate - this is required for notifications to work!
         UNUserNotificationCenter.current().delegate = self
@@ -65,6 +73,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                     // Validate notification system after permission is granted
                     Task {
                         await self.validateNotificationSystem()
+
+                        // Schedule weekly sensor update reminder
+                        await WeeklySensorUpdateService.shared.scheduleWeeklyReminder()
                     }
                 } else if let error = error {
                     print("❌ AppDelegate: Failed to request authorization for notifications: \(error.localizedDescription)")
