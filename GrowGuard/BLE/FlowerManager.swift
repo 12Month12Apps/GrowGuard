@@ -74,6 +74,8 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     // Request flags
     private var liveDataRequested = false
     private var historicalDataRequested = false
+    private var reconnectAttempts = 0
+    private let maxReconnectAttempts = 3
     
     // Enhanced error handling
     private var operationRetryCount = 0
@@ -339,7 +341,10 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         connectionStateSubject.send(.connected)
         peripheral.delegate = self
         peripheral.discoverServices(nil)
-        
+
+        // Reset reconnect counter on successful connection
+        reconnectAttempts = 0
+
         // Wichtig: Vielleicht muss zuerst eine Authentifizierung erfolgen
         // Manche Geräte benötigen einen speziellen Handshake
     }
@@ -359,20 +364,34 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         // Clean up any ongoing operations
         cleanupHistoryFlow()
         
+        // Check if we should reconnect (with max attempts limit)
+        guard reconnectAttempts < maxReconnectAttempts else {
+            AppLogger.ble.bleError("🚫 Max reconnect attempts (\(maxReconnectAttempts)) reached, giving up")
+            loadingStateSubject.send(.error("Connection failed after \(maxReconnectAttempts) attempts"))
+            cleanupHistoryFlow()
+            return
+        }
+
         // Only reconnect for historical data if we haven't completed live data successfully
         // and there's actually historical data processing in progress
         if historicalDataRequested && totalEntries > 0 && currentEntryIndex < totalEntries && !isCancelled {
-            AppLogger.ble.info("📊 Disconnected during history retrieval, reconnecting...")
+            let currentAttempt = reconnectAttempts + 1
+            reconnectAttempts = currentAttempt
+            let maxAttempts = maxReconnectAttempts
+            AppLogger.ble.info("📊 Disconnected during history retrieval, reconnecting (attempt \(currentAttempt)/\(maxAttempts))...")
             // Delay reconnection slightly to allow device to settle
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 if let deviceUUID = self.deviceUUID, !self.isCancelled {
                     self.connectToKnownDevice(deviceUUID: deviceUUID)
                 }
             }
         } else if historicalDataRequested && totalEntries == 0 && !wasRequestingData && !isCancelled {
-            AppLogger.ble.info("📊 Live data completed, will reconnect for historical data...")
+            let currentAttempt = reconnectAttempts + 1
+            reconnectAttempts = currentAttempt
+            let maxAttempts = maxReconnectAttempts
+            AppLogger.ble.info("📊 Live data completed, will reconnect for historical data (attempt \(currentAttempt)/\(maxAttempts))...")
             // Only reconnect if we're not in the middle of a live data request
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 if let deviceUUID = self.deviceUUID, !self.isCancelled && self.historicalDataRequested {
                     AppLogger.ble.info("📊 Reconnecting specifically for historical data")
                     self.connectToKnownDevice(deviceUUID: deviceUUID)
@@ -479,7 +498,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         expectedResponse = Data([0x23, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00])
         
         // Set a timeout for authentication
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
             if self.authenticationStep > 0 && !self.isAuthenticated {
                 AppLogger.ble.bleError("🔐 Authentication timeout, proceeding without auth")
                 self.authenticationStep = 0
@@ -527,13 +546,21 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
 
     // New method to handle the correct history data flow (from Beta-270325)
     private func startHistoryDataFlow() {
+        // Check if we're resuming after a reconnect
+        let isResumingHistory = totalEntries > 0 && currentEntryIndex < totalEntries
+
         // Prevent multiple concurrent history flows
         guard !isHistoryFlowActive else {
             AppLogger.ble.info("⚠️ History flow already active, ignoring request")
             return
         }
-        
-        AppLogger.ble.info("🔄 Starting history data flow for device: \(self.deviceUUID ?? "unknown")")
+
+        if isResumingHistory {
+            AppLogger.ble.info("🔄 Resuming history data flow at entry \(self.currentEntryIndex)/\(self.totalEntries) for device: \(self.deviceUUID ?? "unknown")")
+        } else {
+            AppLogger.ble.info("🔄 Starting history data flow for device: \(self.deviceUUID ?? "unknown")")
+        }
+
         isHistoryFlowActive = true
         isCancelled = false  // Reset cancel flag when starting
         loadingStateSubject.send(.loading)
@@ -550,7 +577,19 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         }
         self.historyFlowTimers.append(historyTimeoutTimer)
 
-        // Step 1: Send 0xa00000 to switch to history mode
+        // If resuming, skip setup and go directly to fetching the next entry
+        if isResumingHistory {
+            AppLogger.ble.info("⏭️ Skipping setup, resuming from entry \(self.currentEntryIndex)")
+            // Small delay to ensure connection is stable
+            let resumeTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { [weak self] _ in
+                guard let self = self else { return }
+                self.fetchHistoricalDataEntry(index: self.currentEntryIndex)
+            }
+            self.historyFlowTimers.append(resumeTimer)
+            return
+        }
+
+        // Step 1: Send 0xa00000 to switch to history mode (only for new flow)
         guard let historyControlCharacteristic = historyControlCharacteristic,
               let peripheral = discoveredPeripheral,
               peripheral.state == .connected else {
@@ -558,14 +597,14 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             isHistoryFlowActive = false
             return
         }
-        
+
         AppLogger.ble.bleData("Step 1: Setting history mode (0xa00000)")
         let modeCommand: [UInt8] = [0xa0, 0x00, 0x00]
         let modeData = Data(modeCommand)
         peripheral.writeValue(modeData, for: historyControlCharacteristic, type: .withResponse)
         
-        // Step 2: Read device time (give device more time to process mode change)
-        let step2Timer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { [weak self] timer in
+        // Step 2: Read device time (optimized delay)
+        let step2Timer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak self] timer in
             guard let self = self, 
                   let peripheral = self.discoveredPeripheral,
                   peripheral.state == .connected else {
@@ -579,8 +618,8 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 peripheral.readValue(for: deviceTimeCharacteristic)
             }
             
-            // Step 3: Get entry count (more conservative timing)
-            let step3Timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { [weak self] timer in
+            // Step 3: Get entry count (optimized timing)
+            let step3Timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] timer in
                 guard let self = self,
                       let peripheral = self.discoveredPeripheral,
                       peripheral.state == .connected else {
@@ -593,8 +632,8 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 let entryCountCommand: [UInt8] = [0x3c]  // Command to get entry count
                 peripheral.writeValue(Data(entryCountCommand), for: historyControlCharacteristic, type: .withResponse)
                 
-                // After sending the command, read the history data characteristic (longer delay)
-                let step4Timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { [weak self] timer in
+                // After sending the command, read the history data characteristic (optimized delay)
+                let step4Timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] timer in
                     guard let self = self,
                           let peripheral = self.discoveredPeripheral,
                           peripheral.state == .connected else {
@@ -973,7 +1012,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             centralManager.connect(peripheral, options: nil)
             
             // Set a timeout for reconnection
-            DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                 if peripheral.state == .connected {
                     AppLogger.ble.info("✅ Reconnection successful")
                     completion()
@@ -1099,13 +1138,16 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     func cancelHistoryDataLoading() {
         AppLogger.ble.info("🚫 Cancelling history data loading for device: \(self.deviceUUID ?? "unknown")")
         isCancelled = true
-        
+
+        // Reset reconnect attempts
+        reconnectAttempts = 0
+
         // Clean up history flow
         cleanupHistoryFlow()
-        
+
         // Stop connection monitoring
         stopConnectionQualityMonitoring()
-        
+
         // Reset loading state
         loadingStateSubject.send(.idle)
         
@@ -1364,18 +1406,18 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     // Update the last synced index after each successful entry
                     updateLastHistoryIndex(nextIndex)
                     
-                    // Fast batch processing with minimal delays
-                    let batchSize = 20 // Larger batches for better performance  
+                    // Optimized batch processing with minimal delays
+                    let batchSize = 30 // Larger batches for better performance
                     if nextIndex % batchSize == 0 {
                         print("Completed batch of \(batchSize). Brief pause...")
                         // Very short pause to avoid overwhelming the device
-                        let batchTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] timer in
+                        let batchTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: false) { [weak self] timer in
                             self?.fetchHistoricalDataEntry(index: nextIndex)
                         }
                         self.historyFlowTimers.append(batchTimer)
                     } else {
-                        // Increased delay between individual entries
-                        let nextEntryTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: false) { [weak self] timer in
+                        // Minimal delay between individual entries
+                        let nextEntryTimer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: false) { [weak self] timer in
                             self?.fetchHistoricalDataEntry(index: nextIndex)
                         }
                         self.historyFlowTimers.append(nextEntryTimer)
@@ -1404,12 +1446,12 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     currentEntryIndex = nextIndex
                     
                     // Reset to loading state after showing error briefly
-                    let resetTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in
+                    let resetTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
                         self?.loadingStateSubject.send(.loading)
                     }
                     self.historyFlowTimers.append(resetTimer)
                     
-                    let skipTimer = Timer.scheduledTimer(withTimeInterval: 1.05, repeats: false) { [weak self] timer in
+                    let skipTimer = Timer.scheduledTimer(withTimeInterval: 0.55, repeats: false) { [weak self] timer in
                         self?.fetchHistoricalDataEntry(index: nextIndex)
                     }
                     self.historyFlowTimers.append(skipTimer)
@@ -1442,8 +1484,8 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         // Write address to history control characteristic
         peripheral.writeValue(entryAddress, for: historyControlCharacteristic, type: .withResponse)
         
-        // Increased delay to give the device more time to respond
-        let readTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: false) { [weak self] timer in
+        // Minimal delay to give the device time to respond
+        let readTimer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: false) { [weak self] timer in
             guard let self = self,
                   let peripheral = self.discoveredPeripheral,
                   peripheral.state == .connected,

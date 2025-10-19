@@ -61,9 +61,9 @@ enum BLEOperation: Equatable {
         switch self {
         case .connect: return 10.0
         case .authenticate: return 5.0
-        case .readLiveData: return 8.0
+        case .readLiveData: return 3.0
         case .readHistoryCount: return 5.0
-        case .readHistoryEntry: return 3.0
+        case .readHistoryEntry: return 1.5
         case .disconnect: return 5.0
         }
     }
@@ -103,38 +103,70 @@ class ReliableFlowerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     private var operationQueue: [BLEOperation] = []
     private var operationRetryCount = 0
     private var operationTimer: Timer?
+    private var characteristicCheckTimer: Timer?
+    private var discoveredServices = 0
+    private var totalServices = 0
     
     // MARK: - Data Properties
     private var totalHistoryEntries = 0
     private var currentHistoryIndex = 0
     private let decoder = SensorDataDecoder()
     private let repositoryManager = RepositoryManager.shared
-    
+
+    // MARK: - Request Flags
+    private var pendingHistoryRequest = false
+    private var pendingLiveDataRequest = false
+
     // MARK: - Publishers
     private let sensorDataSubject = PassthroughSubject<SensorData, Never>()
+    private let historicalDataSubject = PassthroughSubject<HistoricalSensorData, Never>()
+    private let deviceUpdateSubject = PassthroughSubject<FlowerDeviceDTO, Never>()
     private let statusSubject = CurrentValueSubject<BLEStatus, Never>(.idle)
     private let connectionStateSubject = CurrentValueSubject<BLEConnectionState, Never>(.disconnected)
-    
+    private let connectionQualitySubject = CurrentValueSubject<ConnectionQuality, Never>(.unknown)
+    private let loadingProgressSubject = CurrentValueSubject<(current: Int, total: Int), Never>((0, 0))
+
     var sensorDataPublisher: AnyPublisher<SensorData, Never> {
         sensorDataSubject.eraseToAnyPublisher()
     }
-    
+
+    var historicalDataPublisher: AnyPublisher<HistoricalSensorData, Never> {
+        historicalDataSubject.eraseToAnyPublisher()
+    }
+
+    var deviceUpdatePublisher: AnyPublisher<FlowerDeviceDTO, Never> {
+        deviceUpdateSubject.eraseToAnyPublisher()
+    }
+
     var statusPublisher: AnyPublisher<BLEStatus, Never> {
         statusSubject.eraseToAnyPublisher()
     }
-    
+
     var connectionStatePublisher: AnyPublisher<BLEConnectionState, Never> {
         connectionStateSubject.eraseToAnyPublisher()
     }
+
+    var rssiDistancePublisher: AnyPublisher<String, Never> {
+        connectionQualitySubject
+            .map { quality in
+                switch quality {
+                case .good: return "Close (Good signal)"
+                case .fair: return "Medium (Fair signal)"
+                case .poor: return "Far (Poor signal)"
+                case .unknown: return "Unknown"
+                }
+            }
+            .eraseToAnyPublisher()
+    }
     
-    // MARK: - Constants - Conservative and Boring
+    // MARK: - Constants - Optimized for Performance
     private let connectTimeout: TimeInterval = 10.0
     private let characteristicDiscoveryDelay: TimeInterval = 2.0
-    private let dataReadDelay: TimeInterval = 1.5
-    private let dataWriteDelay: TimeInterval = 1.0
-    private let batchPauseDelay: TimeInterval = 5.0
-    private let maxEntriesPerBatch = 10
-    private let totalPauseEveryNEntries = 50
+    private let dataReadDelay: TimeInterval = 0.2
+    private let dataWriteDelay: TimeInterval = 0.15
+    private let batchPauseDelay: TimeInterval = 0.5
+    private let maxEntriesPerBatch = 30
+    private let totalPauseEveryNEntries = 0  // Disabled for better performance
     
     // MARK: - UUIDs (use external definitions for consistency)
     
@@ -156,43 +188,53 @@ class ReliableFlowerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     func connectToDevice(_ deviceUUID: String) {
         log("Requested connection to device: \(deviceUUID)")
         self.deviceUUID = deviceUUID
-        
-        guard connectionState == .disconnected else {
-            log("Cannot connect - not in disconnected state: \(connectionState)")
-            return
+
+        // If we're not disconnected, disconnect first
+        if connectionState != .disconnected {
+            log("Not disconnected (state: \(connectionState)), disconnecting first...")
+            // Cleanup current state
+            if let peripheral = discoveredPeripheral {
+                centralManager.cancelPeripheralConnection(peripheral)
+            }
+            clearOperationQueue()
+            updateConnectionState(.disconnected)
         }
-        
+
         clearOperationQueue()
         operationQueue = [.connect, .authenticate]
         processNextOperation()
     }
     
     func requestLiveData() {
-        log("Requested live data")
-        guard connectionState == .ready else {
-            log("Cannot request live data - not ready: \(connectionState)")
-            updateStatus(.failed("Device not ready for live data"))
-            return
+        log("Requested live data (current state: \(connectionState))")
+        pendingLiveDataRequest = true
+
+        if connectionState == .ready {
+            log("Device ready - adding live data operation to queue")
+            addOperation(.readLiveData)
+            pendingLiveDataRequest = false
+        } else {
+            log("Device not ready - will request live data when ready")
         }
-        
-        addOperation(.readLiveData)
     }
     
     func requestHistoricalData() {
-        log("Requested historical data")
-        guard connectionState == .ready else {
-            log("Cannot request historical data - not ready: \(connectionState)")
-            updateStatus(.failed("Device not ready for historical data"))
-            return
-        }
-        
+        log("Requested historical data (current state: \(connectionState))")
+        pendingHistoryRequest = true
+
         // Reset counters
         totalHistoryEntries = 0
         currentHistoryIndex = 0
-        
-        addOperation(.readHistoryCount)
+
+        if connectionState == .ready {
+            log("Device ready - adding history operation to queue")
+            addOperation(.readHistoryCount)
+            pendingHistoryRequest = false
+        } else {
+            log("Device not ready - will request historical data when ready")
+        }
     }
-    
+
     func disconnect() {
         log("Requested disconnect")
         addOperation(.disconnect)
@@ -201,9 +243,12 @@ class ReliableFlowerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     // MARK: - Operation Management
     
     private func addOperation(_ operation: BLEOperation) {
+        log("Adding operation to queue: \(operation)")
         operationQueue.append(operation)
         if currentOperation == nil {
             processNextOperation()
+        } else {
+            log("Operation queued, will execute after current operation completes")
         }
     }
     
@@ -287,6 +332,19 @@ class ReliableFlowerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         case .authenticate:
             updateConnectionState(.ready)
             updateStatus(.idle)
+
+            // Process any pending requests
+            if pendingLiveDataRequest {
+                log("Processing pending live data request")
+                pendingLiveDataRequest = false
+                addOperation(.readLiveData)
+            }
+
+            if pendingHistoryRequest {
+                log("Processing pending history request")
+                pendingHistoryRequest = false
+                addOperation(.readHistoryCount)
+            }
             
         case .readLiveData:
             // Live data handling completed in delegate
@@ -295,6 +353,7 @@ class ReliableFlowerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         case .readHistoryCount:
             if totalHistoryEntries > 0 {
                 log("Will read \(totalHistoryEntries) history entries")
+                loadingProgressSubject.send((0, totalHistoryEntries))
                 // Queue up all history entries
                 for i in 0..<totalHistoryEntries {
                     addOperation(.readHistoryEntry(index: i))
@@ -306,19 +365,16 @@ class ReliableFlowerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         case .readHistoryEntry(let index):
             let nextIndex = index + 1
             updateStatus(.readingEntry(current: nextIndex, total: totalHistoryEntries))
-            
+            loadingProgressSubject.send((nextIndex, totalHistoryEntries))
+
             // Add pause every batch
             if nextIndex % maxEntriesPerBatch == 0 && nextIndex < totalHistoryEntries {
                 log("Pausing after batch of \(maxEntriesPerBatch) entries")
                 pauseOperations(seconds: Int(batchPauseDelay), reason: "batch break")
             }
-            
-            // Add longer pause every N entries
-            if nextIndex % totalPauseEveryNEntries == 0 && nextIndex < totalHistoryEntries {
-                log("Taking longer pause every \(totalPauseEveryNEntries) entries")
-                pauseOperations(seconds: Int(batchPauseDelay * 2), reason: "connection rest")
-            }
-            
+
+            // Major pauses disabled for better performance (totalPauseEveryNEntries = 0)
+
             if nextIndex >= totalHistoryEntries {
                 updateStatus(.completed)
                 log("All history entries completed")
@@ -327,6 +383,9 @@ class ReliableFlowerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         case .disconnect:
             updateConnectionState(.disconnected)
             updateStatus(.idle)
+            // Reset pending requests
+            pendingLiveDataRequest = false
+            pendingHistoryRequest = false
         }
         
         // Process next operation
@@ -364,6 +423,8 @@ class ReliableFlowerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         currentOperation = nil
         operationTimer?.invalidate()
         operationTimer = nil
+        characteristicCheckTimer?.invalidate()
+        characteristicCheckTimer = nil
     }
     
     // MARK: - State Updates
@@ -425,16 +486,29 @@ class ReliableFlowerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     private func executeReadLiveData() {
         guard let peripheral = discoveredPeripheral,
               let modeChar = modeChangeCharacteristic,
+              let sensorChar = realTimeSensorValuesCharacteristic,
               peripheral.state == .connected else {
             completeOperation(success: false, error: "Device not ready for live data")
             return
         }
-        
-        log("Reading live sensor data")
+
+        log("Writing mode change command for live data")
         let command: [UInt8] = [0xA0, 0x1F]
         peripheral.writeValue(Data(command), for: modeChar, type: .withResponse)
-        
-        // The actual completion will happen in the delegate when data is received
+
+        // After writing, wait a bit and then read the sensor values
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self,
+                  let peripheral = self.discoveredPeripheral,
+                  peripheral.state == .connected else {
+                self?.log("Device disconnected before reading sensor data")
+                self?.completeOperation(success: false, error: "Device disconnected")
+                return
+            }
+
+            self.log("Reading sensor values characteristic")
+            peripheral.readValue(for: sensorChar)
+        }
     }
     
     private func executeReadHistoryCount() {
@@ -581,16 +655,20 @@ extension ReliableFlowerManager {
             }
             return
         }
-        
+
         log("Services discovered, discovering characteristics...")
-        
+
         guard let services = peripheral.services else {
             if currentOperation == .authenticate {
                 completeOperation(success: false, error: "No services found")
             }
             return
         }
-        
+
+        totalServices = services.count
+        discoveredServices = 0
+        log("Will discover characteristics for \(totalServices) services")
+
         for service in services {
             peripheral.discoverCharacteristics(nil, for: service)
         }
@@ -626,28 +704,48 @@ extension ReliableFlowerManager {
             case deviceTimeCharacteristicUUID:
                 deviceTimeCharacteristic = characteristic
                 log("Found device time characteristic")
+            case firmwareVersionCharacteristicUUID:
+                log("Found firmware version characteristic")
+                peripheral.readValue(for: characteristic)
             default:
                 break
             }
         }
-        
-        // Check if we have all required characteristics
-        if currentOperation == .authenticate {
-            let hasRequired = modeChangeCharacteristic != nil &&
-                             realTimeSensorValuesCharacteristic != nil &&
-                             historyControlCharacteristic != nil &&
-                             historyDataCharacteristic != nil &&
-                             deviceTimeCharacteristic != nil
-            
-            if hasRequired {
-                log("All required characteristics found")
-                // Wait a bit for characteristic setup to settle
-                DispatchQueue.main.asyncAfter(deadline: .now() + characteristicDiscoveryDelay) {
-                    self.completeOperation(success: true)
+
+        // Increment discovered services counter
+        discoveredServices += 1
+        log("Discovered characteristics for service \(discoveredServices)/\(totalServices)")
+
+        // Check if we have all required characteristics only after all services are discovered
+        if currentOperation == .authenticate && discoveredServices >= totalServices {
+            // Cancel any existing timer
+            characteristicCheckTimer?.invalidate()
+
+            // Wait a bit to make sure all characteristics are processed
+            characteristicCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
+                guard let self = self else { return }
+
+                let hasRequired = self.modeChangeCharacteristic != nil &&
+                                 self.realTimeSensorValuesCharacteristic != nil &&
+                                 self.historyControlCharacteristic != nil &&
+                                 self.historyDataCharacteristic != nil &&
+                                 self.deviceTimeCharacteristic != nil
+
+                if hasRequired {
+                    self.log("All required characteristics found")
+                    // Wait a bit for characteristic setup to settle
+                    DispatchQueue.main.asyncAfter(deadline: .now() + self.characteristicDiscoveryDelay) {
+                        self.completeOperation(success: true)
+                    }
+                } else {
+                    self.log("Missing required characteristics after all services discovered")
+                    self.log("  modeChange: \(self.modeChangeCharacteristic != nil)")
+                    self.log("  realTime: \(self.realTimeSensorValuesCharacteristic != nil)")
+                    self.log("  historyControl: \(self.historyControlCharacteristic != nil)")
+                    self.log("  historyData: \(self.historyDataCharacteristic != nil)")
+                    self.log("  deviceTime: \(self.deviceTimeCharacteristic != nil)")
+                    self.completeOperation(success: false, error: "Missing required characteristics")
                 }
-            } else {
-                log("Missing required characteristics")
-                completeOperation(success: false, error: "Missing required characteristics")
             }
         }
     }
@@ -669,14 +767,17 @@ extension ReliableFlowerManager {
         switch characteristic.uuid {
         case realTimeSensorValuesCharacteristicUUID:
             handleRealTimeSensorData(data)
-            
+
         case historicalSensorValuesCharacteristicUUID:
             handleHistoryData(data)
-            
+
         case deviceTimeCharacteristicUUID:
             log("Device time read successfully")
             // Device time read is part of history setup, no completion needed
-            
+
+        case firmwareVersionCharacteristicUUID:
+            handleFirmwareAndBattery(data)
+
         default:
             log("Received data for unhandled characteristic: \(characteristic.uuid)")
         }
@@ -753,12 +854,10 @@ extension ReliableFlowerManager {
             if let historicalData = decoder.decodeHistoricalSensorData(data: data) {
                 log("Decoded history entry \(index): temp=\(historicalData.temperature)°C")
                 
-                // Send to repository
+                // Publish historical data
                 Task {
-                    // Save historical data here if needed
                     await MainActor.run {
-                        // Publish historical data if you have a publisher for it
-                        // self.historicalDataSubject.send(historicalData)
+                        self.historicalDataSubject.send(historicalData)
                     }
                 }
                 
@@ -768,5 +867,150 @@ extension ReliableFlowerManager {
                 completeOperation(success: false, error: "Failed to decode history entry")
             }
         }
+    }
+
+    // MARK: - Additional Features
+
+    func connectToKnownDevice(deviceUUID: String) {
+        log("Connect to known device requested: \(deviceUUID)")
+        connectToDevice(deviceUUID)
+    }
+
+    private func handleFirmwareAndBattery(_ data: Data) {
+        guard let (battery, firmware) = decoder.decodeFirmwareAndBattery(data: data) else {
+            log("Failed to decode firmware and battery")
+            return
+        }
+
+        log("Battery: \(battery)%, Firmware: \(firmware)")
+
+        guard let deviceUUID = self.deviceUUID else { return }
+
+        Task {
+            do {
+                guard var deviceDTO = try await repositoryManager.flowerDeviceRepository.getDevice(by: deviceUUID) else {
+                    self.log("Device not found for UUID: \(deviceUUID)")
+                    return
+                }
+
+                // Update battery level and firmware
+                deviceDTO = FlowerDeviceDTO(
+                    id: deviceDTO.id,
+                    name: deviceDTO.name,
+                    uuid: deviceDTO.uuid,
+                    peripheralID: deviceDTO.peripheralID,
+                    battery: Int16(battery),
+                    firmware: firmware,
+                    isSensor: deviceDTO.isSensor,
+                    added: deviceDTO.added,
+                    lastUpdate: deviceDTO.lastUpdate,
+                    optimalRange: deviceDTO.optimalRange,
+                    potSize: deviceDTO.potSize,
+                    selectedFlower: deviceDTO.selectedFlower,
+                    sensorData: deviceDTO.sensorData
+                )
+
+                try await repositoryManager.flowerDeviceRepository.updateDevice(deviceDTO)
+                self.log("Successfully updated battery and firmware for device \(deviceUUID)")
+
+                // Publish the updated device
+                await MainActor.run {
+                    self.deviceUpdateSubject.send(deviceDTO)
+                }
+            } catch {
+                self.log("Error updating device battery/firmware: \(error)")
+            }
+        }
+    }
+
+    func blinkLED() {
+        guard let peripheral = discoveredPeripheral,
+              peripheral.state == .connected,
+              let ledChar = modeChangeCharacteristic else {
+            log("Cannot blink LED: device not ready")
+            return
+        }
+
+        log("Blinking LED")
+        let blinkData = Data([0xfd, 0xff])
+        peripheral.writeValue(blinkData, for: ledChar, type: .withResponse)
+    }
+
+    // MARK: - Connection Quality
+
+    enum ConnectionQuality {
+        case unknown
+        case poor
+        case fair
+        case good
+    }
+
+    enum LoadingState: Equatable {
+        case idle
+        case loading
+        case completed
+        case error(String)
+    }
+
+    var currentDeviceUUID: String? {
+        return deviceUUID
+    }
+
+    var loadingProgressPublisher: AnyPublisher<(current: Int, total: Int), Never> {
+        loadingProgressSubject.eraseToAnyPublisher()
+    }
+
+    var loadingStatePublisher: AnyPublisher<LoadingState, Never> {
+        statusPublisher
+            .map { status in
+                switch status {
+                case .idle: return .idle
+                case .connecting, .authenticating, .readingCount, .readingEntry, .pausing, .retrying: return .loading
+                case .completed: return .completed
+                case .failed(let error): return .error(error)
+                }
+            }
+            .eraseToAnyPublisher()
+    }
+
+    var connectionQualityPublisher: AnyPublisher<ConnectionQuality, Never> {
+        connectionQualitySubject.eraseToAnyPublisher()
+    }
+
+    func cancelHistoryDataLoading() {
+        log("Cancelling history data loading")
+        clearOperationQueue()
+        updateStatus(.idle)
+        disconnect()
+    }
+
+    func forceResetHistoryState() {
+        log("Force resetting history state")
+        clearOperationQueue()
+        totalHistoryEntries = 0
+        currentHistoryIndex = 0
+        updateStatus(.idle)
+    }
+
+    func peripheral(_ peripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
+        if let error = error {
+            log("Failed to read RSSI: \(error.localizedDescription)")
+            connectionQualitySubject.send(.unknown)
+            return
+        }
+
+        let rssiValue = RSSI.intValue
+        let quality: ConnectionQuality
+
+        if rssiValue >= -65 {
+            quality = .good
+        } else if rssiValue >= -80 {
+            quality = .fair
+        } else {
+            quality = .poor
+        }
+
+        log("RSSI: \(rssiValue) dBm - Quality: \(quality)")
+        connectionQualitySubject.send(quality)
     }
 }

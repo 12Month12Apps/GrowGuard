@@ -22,7 +22,7 @@ struct FlowerSearch {
                             families.name AS family_name,
                             CAST(ROUND(water_intensity.plant_factor_min * 100.0, 0) AS INTEGER) AS min_moisture,
                             CAST(ROUND(water_intensity.plant_factor_max * 100.0, 0) AS INTEGER) AS max_moisture,
-                            GROUP_CONCAT(DISTINCT common_names.name, '|') AS common_names
+                            REPLACE(GROUP_CONCAT(DISTINCT common_names.name), ',', '|') AS common_names
                         FROM flowers
                         LEFT JOIN families ON families.id = flowers.family_id
                         LEFT JOIN water_categories ON water_categories.id = flowers.water_category_id
