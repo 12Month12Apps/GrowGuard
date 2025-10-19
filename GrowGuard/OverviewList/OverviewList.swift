@@ -22,54 +22,104 @@ struct OverviewList: View {
     }
     
     var body: some View {
-        VStack {
-            List {
-                Section {
-                    VStack {
-                        Spacer()
-                        HStack {
-                            Spacer()
-                            CircularProgressView(progress: progress, color: .red, icon: Image(systemName: "thermometer.variable"))
-                                .frame(width: 80, height: 80)
-                            Spacer()
-                            CircularProgressView(progress: progress, color: .green, icon: Image(systemName: "sun.max"))
-                                .frame(width: 80, height: 80)
-                            Spacer()
-                            CircularProgressView(progress: progress, color: .blue, icon: Image(systemName: "drop.fill"))
-                               .frame(width: 80, height: 80)
-                            Spacer()
+        ScrollView {
+            VStack(spacing: 20) {
+                // Summary Cards Section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Environment Overview")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .padding(.horizontal)
+
+                    HStack(spacing: 16) {
+//                        SummaryCard(
+//                            value: progress,
+//                            color: .orange,
+//                            icon: "thermometer.variable.and.figure",
+//                            title: "Temperature"
+//                        )
+//
+//                        SummaryCard(
+//                            value: progress,
+//                            color: .yellow,
+//                            icon: "sun.max.fill",
+//                            title: "Light"
+//                        )
+                        
+                        VStack {
+                            Text("Next Plant Warting")
+                            Text("Monstera")
+                                .font(.headline)
+                            Text("Days Left: 5")
+                            Text("water needed: 12.12.2025")
+                            Text("Last Watered: 10.12.2025")
                         }
+                        
                         Spacer()
-                        HStack {
-                            Slider(value: $progress, in: 0...1)
-                        }
+                        
+                        SummaryCard(
+                            value: progress,
+                            color: .blue,
+                            icon: "drop.fill",
+                            title: "Moisture"
+                        )
                     }
+                    .padding(.horizontal)
+
+                    // Debug slider (can be removed in production)
+//                    Slider(value: $progress, in: 0...1)
+//                        .padding(.horizontal)
+//                        .opacity(0.3)
                 }
-                
+                .padding(.top, 8)
+
+                // Debug Link
                 NavigationLink(destination: LogExportView()) {
-                    Text(L10n.Debug.menu)
-                }
-                
-                Section {
-                    ForEach(viewModel.allSavedDevices) { device in
-                        Button {
-                            // Add a new method to NavigationService
-                            NavigationService.shared.navigateToDeviceView(flowerDevice: device)
-                        } label: {
-                            Text(device.name ?? "")
-                            Text(device.lastUpdate , format: .dateTime)
-                        }
-                        .navigationLinkStyle()
-                        .contentShape(Rectangle())
+                    HStack {
+                        Image(systemName: "ladybug.fill")
+                        Text(L10n.Debug.menu)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
-                    .onDelete(perform: delete)
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal)
+
+                // Devices Section
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("My Plants")
+                            .font(.title2)
+                            .fontWeight(.bold)
+
+                        Spacer()
+
+                        EditButton()
+                            .buttonStyle(.bordered)
+                    }
+                    .padding(.horizontal)
+
+                    if viewModel.allSavedDevices.isEmpty {
+                        EmptyStateView()
+                    } else {
+                        ForEach(viewModel.allSavedDevices) { device in
+                            DeviceCard(device: device) {
+                                NavigationService.shared.navigateToDeviceView(flowerDevice: device)
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
                 }
             }
+            .padding(.bottom, 20)
         }
+        .background(Color(.systemGroupedBackground))
         .navigationTitle(L10n.Navigation.overview)
-        .toolbar {
-            EditButton()
-        }
+        .navigationBarTitleDisplayMode(.large)
         .onAppear {
             self.loading = true
             Task {
@@ -119,5 +169,143 @@ struct OverviewList: View {
             await viewModel.deleteDevice(at: offsets)
         }
         deviceToDelete = nil
+    }
+}
+
+// MARK: - Supporting Views
+
+struct SummaryCard: View {
+    let value: Double
+    let color: Color
+    let icon: String
+    let title: String
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .stroke(color.opacity(0.2), lineWidth: 6)
+                    .frame(width: 60, height: 60)
+
+                Circle()
+                    .trim(from: 0, to: value)
+                    .stroke(color, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    .frame(width: 60, height: 60)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeOut, value: value)
+
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(color)
+            }
+
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Text("\(Int(value * 100))%")
+                .font(.headline)
+                .fontWeight(.semibold)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+    }
+}
+
+struct DeviceCard: View {
+    let device: FlowerDeviceDTO
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                // Plant icon
+                ZStack {
+                    Circle()
+                        .fill(Color.green.opacity(0.15))
+                        .frame(width: 56, height: 56)
+
+                    Image(systemName: device.isSensor ? "sensor.fill" : "leaf.fill")
+                        .font(.title2)
+                        .foregroundColor(.green)
+                }
+
+                // Device info
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(device.name ?? "Unknown Plant")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock")
+                            .font(.caption2)
+                        Text(device.lastUpdate, format: .relative(presentation: .named))
+                            .font(.caption)
+                    }
+                    .foregroundColor(.secondary)
+
+                    if device.isSensor {
+                        HStack(spacing: 12) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "battery.75percent")
+                                    .font(.caption2)
+                                Text(device.battery, format: .percent)
+                                    .font(.caption)
+                            }
+
+                            if !device.uuid.isEmpty {
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(Color.green)
+                                        .frame(width: 6, height: 6)
+                                    Text("Connected")
+                                        .font(.caption)
+                                }
+                            }
+                        }
+                        .foregroundColor(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                // Chevron
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct EmptyStateView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "leaf.circle")
+                .font(.system(size: 64))
+                .foregroundColor(.green.opacity(0.5))
+
+            Text("No Plants Yet")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            Text("Add your first plant to start monitoring")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(40)
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .padding(.horizontal)
     }
 }

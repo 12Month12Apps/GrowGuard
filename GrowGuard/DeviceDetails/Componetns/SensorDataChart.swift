@@ -41,22 +41,81 @@ struct SensorDataChart<T: Comparable & Numeric>: View {
         if isOverview {
             chart(for: currentWeekIndex)
         } else {
-            Section {
-                VStack {
-                    header(for: currentWeekIndex, current: groupedData.last?.maxValue ?? 0)
-                    if groupedData.isEmpty {
-                        Text("No data available")
-                            .foregroundColor(.gray)
-                            .frame(height: 250)
-                    } else {
-                        chart(for: currentWeekIndex)
-                            .frame(height: 250)
+            VStack(spacing: 12) {
+                // Current value display
+                if let currentValue = groupedData.last?.maxValue {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(title)
+                                .font(.headline)
+                                .fontWeight(.semibold)
+
+                            HStack(spacing: 4) {
+                                Text("Current:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("\(String(format: "%.1f", currentValue))\(dataType)")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(getColorForValue(currentValue))
+                            }
+                        }
+
+                        Spacer()
+
+                        // Range indicator
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text("Optimal Range")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text("\(minRange) - \(maxRange)\(dataType)")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.secondary)
+                        }
                     }
+                    .padding()
+                    .background(Color(.tertiarySystemGroupedBackground))
+                    .cornerRadius(12)
                 }
-                .onAppear {
-                    currentWeekIndex = numberOfWeeks - 1
+
+                // Chart
+                if groupedData.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "chart.xyaxis.line")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary.opacity(0.5))
+
+                        Text("No data available")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(height: 250)
+                    .frame(maxWidth: .infinity)
+                } else {
+                    chart(for: currentWeekIndex)
+                        .frame(height: 250)
                 }
             }
+            .padding()
+            .background(Color(.tertiarySystemGroupedBackground).opacity(0.5))
+            .cornerRadius(16)
+            .onAppear {
+                currentWeekIndex = numberOfWeeks - 1
+            }
+        }
+    }
+
+    private func getColorForValue(_ value: Double) -> Color {
+        let minD = Double(minRange)
+        let maxD = Double(maxRange)
+
+        if value < minD {
+            return .orange
+        } else if value > maxD {
+            return .red
+        } else {
+            return .green
         }
     }
 
@@ -76,68 +135,100 @@ struct SensorDataChart<T: Comparable & Numeric>: View {
 
         if filteredData.isEmpty {
             return AnyView(
-                Text("No data available for this week")
-                    .foregroundColor(.gray)
-                    .frame(height: 250)
+                VStack(spacing: 12) {
+                    Image(systemName: "chart.xyaxis.line")
+                        .font(.system(size: 36))
+                        .foregroundColor(.secondary.opacity(0.5))
+
+                    Text("No data available for this week")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(height: 250)
             )
         } else {
             return AnyView(
                 Chart(filteredData, id: \.date) { dataPoint in
+                    // Optimal range background
                     RectangleMark(
                         xStart: .value("Start", startDate, unit: componet),
                         xEnd: .value("End", endDate, unit: componet),
                         yStart: .value("Low", minRange),
                         yEnd: .value("High", maxRange)
                     )
-                    .foregroundStyle(Color.gray.opacity(0.1))
-                    
-//                    if selectedChartType == .water {
-//                        BarMark(
-//                            x: .value("Date", dataPoint.date, unit: componet),
-//                            yStart: .value("\(title) Min", dataPoint.minValue),
-//                            yEnd: .value("\(title) Max", dataPoint.maxValue + 2),
-//                            width: .fixed(isOverview ? 8 : 10)
-//                        )
-//                        .clipShape(Capsule())
-//                        .foregroundStyle(chartColor.gradient)
-//
-//                        LineMark(
-//                            x: .value("Date", dataPoint.date, unit: componet),
-//                            y: .value("\(title) \(dataType)", dataPoint.maxValue)
-//                        )
-//                        .interpolationMethod(.cardinal)
-//                        .foregroundStyle(graphColor.gradient)
-//                        .symbol(Circle().strokeBorder(lineWidth: barWidth))
-                        
-                        PointMark(x: .value("Date", dataPoint.date, unit: componet),
-                                  y: .value("\(title) \(dataType)", dataPoint.maxValue))
-                            .foregroundStyle(chartColor.gradient)
-//                    } else if selectedChartType == .bars {
-//                        BarMark(
-//                            x: .value("Date", dataPoint.date, unit: componet),
-//                            y: .value(title, dataPoint.maxValue),
-//                            width: .fixed(12)
-//                        )
-//                        .foregroundStyle(chartColor.gradient)
-//                    }
+                    .foregroundStyle(Color.green.opacity(0.1))
+
+                    if selectedChartType == .water {
+                        // Line chart with gradient fill
+                        AreaMark(
+                            x: .value("Date", dataPoint.date, unit: componet),
+                            y: .value("\(title) \(dataType)", dataPoint.maxValue)
+                        )
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [chartColor.opacity(0.3), chartColor.opacity(0.05)]),
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+
+                        LineMark(
+                            x: .value("Date", dataPoint.date, unit: componet),
+                            y: .value("\(title) \(dataType)", dataPoint.maxValue)
+                        )
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(chartColor)
+                        .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+
+                        PointMark(
+                            x: .value("Date", dataPoint.date, unit: componet),
+                            y: .value("\(title) \(dataType)", dataPoint.maxValue)
+                        )
+                        .foregroundStyle(chartColor)
+                        .symbolSize(60)
+                    } else if selectedChartType == .bars {
+                        BarMark(
+                            x: .value("Date", dataPoint.date, unit: componet),
+                            y: .value(title, dataPoint.maxValue),
+                            width: .fixed(isOverview ? 8 : 12)
+                        )
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [chartColor, chartColor.opacity(0.7)]),
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .cornerRadius(4)
+                    }
                 }
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day)) { _ in
-                        AxisTick()
-                        AxisGridLine()
+                        AxisTick(stroke: StrokeStyle(lineWidth: 1))
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 4]))
+                            .foregroundStyle(Color.secondary.opacity(0.2))
                         AxisValueLabel(format: .dateTime.day().month())
+                            .font(.caption2)
                     }
                 }
                 .chartYAxis {
                     AxisMarks { value in
-                        AxisTick()
-                        AxisGridLine()
+                        AxisTick(stroke: StrokeStyle(lineWidth: 1))
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 4]))
+                            .foregroundStyle(Color.secondary.opacity(0.2))
                         AxisValueLabel {
                             if let intValue = value.as(Double.self) {
-                                Text("\(intValue, specifier: "%.0f")\(dataType)")
+                                Text("\(intValue, specifier: "%.0f")")
+                                    .font(.caption2)
                             }
                         }
                     }
+                }
+                .chartPlotStyle { plotArea in
+                    plotArea
+                        .background(Color(.systemBackground).opacity(0.5))
+                        .cornerRadius(8)
                 }
                 .accessibilityChartDescriptor(self)
             )
