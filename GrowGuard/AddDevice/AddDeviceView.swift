@@ -70,8 +70,15 @@ struct AddDeviceView: View {
                     }
                     .padding(.horizontal)
 
-                    if !viewModel.loading && viewModel.devices.isEmpty {
-                        // Empty state
+                    // Bluetooth permission warning
+                    if viewModel.bluetoothState == .unauthorized {
+                        BluetoothPermissionWarning()
+                            .padding(.horizontal)
+                    } else if viewModel.bluetoothState == .poweredOff {
+                        BluetoothPoweredOffWarning()
+                            .padding(.horizontal)
+                    } else if !viewModel.loading && viewModel.devices.isEmpty && viewModel.bluetoothState == .poweredOn {
+                        // Empty state (only show when Bluetooth is on and working)
                         VStack(spacing: 16) {
                             Image(systemName: "sensor.tag.radiowaves.forward")
                                 .font(.system(size: 48))
@@ -90,7 +97,7 @@ struct AddDeviceView: View {
                         .background(Color(.secondarySystemGroupedBackground))
                         .cornerRadius(16)
                         .padding(.horizontal)
-                    } else {
+                    } else if viewModel.bluetoothState == .poweredOn {
                         ForEach(viewModel.devices, id: \.identifier.uuidString) { device in
                             SensorDeviceCard(
                                 device: device,
@@ -192,5 +199,95 @@ struct SensorDeviceCard: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Bluetooth Warning Views
+
+struct BluetoothPermissionWarning: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 48))
+                .foregroundColor(.orange)
+
+            Text("Bluetooth Permission Required")
+                .font(.headline)
+
+            Text("GrowGuard needs Bluetooth access to discover and connect to your plant sensors. Please enable Bluetooth permission in Settings.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "gear")
+                    Text("Open Settings")
+                }
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.white)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.blue)
+                .cornerRadius(10)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(40)
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+struct BluetoothPoweredOffWarning: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "antenna.radiowaves.left.and.right.slash")
+                .font(.system(size: 48))
+                .foregroundColor(.red.opacity(0.7))
+
+            Text("Bluetooth is Off")
+                .font(.headline)
+
+            Text("Please turn on Bluetooth to scan for plant sensors")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+
+            Button {
+                if let url = URL(string: "App-Prefs:Bluetooth") {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "gear")
+                    Text("Open Settings")
+                }
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.white)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.red.opacity(0.8))
+                .cornerRadius(10)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(40)
+        .background(Color.red.opacity(0.1))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.red.opacity(0.3), lineWidth: 1)
+        )
     }
 }

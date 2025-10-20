@@ -19,9 +19,11 @@ class AddDeviceBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     private var shouldScan = false
 
     var foundDevice: ((CBPeripheral) -> ())
-    
-    init(foundDevice: @escaping ((CBPeripheral) -> ())) {
+    var stateChanged: ((CBManagerState) -> ())?
+
+    init(foundDevice: @escaping ((CBPeripheral) -> ()), stateChanged: ((CBManagerState) -> ())? = nil) {
         self.foundDevice = foundDevice
+        self.stateChanged = stateChanged
 
         super.init()
         centralManager = CBCentralManager(delegate: self, queue: nil)
@@ -29,13 +31,15 @@ class AddDeviceBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
 
     // MARK: - CBCentralManagerDelegate Methods
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        stateChanged?(central.state)
+
         if central.state == .poweredOn {
             if shouldScan {
                 centralManager.scanForPeripherals(withServices: [flowerCareServiceUUID], options: nil)
             }
         } else {
             centralManager.stopScan()
-            print("Bluetooth is not available.")
+            print("Bluetooth is not available. State: \(central.state.rawValue)")
         }
     }
 

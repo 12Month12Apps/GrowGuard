@@ -97,7 +97,7 @@
 "sensor.currentValue" = "Current Value: %@";
 "sensor.range" = "%@ Range";
 "sensor.unit.lux" = "lux";
-"sensor.unit.percent" = "%";
+"sensor.unit.percent" = "%%";
 "sensor.unit.celsius" = "C";
 
 /* Watering */

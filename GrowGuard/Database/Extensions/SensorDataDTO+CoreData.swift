@@ -10,32 +10,36 @@ extension SensorDataDTO {
         }
         
         let context = DataService.shared.context
+        var result: SensorData?
         
-        // Try to find the associated device first
-        let request = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
-        request.predicate = NSPredicate(format: "uuid == %@", deviceUUID)
-        request.fetchLimit = 1
-        
-        do {
-            let devices = try context.fetch(request)
-            guard let device = devices.first else {
-                print("SensorDataDTO.toCoreDataSensorData(): No device found with UUID \(deviceUUID)")
-                return nil
+        context.performAndWait {
+            // Try to find the associated device first
+            let request = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
+            request.predicate = NSPredicate(format: "uuid == %@", deviceUUID)
+            request.fetchLimit = 1
+            
+            do {
+                let devices = try context.fetch(request)
+                guard let device = devices.first else {
+                    print("SensorDataDTO.toCoreDataSensorData(): No device found with UUID \(deviceUUID)")
+                    return
+                }
+                
+                // Create sensor data only after confirming device exists
+                let sensorData = SensorData(context: context)
+                sensorData.temperature = temperature
+                sensorData.brightness = brightness
+                sensorData.moisture = moisture
+                sensorData.conductivity = conductivity
+                sensorData.date = date
+                sensorData.device = device
+                
+                result = sensorData
+            } catch {
+                print("SensorDataDTO.toCoreDataSensorData(): Error finding device for sensor data: \(error)")
             }
-            
-            // Create sensor data only after confirming device exists
-            let sensorData = SensorData(context: context)
-            sensorData.temperature = temperature
-            sensorData.brightness = brightness
-            sensorData.moisture = moisture
-            sensorData.conductivity = conductivity
-            sensorData.date = date
-            sensorData.device = device
-            
-            return sensorData
-        } catch {
-            print("SensorDataDTO.toCoreDataSensorData(): Error finding device for sensor data: \(error)")
-            return nil
         }
+        
+        return result
     }
 }

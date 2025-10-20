@@ -17,10 +17,11 @@ import CoreData
     private var ble: AddDeviceBLE?
     var allSavedDevices: [FlowerDeviceDTO] = []
     var loading: Bool = false
+    var bluetoothState: CBManagerState = .unknown
     private var loadingTask: Task<Void, Never>? = nil
     private var hasStartedScan = false
     private let repositoryManager = RepositoryManager.shared
-    
+
     init() {}
     
     @MainActor
@@ -30,14 +31,22 @@ import CoreData
         loading = true
         devices = []
 
-        ble = AddDeviceBLE { [weak self] peripheral in
-            Task { @MainActor in
-                guard let self = self else { return }
-                self.addToList(peripheral: peripheral)
-                self.loadingTask?.cancel()
-                self.loading = false
+        ble = AddDeviceBLE(
+            foundDevice: { [weak self] peripheral in
+                Task { @MainActor in
+                    guard let self = self else { return }
+                    self.addToList(peripheral: peripheral)
+                    self.loadingTask?.cancel()
+                    self.loading = false
+                }
+            },
+            stateChanged: { [weak self] state in
+                Task { @MainActor in
+                    guard let self = self else { return }
+                    self.bluetoothState = state
+                }
             }
-        }
+        )
 
         ble?.startScanning()
 

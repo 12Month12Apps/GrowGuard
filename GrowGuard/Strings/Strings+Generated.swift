@@ -290,8 +290,8 @@ internal enum L10n {
       internal static let celsius = L10n.tr("Localizable", "sensor.unit.celsius", fallback: "C")
       /// lux
       internal static let lux = L10n.tr("Localizable", "sensor.unit.lux", fallback: "lux")
-      /// %
-      internal static let percent = L10n.tr("Localizable", "sensor.unit.percent", fallback: "%")
+      /// %%
+      internal static let percent = L10n.tr("Localizable", "sensor.unit.percent", fallback: "%%")
     }
   }
   internal enum SensorData {
