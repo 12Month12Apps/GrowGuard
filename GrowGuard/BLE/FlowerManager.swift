@@ -85,8 +85,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     // History data flow control
     private var isHistoryFlowActive = false
     private var historyFlowTimers: [Timer] = []
-    private var activeHistoryDeviceUUID: String?
-    private var requestedHistoryDeviceUUID: String?
 
     var loadingStatePublisher: AnyPublisher<LoadingState, Never> {
         loadingStateSubject.eraseToAnyPublisher()
@@ -153,10 +151,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             AppLogger.ble.bleError("Invalid device UUID: \(deviceUUID)")
             connectionStateSubject.send(.error(.deviceNotFound))
             return
-        }
-        if let activeUUID = activeHistoryDeviceUUID, activeUUID != deviceUUID {
-            AppLogger.ble.info("📊 Switching devices from \(activeUUID) to \(deviceUUID) – cancelling running history flow")
-            cleanupHistoryFlow()
         }
         
         connectionStateSubject.send(.connecting)
@@ -552,15 +546,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
 
     // New method to handle the correct history data flow (from Beta-270325)
     private func startHistoryDataFlow() {
-        guard let sessionDeviceUUID = requestedHistoryDeviceUUID ?? deviceUUID else {
-            AppLogger.ble.bleError("📊 Cannot start history flow without a device UUID")
-            return
-        }
-        if let currentUUID = deviceUUID, currentUUID != sessionDeviceUUID {
-            AppLogger.ble.warning("📊 Device UUID changed before history flow start (was \(sessionDeviceUUID), now \(currentUUID)) – aborting")
-            return
-        }
-
         // Check if we're resuming after a reconnect
         let isResumingHistory = totalEntries > 0 && currentEntryIndex < totalEntries
 
@@ -570,12 +555,10 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
             return
         }
 
-        activeHistoryDeviceUUID = sessionDeviceUUID
-
         if isResumingHistory {
-            AppLogger.ble.info("🔄 Resuming history data flow at entry \(self.currentEntryIndex)/\(self.totalEntries) for device: \(sessionDeviceUUID)")
+            AppLogger.ble.info("🔄 Resuming history data flow at entry \(self.currentEntryIndex)/\(self.totalEntries) for device: \(self.deviceUUID ?? "unknown")")
         } else {
-            AppLogger.ble.info("🔄 Starting history data flow for device: \(sessionDeviceUUID)")
+            AppLogger.ble.info("🔄 Starting history data flow for device: \(self.deviceUUID ?? "unknown")")
         }
 
         isHistoryFlowActive = true
@@ -784,19 +767,18 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     }
 
     private func decodeEntryCount(data: Data) {
-            if let count = decoder.decodeEntryCount(data: data) {
-                totalEntries = count
-                AppLogger.ble.info("📊 Total historical entries available: \(self.totalEntries)")
+        if let count = decoder.decodeEntryCount(data: data) {
+            totalEntries = count
+            AppLogger.ble.info("📊 Total historical entries available: \(self.totalEntries)")
 
-                if (totalEntries > 0) {
-                    // Get the last synced index for incremental sync
-                    let sessionDeviceUUID = self.activeHistoryDeviceUUID ?? self.deviceUUID
-                    Task {
-                        do {
-                            var startIndex = 0
-                            if let sessionDeviceUUID = sessionDeviceUUID,
-                               let deviceDTO = try await RepositoryManager.shared.flowerDeviceRepository.getDevice(by: sessionDeviceUUID) {
-                                let lastSyncedIndex = deviceDTO.lastHistoryIndex
+            if (totalEntries > 0) {
+                // Get the last synced index for incremental sync
+                Task {
+                    do {
+                        var startIndex = 0
+                        if let deviceUUID = deviceUUID,
+                           let deviceDTO = try await RepositoryManager.shared.flowerDeviceRepository.getDevice(by: deviceUUID) {
+                            let lastSyncedIndex = deviceDTO.lastHistoryIndex
                             
                             // If we've already synced all entries, start from 0 for a full refresh
                             if lastSyncedIndex >= totalEntries {
@@ -823,9 +805,9 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                             } else {
                                 AppLogger.ble.info("ℹ️ No new historical entries to sync")
                                 self.loadingStateSubject.send(.completed)
-                                if let sessionDeviceUUID = self.activeHistoryDeviceUUID ?? self.requestedHistoryDeviceUUID ?? self.deviceUUID {
-                                    NotificationCenter.default.post(name: NSNotification.Name("HistoricalDataLoadingCompleted"), object: sessionDeviceUUID)
-                                }
+                                
+                                // Mark historical data as completed
+                                self.historicalDataRequested = false
                                 self.cleanupHistoryFlow()
                                 
                                 // Disconnect to save battery
@@ -919,7 +901,7 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
 
     // MARK: - Incremental Sync Helper
     private func updateLastHistoryIndex(_ index: Int) {
-        guard let deviceUUID = activeHistoryDeviceUUID ?? deviceUUID else { return }
+        guard let deviceUUID = deviceUUID else { return }
         
         Task {
             do {
@@ -1053,9 +1035,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     private func cleanupHistoryFlow() {
         AppLogger.ble.info("🧹 Cleaning up history flow")
         isHistoryFlowActive = false
-        historicalDataRequested = false
-        requestedHistoryDeviceUUID = nil
-        activeHistoryDeviceUUID = nil
         
         // Cancel all pending timers
         for timer in historyFlowTimers {
@@ -1233,26 +1212,18 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     }
     
     func requestHistoricalData(forceFullSync: Bool) {
-        guard let targetUUID = deviceUUID else {
-            AppLogger.ble.bleError("📊 Cannot request history without a device UUID")
-            return
-        }
-        AppLogger.ble.info("📊 Historical data requested (forceFullSync: \(forceFullSync)) for device \(targetUUID)")
+        AppLogger.ble.info("📊 Historical data requested (forceFullSync: \(forceFullSync))")
         resetErrorState()
-        
-        if let activeUUID = activeHistoryDeviceUUID, activeUUID != targetUUID {
-            AppLogger.ble.info("📊 Cancelling active history flow for \(activeUUID) before starting new request")
-            cleanupHistoryFlow()
-        }
-        requestedHistoryDeviceUUID = targetUUID
         historicalDataRequested = true
         
         // Add a flag to force full sync
         if forceFullSync {
             AppLogger.ble.info("🔄 Forcing full historical data sync")
             // Reset lastHistoryIndex for this device to force full sync
-            Task {
-                await resetLastHistoryIndex(for: targetUUID)
+            if let deviceUUID = deviceUUID {
+                Task {
+                    await resetLastHistoryIndex(for: deviceUUID)
+                }
             }
         }
         
@@ -1405,9 +1376,6 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     print("No historical entries available.")
                     AppLogger.ble.info("✅ Historical data completed - device has no entries")
                     loadingStateSubject.send(.completed)
-                    if let sessionDeviceUUID = activeHistoryDeviceUUID {
-                        NotificationCenter.default.post(name: NSNotification.Name("HistoricalDataLoadingCompleted"), object: sessionDeviceUUID)
-                    }
                     cleanupHistoryFlow()
                 }
             } else {
@@ -1417,21 +1385,20 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 cleanupHistoryFlow()
             }
         } else {
-            guard let sessionDeviceUUID = activeHistoryDeviceUUID else {
-                AppLogger.ble.bleError("⚠️ Received historical data without an active history session")
-                cleanupHistoryFlow()
+            // This is an actual history entry
+            guard let deviceUUID = self.deviceUUID else {
+                AppLogger.ble.bleError("⚠️ Received historical data without a device UUID context")
                 return
             }
-            // This is an actual history entry
-            if let historicalData = decoder.decodeHistoricalSensorData(data: data, deviceUUID: sessionDeviceUUID) {
+            if let historicalData = decoder.decodeHistoricalSensorData(data: data, deviceUUID: deviceUUID) {
                 print("Decoded history entry \(currentEntryIndex): temp=\(historicalData.temperature)°C, moisture=\(historicalData.moisture)%, conductivity=\(historicalData.conductivity)µS/cm")
-
+                
                 // Safety check: Only send data if loading hasn't been cancelled and we're still loading for the same device
-                guard !isCancelled && historicalDataRequested && historicalData.deviceUUID == sessionDeviceUUID else {
+                guard !isCancelled && historicalDataRequested else {
                     AppLogger.ble.warning("⚠️ Ignoring historical data - loading cancelled or not requested")
                     return
                 }
-
+                
                 historicalDataSubject.send(historicalData)
                 
                 // Update progress
@@ -1466,10 +1433,8 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                     loadingStateSubject.send(.completed)
                     
                     // Notify UI that historical loading is complete for cache refresh
-                    if let sessionDeviceUUID = activeHistoryDeviceUUID {
-                        NotificationCenter.default.post(name: NSNotification.Name("HistoricalDataLoadingCompleted"), object: sessionDeviceUUID)
-                    }
-
+                    NotificationCenter.default.post(name: NSNotification.Name("HistoricalDataLoadingCompleted"), object: self.deviceUUID)
+                    
                     cleanupHistoryFlow()
                 }
             } else {
