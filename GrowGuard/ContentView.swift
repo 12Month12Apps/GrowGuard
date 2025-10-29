@@ -10,6 +10,7 @@ import SwiftUI
 enum NavigationTabs {
     case overview
     case addDevice
+    case settings
 }
 
 struct ContentView: View {
@@ -28,6 +29,12 @@ struct ContentView: View {
                     
                     Tab(L10n.Navigation.add, systemImage: "plus.app", value: .addDevice) {
                         AddDeviceView()
+                    }
+
+                    Tab(L10n.Navigation.settings, systemImage: "gear", value: .settings) {
+                        NavigationStack {
+                            AppSettingsView()
+                        }
                     }
                 }
             }

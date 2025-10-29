@@ -299,7 +299,15 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         let identifier = response.notification.request.identifier
-        let deviceId = identifier.components(separatedBy: "-")[1]
+        let userInfo = response.notification.request.content.userInfo
+        let userInfoDeviceId = userInfo["deviceUUID"] as? String
+        let identifierDeviceId = identifier.split(separator: "-").last.map(String.init)
+
+        guard let deviceId = userInfoDeviceId ?? identifierDeviceId, !deviceId.isEmpty else {
+            print("⚠️ AppDelegate: Unable to determine device UUID for notification \(identifier)")
+            completionHandler()
+            return
+        }
         
         switch response.actionIdentifier {
         case "WATER_ACTION":
@@ -320,7 +328,12 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                     // Cancel notifications by recreating them - simplified approach
                     let center = UNUserNotificationCenter.current()
                     let pendingRequests = await center.pendingNotificationRequests()
-                    let identifiersToRemove = pendingRequests.filter { $0.identifier.contains(deviceId) }.map { $0.identifier }
+                    let identifiersToRemove = pendingRequests
+                        .filter {
+                            $0.identifier.contains(deviceId) &&
+                            !$0.identifier.contains("watering-daily")
+                        }
+                        .map { $0.identifier }
                     center.removePendingNotificationRequests(withIdentifiers: identifiersToRemove)
                     
                     let content = UNMutableNotificationContent()
@@ -329,6 +342,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                     content.sound = .default
                     content.categoryIdentifier = "WATERING_REMINDER"
                     content.userInfo = response.notification.request.content.userInfo
+                    content.interruptionLevel = .timeSensitive
                     
                     let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 2 * 60 * 60, repeats: false)
                     let request = UNNotificationRequest(identifier: "reminder-later-\(deviceId)", content: content, trigger: trigger)

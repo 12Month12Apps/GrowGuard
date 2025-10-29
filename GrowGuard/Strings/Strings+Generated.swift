@@ -327,6 +327,12 @@ internal enum L10n {
     }
     /// Loading...
     internal static let loading = L10n.tr("Localizable", "settings.loading", fallback: "Loading...")
+    /// Notifications
+    internal static let notificationSection = L10n.tr("Localizable", "settings.notificationSection", fallback: "Notifications")
+    /// Daily Reminder Time
+    internal static let dailyReminderTime = L10n.tr("Localizable", "settings.dailyReminderTime", fallback: "Daily Reminder Time")
+    /// Choose when daily watering reminders should arrive.
+    internal static let dailyReminderDescription = L10n.tr("Localizable", "settings.dailyReminderDescription", fallback: "Choose when daily watering reminders should arrive.")
     /// Saving...
     internal static let saving = L10n.tr("Localizable", "settings.saving", fallback: "Saving...")
     /// Total entries: %d

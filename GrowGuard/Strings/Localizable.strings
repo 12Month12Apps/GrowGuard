@@ -137,6 +137,9 @@
 "settings.cleanDescription" = "Removes impossible sensor values like moisture > 100%, extreme temperatures, etc.";
 "settings.loading" = "Loading...";
 "settings.saving" = "Saving...";
+"settings.notificationSection" = "Notifications";
+"settings.dailyReminderTime" = "Daily Reminder Time";
+"settings.dailyReminderDescription" = "Choose when daily watering reminders should arrive.";
 
 /* Notifications */
 "notification.debugTest" = "🧪 Debug: Test Notifications";
