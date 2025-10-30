@@ -63,6 +63,8 @@ enum NavigationDestination: Hashable {
     }
     
     func navigateToDeviceView(flowerDevice: FlowerDeviceDTO) {
+        // Ensure we start from a clean stack so we don't push multiple detail views at once
+        popToRoot()
         path.append(NavigationDestination.deviceView(flowerDevice))
     }
     
@@ -528,4 +530,3 @@ struct AddDeviceDetails:  View {
         }.alert(isPresented: $viewModel.showAlert, content: { viewModel.alertView })
     }
 }
-
