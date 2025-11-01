@@ -121,36 +121,136 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
     // MARK: - Private Methods
 
     private func startScanning() {
-        // TODO: Implement
+        // Prüfe ob bereits am Scannen
+        guard !isScanning else {
+            AppLogger.ble.bleWarning("Already scanning, skipping startScanning()")
+            return
+        }
+
+        // Prüfe Bluetooth State
+        guard centralManager.state == .poweredOn else {
+            AppLogger.ble.bleWarning("Cannot start scanning - Bluetooth state: \(centralManager.state.rawValue)")
+            return
+        }
+
+        // Starte Scan mit Service Filter
+        let options: [String: Any] = [
+            CBCentralManagerScanOptionAllowDuplicatesKey: false
+        ]
+
+        centralManager.scanForPeripherals(
+            withServices: [flowerCareServiceUUID],
+            options: options
+        )
+
+        isScanning = true
+        scanningStateSubject.send(true)
+
+        AppLogger.ble.bleConnection("Started scanning for devices: \(devicesToScan)")
     }
 
     private func stopScanning() {
-        // TODO: Implement
+        // Prüfe ob überhaupt am Scannen
+        guard isScanning else {
+            AppLogger.ble.bleWarning("Not scanning, skipping stopScanning()")
+            return
+        }
+
+        centralManager.stopScan()
+        isScanning = false
+        scanningStateSubject.send(false)
+
+        AppLogger.ble.bleConnection("Stopped scanning")
     }
 
     // MARK: - CBCentralManagerDelegate
 
     nonisolated func centralManagerDidUpdateState(_ central: CBCentralManager) {
         Task { @MainActor in
-            // TODO: Implement
+            AppLogger.ble.bleConnection("Bluetooth state changed: \(central.state.rawValue)")
+
+            switch central.state {
+            case .poweredOn:
+                AppLogger.ble.bleConnection("Bluetooth is powered on")
+                // Falls wir Geräte zum Scannen haben, starte Scan
+                if !devicesToScan.isEmpty {
+                    AppLogger.ble.bleConnection("Auto-starting scan for pending devices")
+                    startScanning()
+                }
+            case .poweredOff:
+                AppLogger.ble.bleError("Bluetooth is powered off")
+            case .unsupported:
+                AppLogger.ble.bleError("Bluetooth is not supported on this device")
+            case .unauthorized:
+                AppLogger.ble.bleError("Bluetooth access is unauthorized")
+            case .resetting:
+                AppLogger.ble.bleWarning("Bluetooth is resetting")
+            case .unknown:
+                AppLogger.ble.bleWarning("Bluetooth state is unknown")
+            @unknown default:
+                AppLogger.ble.bleWarning("Bluetooth state is unknown: \(central.state.rawValue)")
+            }
         }
     }
 
     nonisolated func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
         Task { @MainActor in
-            // TODO: Implement
+            let peripheralUUID = peripheral.identifier.uuidString
+
+            AppLogger.ble.bleConnection("Discovered peripheral: \(peripheral.name ?? "Unknown") (\(peripheralUUID)) RSSI: \(RSSI)")
+
+            // Prüfe ob wir nach diesem Gerät suchen
+            guard devicesToScan.contains(peripheralUUID) else {
+                AppLogger.ble.bleConnection("Peripheral \(peripheralUUID) not in scan list, ignoring")
+                return
+            }
+
+            AppLogger.ble.bleConnection("Found target device: \(peripheralUUID)")
+
+            // Hole Connection
+            let connection = getConnection(for: peripheralUUID)
+
+            // Setze Peripheral
+            connection.setPeripheral(peripheral)
+
+            // Verbinde
+            central.connect(peripheral, options: nil)
+            AppLogger.ble.bleConnection("Connecting to peripheral: \(peripheralUUID)")
+
+            // Entferne aus Scan-Liste
+            devicesToScan.remove(peripheralUUID)
+            AppLogger.ble.bleConnection("Removed \(peripheralUUID) from scan list. Remaining: \(devicesToScan)")
+
+            // Stoppe Scan falls keine weiteren Geräte zu suchen sind
+            if devicesToScan.isEmpty {
+                AppLogger.ble.bleConnection("All target devices found, stopping scan")
+                stopScanning()
+            }
         }
     }
 
     nonisolated func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         Task { @MainActor in
-            // TODO: Implement
+            let peripheralUUID = peripheral.identifier.uuidString
+            AppLogger.ble.bleConnection("Successfully connected to peripheral: \(peripheral.name ?? "Unknown") (\(peripheralUUID))")
+
+            // TODO: Connection wird in DeviceConnection verwaltet
+            // Hier müssen wir später die DeviceConnection informieren
         }
     }
 
     nonisolated func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         Task { @MainActor in
-            // TODO: Implement
+            let peripheralUUID = peripheral.identifier.uuidString
+
+            if let error = error {
+                AppLogger.ble.bleError("Disconnected from peripheral \(peripheralUUID) with error: \(error.localizedDescription)")
+            } else {
+                AppLogger.ble.bleConnection("Disconnected from peripheral: \(peripheralUUID)")
+            }
+
+            // TODO: Connection wird in DeviceConnection verwaltet
+            // Hier müssen wir später die DeviceConnection informieren
         }
     }
 }
