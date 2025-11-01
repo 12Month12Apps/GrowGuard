@@ -235,6 +235,42 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         }
     }
 
+    // MARK: - Live Data Requests
+
+    /// Fordert aktuelle Live-Sensor-Daten vom FlowerCare Sensor an
+    /// Schreibt Mode Change Command an das Gerät
+    func requestLiveData() {
+        // Prüfe ob authentifiziert
+        guard isAuthenticated else {
+            AppLogger.ble.bleWarning("Cannot request live data - device \(deviceUUID) not authenticated")
+            return
+        }
+
+        // Prüfe ob Peripheral verbunden ist
+        guard let peripheral = peripheral, peripheral.state == .connected else {
+            AppLogger.ble.bleError("Cannot request live data - device \(deviceUUID) not connected")
+            return
+        }
+
+        // Hole Mode Change Characteristic aus Dictionary
+        guard let modeCharacteristic = characteristics[deviceModeChangeCharacteristicUUID.uuidString] else {
+            AppLogger.ble.bleWarning("Cannot request live data - mode characteristic not found for device \(deviceUUID)")
+            return
+        }
+
+        AppLogger.ble.bleData("📤 Requesting live sensor data from device \(deviceUUID) - sending mode change command (0xA01F)")
+
+        // Sende Mode Change Command
+        let command: [UInt8] = [0xA0, 0x1F]
+        peripheral.writeValue(Data(command), for: modeCharacteristic, type: .withResponse)
+    }
+
+    /// Stoppt Live-Daten-Updates
+    func stopLiveData() {
+        AppLogger.ble.bleConnection("Stopping live data for device \(deviceUUID)")
+        // TODO: Falls nötig, weitere Cleanup-Logik hinzufügen
+    }
+
     /// Startet die Service Discovery für das Peripheral
     /// Sucht nach den benötigten BLE Services des Flower Care Sensors
     func discoverServices() {
@@ -343,12 +379,68 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
             return
         }
 
-        // TODO: Sensor-Daten Handling - kommt in Phase 3
-        AppLogger.ble.bleConnection("Received data for characteristic \(characteristic.uuid.uuidString) on device \(deviceUUID)")
+        // Verarbeite Daten nur wenn authenticated
+        guard isAuthenticated else {
+            AppLogger.ble.bleWarning("Received data but not authenticated yet for device \(deviceUUID)")
+            return
+        }
 
-        // Daten verarbeiten basierend auf Characteristic
-        // Authentication, Live Data, History Data etc.
-        // Implementierung kommt später
+        // Verarbeite basierend auf Characteristic UUID
+        switch characteristic.uuid {
+        case realTimeSensorValuesCharacteristicUUID:
+            AppLogger.ble.bleData("📊 Received real-time sensor data for device \(deviceUUID)")
+            processRealTimeSensorData(value)
+
+        case firmwareVersionCharacteristicUUID:
+            AppLogger.ble.bleData("🔋 Received firmware/battery data for device \(deviceUUID)")
+            processFirmwareAndBattery(value)
+
+        case deviceNameCharacteristicUUID:
+            AppLogger.ble.bleData("📛 Received device name for device \(deviceUUID)")
+            processDeviceName(value)
+
+        default:
+            AppLogger.ble.bleConnection("Received data for characteristic \(characteristic.uuid.uuidString) on device \(deviceUUID)")
+        }
+    }
+
+    // MARK: - Data Processing
+
+    /// Verarbeitet Real-Time Sensor-Daten
+    /// - Parameter data: Die rohen Sensor-Daten vom Gerät
+    private func processRealTimeSensorData(_ data: Data) {
+        // Dekodiere Sensor-Daten
+        guard let sensorData = decoder.decodeRealTimeSensorValues(data: data, deviceUUID: deviceUUID) else {
+            AppLogger.ble.bleError("Failed to decode real-time sensor data for device \(deviceUUID)")
+            return
+        }
+
+        AppLogger.sensor.info("✅ Decoded sensor data for device \(deviceUUID): temp=\(sensorData.temperature)°C, moisture=\(sensorData.moisture)%, light=\(sensorData.lightIntensity)lux, conductivity=\(sensorData.conductivity)µS/cm")
+
+        // Sende Sensor-Daten via Publisher
+        sensorDataSubject.send(sensorData)
+    }
+
+    /// Verarbeitet Firmware und Battery Daten
+    /// - Parameter data: Die rohen Firmware/Battery Daten vom Gerät
+    private func processFirmwareAndBattery(_ data: Data) {
+        guard let (battery, firmware) = decoder.decodeFirmwareAndBattery(data: data) else {
+            AppLogger.ble.bleError("Failed to decode firmware/battery data for device \(deviceUUID)")
+            return
+        }
+
+        AppLogger.sensor.info("🔋 Device \(deviceUUID) battery: \(battery)%, firmware: \(firmware)")
+
+        // TODO: Update Device Info in Database (kommt später)
+    }
+
+    /// Verarbeitet Device Name Daten
+    /// - Parameter data: Die rohen Device Name Daten vom Gerät
+    private func processDeviceName(_ data: Data) {
+        if let deviceName = String(data: data, encoding: .utf8) {
+            AppLogger.ble.bleConnection("📛 Device name for \(deviceUUID): \(deviceName)")
+            // TODO: Update Device Info in Database (kommt später)
+        }
     }
 
     /// Callback wenn Daten an eine Characteristic geschrieben wurden
