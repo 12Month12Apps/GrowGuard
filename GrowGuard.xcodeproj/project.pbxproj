@@ -74,6 +74,7 @@
 		56B44CC62D6E7B3F00A6A75A /* UUIDs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */; };
 		56B44CCA2D724D7700A6A75A /* OnbordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC92D724D7200A6A75A /* OnbordingView.swift */; };
 		56B44CCC2D725C2700A6A75A /* PlantMonitorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */; };
+		56F9D1A12E5B4E0D00A1B2C3 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */; };
 		56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CCD2D78E8EB00A6A75A /* print.swift */; };
 		56BF5F9B2DFA5D7300D9B2AE /* AddWithoutSensor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BF5F9A2DFA5D6C00D9B2AE /* AddWithoutSensor.swift */; };
 		56BF5F9D2DFA5E9100D9B2AE /* AddWithoutSensorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */; };
@@ -178,6 +179,7 @@
 		56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UUIDs.swift; sourceTree = "<group>"; };
 		56B44CC92D724D7200A6A75A /* OnbordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbordingView.swift; sourceTree = "<group>"; };
 		56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantMonitorService.swift; sourceTree = "<group>"; };
+		56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/NotificationService.swift; sourceTree = "<group>"; };
 		56B44CCD2D78E8EB00A6A75A /* print.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = print.swift; sourceTree = "<group>"; };
 		56BF5F9A2DFA5D6C00D9B2AE /* AddWithoutSensor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWithoutSensor.swift; sourceTree = "<group>"; };
 		56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWithoutSensorViewModel.swift; sourceTree = "<group>"; };
@@ -471,6 +473,7 @@
 				56AF11452BE2492300887073 /* Info.plist */,
 				56AF11182BDED05900887073 /* GrowGuardApp.swift */,
 				56AF111A2BDED05900887073 /* ContentView.swift */,
+				56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */,
 				56FD6C852E34194C00905984 /* SensorDataManager.swift */,
 				56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */,
 				56AF111E2BDED05B00887073 /* Assets.xcassets */,
@@ -715,6 +718,7 @@
 				569B70ED2C10F221005B7BC9 /* DataService.swift in Sources */,
 				5667BD8A2C28925300D04382 /* SensorData.swift in Sources */,
 				56B44CCC2D725C2700A6A75A /* PlantMonitorService.swift in Sources */,
+				56F9D1A12E5B4E0D00A1B2C3 /* NotificationService.swift in Sources */,
 				568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */,
 				5622B0D92E317710002C7E74 /* CoreDataPotSizeRepository.swift in Sources */,
 				5622B0DA2E317710002C7E74 /* RepositoryError.swift in Sources */,

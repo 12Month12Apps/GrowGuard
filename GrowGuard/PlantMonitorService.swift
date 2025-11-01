@@ -170,7 +170,7 @@ class PlantMonitorService {
         if currentMoisture < minMoisture {
             print("🚨 PlantMonitorService: Immediate watering needed for \(device.name)")
             print("   Reason: Current \(currentMoisture)% is below minimum threshold \(minMoisture)%")
-            await scheduleWateringReminder(for: device)
+            await NotificationService.shared.scheduleWateringNotifications(for: device)
         } else if currentMoisture >= minMoisture && currentMoisture <= maxMoisture {
             print("✅ PlantMonitorService: \(device.name) is within optimal range (\(minMoisture)%-\(maxMoisture)%)")
             // Plant is within optimal range - no immediate watering needed, but check predictions
@@ -187,7 +187,7 @@ class PlantMonitorService {
             // Plant is above optimal range - no watering needed
             print("💧 PlantMonitorService: \(device.name) is above optimal range (\(currentMoisture)% > \(maxMoisture)%) - no watering needed")
             // Cancel any existing notifications since plant is well-watered
-            await cancelNotifications(for: device.uuid)
+            await NotificationService.shared.cancelNotifications(for: device.uuid)
         }
     }
     
@@ -205,7 +205,7 @@ class PlantMonitorService {
         }
         
         // Schedule predictive notification
-        await schedulePredictiveNotification(for: device, wateringDate: prediction.predictedDate)
+        await NotificationService.shared.schedulePredictiveNotification(for: device, wateringDate: prediction.predictedDate)
     }
 
     // Add this method to your PlantMonitorService
@@ -329,7 +329,7 @@ class PlantMonitorService {
         print("💧 PlantMonitorService: Recorded watering event for device \(deviceUUID) (\(source.rawValue))")
         
         // Cancel any pending notifications for this device since it was just watered
-        await cancelNotifications(for: deviceUUID)
+        await NotificationService.shared.cancelNotifications(for: deviceUUID)
     }
     
     /// Schedules daily check for all devices (to be called from background tasks)
@@ -579,155 +579,5 @@ class PlantMonitorService {
         case 12, 1, 2: return 0.8  // Winter
         default: return 1.0  // Spring/Fall
         }
-    }
-    
-    // MARK: - Notification Methods
-    
-    /// Schedules persistent watering reminders for plants below optimal moisture
-    private func scheduleWateringReminder(for device: FlowerDeviceDTO) async {
-        let center = UNUserNotificationCenter.current()
-        
-        let pendingRequests = await center.pendingNotificationRequests()
-        let immediateIdentifier = "watering-immediate-\(device.uuid)"
-        let dailyIdentifier = "watering-daily-\(device.uuid)"
-
-        // Remove legacy one-off reminders from older builds
-        let legacyReminderIds = pendingRequests
-            .filter { $0.identifier.contains(device.uuid) && $0.identifier.contains("watering-reminder") }
-            .map { $0.identifier }
-        if !legacyReminderIds.isEmpty {
-            center.removePendingNotificationRequests(withIdentifiers: legacyReminderIds)
-            print("🧹 PlantMonitorService: Removed legacy 8h reminders for \(device.name)")
-        }
-
-        let hasImmediate = pendingRequests.contains { $0.identifier == immediateIdentifier }
-        let hasDaily = pendingRequests.contains { $0.identifier == dailyIdentifier }
-
-        // Schedule immediate notification
-        let immediateContent = UNMutableNotificationContent()
-        immediateContent.title = "💧 Water Your \(device.name)"
-        immediateContent.body = "Moisture level is below optimal range. Your plant needs water now!"
-        immediateContent.sound = .default
-        immediateContent.categoryIdentifier = "WATERING_REMINDER"
-        immediateContent.interruptionLevel = .timeSensitive
-        immediateContent.relevanceScore = 1.0
-        immediateContent.userInfo = [
-            "deviceUUID": device.uuid,
-            "notificationType": "immediate"
-        ]
-
-        let immediateRequest = UNNotificationRequest(identifier: immediateIdentifier, content: immediateContent, trigger: nil)
-
-        do {
-            if !hasImmediate {
-                try await center.add(immediateRequest)
-                print("📱 PlantMonitorService: Scheduled immediate watering notification for \(device.name)")
-            } else {
-                print("⏭️ PlantMonitorService: Immediate watering notification already scheduled for \(device.name)")
-            }
-
-            if !hasDaily {
-                let dailyContent = UNMutableNotificationContent()
-                dailyContent.title = "🚨 Still Needs Water: \(device.name)"
-                dailyContent.body = "Your plant is still below optimal moisture. Please water it today."
-                dailyContent.sound = .default
-                dailyContent.categoryIdentifier = "WATERING_REMINDER"
-                dailyContent.interruptionLevel = .timeSensitive
-                dailyContent.relevanceScore = 0.9
-                dailyContent.userInfo = [
-                    "deviceUUID": device.uuid,
-                    "notificationType": "dailyReminder"
-                ]
-
-                let preferenceComponents = NotificationPreferenceStore.shared.preferredReminderComponents()
-                let dailyTrigger = UNCalendarNotificationTrigger(dateMatching: preferenceComponents, repeats: true)
-                let dailyRequest = UNNotificationRequest(identifier: dailyIdentifier, content: dailyContent, trigger: dailyTrigger)
-                try await center.add(dailyRequest)
-                print("📱 PlantMonitorService: Scheduled daily watering reminder for \(device.name)")
-            } else {
-                print("⏭️ PlantMonitorService: Daily watering reminder already scheduled for \(device.name)")
-            }
-        } catch {
-            print("❌ PlantMonitorService: Failed to schedule watering reminders: \(error)")
-        }
-    }
-    
-    private func schedulePredictiveNotification(for device: FlowerDeviceDTO, wateringDate: Date) async {
-        await cancelNotifications(for: device.uuid)
-        
-        let notificationDate = wateringDate.addingTimeInterval(-2 * 60 * 60) // 2 hours before
-        
-        guard notificationDate > Date() else {
-            print("⚠️ PlantMonitorService: Skipping predictive notification - would be in the past")
-            return
-        }
-        
-        let content = UNMutableNotificationContent()
-        content.title = "🌱 \(device.name) Will Need Water Soon"
-        content.body = "Based on current trends, your plant will need watering in about 2 hours."
-        content.sound = .default
-        content.categoryIdentifier = "WATERING_REMINDER"
-        
-        // Configure as active notification (less urgent than immediate)
-        content.interruptionLevel = .active
-        content.relevanceScore = 0.7 // High relevance but not maximum
-        
-        content.userInfo = [
-            "deviceUUID": device.uuid,
-            "notificationType": "predictive"
-        ]
-        
-        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: notificationDate)
-        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
-        
-        let identifier = "watering-predictive-\(device.uuid)"
-        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-        
-        do {
-            try await UNUserNotificationCenter.current().add(request)
-            print("📱 PlantMonitorService: Scheduled ACTIVE priority predictive notification for \(device.name)")
-        } catch {
-            print("❌ PlantMonitorService: Failed to schedule predictive notification: \(error)")
-        }
-    }
-    
-    /// Updates any pending daily watering reminders to use the current user preference
-    func rescheduleDailyRemindersToPreferredTime() async {
-        let center = UNUserNotificationCenter.current()
-        let pendingRequests = await center.pendingNotificationRequests()
-        let preferenceComponents = NotificationPreferenceStore.shared.preferredReminderComponents()
-        let dailyRequests = pendingRequests.filter { $0.identifier.contains("watering-daily-") }
-        
-        guard !dailyRequests.isEmpty else {
-            print("ℹ️ PlantMonitorService: No daily watering reminders to reschedule")
-            return
-        }
-        
-        for request in dailyRequests {
-            center.removePendingNotificationRequests(withIdentifiers: [request.identifier])
-            let updatedTrigger = UNCalendarNotificationTrigger(dateMatching: preferenceComponents, repeats: true)
-            let updatedRequest = UNNotificationRequest(identifier: request.identifier, content: request.content, trigger: updatedTrigger)
-            
-            do {
-                try await center.add(updatedRequest)
-                print("🔁 PlantMonitorService: Rescheduled daily reminder \(request.identifier)")
-            } catch {
-                print("❌ PlantMonitorService: Failed to reschedule daily reminder \(request.identifier): \(error)")
-            }
-        }
-    }
-
-    private func cancelNotifications(for deviceUUID: String) async {
-        let center = UNUserNotificationCenter.current()
-        let pendingRequests = await center.pendingNotificationRequests()
-        
-        let identifiersToRemove = pendingRequests
-            .filter { $0.identifier.contains(deviceUUID) }
-            .map { $0.identifier }
-        
-        center.removeDeliveredNotifications(withIdentifiers: identifiersToRemove)
-        center.removePendingNotificationRequests(withIdentifiers: identifiersToRemove)
-        
-        print("🗑️ PlantMonitorService: Cancelled \(identifiersToRemove.count) notifications for device \(deviceUUID)")
     }
 }

@@ -4,15 +4,18 @@ import SwiftUI
 final class AppSettingsViewModel {
     private let preferenceStore: NotificationPreferenceStore
     private let calendar: Calendar
+    private let notificationService: NotificationService
 
     var preferredReminderTime: Date
 
     init(
         preferenceStore: NotificationPreferenceStore = .shared,
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        notificationService: NotificationService = .shared
     ) {
         self.preferenceStore = preferenceStore
         self.calendar = calendar
+        self.notificationService = notificationService
         self.preferredReminderTime = preferenceStore.reminderDate(for: calendar)
     }
 
@@ -20,7 +23,7 @@ final class AppSettingsViewModel {
         preferenceStore.updateReminderTime(with: newValue, calendar: calendar)
 
         Task {
-            await PlantMonitorService.shared.rescheduleDailyRemindersToPreferredTime()
+            await notificationService.reschedulePersistentWateringReminders()
         }
     }
 }
