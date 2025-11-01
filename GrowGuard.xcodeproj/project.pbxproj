@@ -37,8 +37,6 @@
 		565058CC2E3F64F900CC6E2B /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565058C92E3F64F900CC6E2B /* Logger.swift */; };
 		5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2AB2CB44DA000EED3D3 /* Extensions.swift */; };
 		5654B2B92CB4575E00EED3D3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2B82CB4575C00EED3D3 /* SettingsView.swift */; };
-		5699C0F42E126A5C00FA9A11 /* AppSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5699C0F02E126A5C00FA9A11 /* AppSettingsView.swift */; };
-		5699C0F52E126A5C00FA9A11 /* NotificationPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5699C0F12E126A5C00FA9A11 /* NotificationPreferenceStore.swift */; };
 		5654B2BB2CB45C6E00EED3D3 /* SensorDataDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */; };
 		5654B2BD2CB46EE600EED3D3 /* OverviewListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2BC2CB46EDB00EED3D3 /* OverviewListViewModelTests.swift */; };
 		5654B2C12CB4739C00EED3D3 /* AddDeviceViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2C02CB4739400EED3D3 /* AddDeviceViewModelTests.swift */; };
@@ -53,6 +51,8 @@
 		568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568892072C832936000E8FAE /* SensorDataChart.swift */; };
 		5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5688920A2C84B4B9000E8FAE /* AppDelegate.swift */; };
 		569417562E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 569417542E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld */; };
+		5699C0F42E126A5C00FA9A11 /* AppSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5699C0F02E126A5C00FA9A11 /* AppSettingsView.swift */; };
+		5699C0F52E126A5C00FA9A11 /* NotificationPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5699C0F12E126A5C00FA9A11 /* NotificationPreferenceStore.swift */; };
 		569B70ED2C10F221005B7BC9 /* DataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 569B70EC2C10F221005B7BC9 /* DataService.swift */; };
 		56A8C6EA2D8ECF37004021C0 /* AddDeviceDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6E92D8ECF31004021C0 /* AddDeviceDetails.swift */; };
 		56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6EC2D8EF1E5004021C0 /* Alert.swift */; };
@@ -74,7 +74,6 @@
 		56B44CC62D6E7B3F00A6A75A /* UUIDs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */; };
 		56B44CCA2D724D7700A6A75A /* OnbordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC92D724D7200A6A75A /* OnbordingView.swift */; };
 		56B44CCC2D725C2700A6A75A /* PlantMonitorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */; };
-		56F9D1A12E5B4E0D00A1B2C3 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */; };
 		56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CCD2D78E8EB00A6A75A /* print.swift */; };
 		56BF5F9B2DFA5D7300D9B2AE /* AddWithoutSensor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BF5F9A2DFA5D6C00D9B2AE /* AddWithoutSensor.swift */; };
 		56BF5F9D2DFA5E9100D9B2AE /* AddWithoutSensorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */; };
@@ -83,6 +82,7 @@
 		56DC564D2DD9256800041DBA /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 56DC564C2DD9256800041DBA /* GRDB */; };
 		56F0F7DB2E564C0400B538AF /* MoistureAnomalyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F0F7DA2E564C0400B538AF /* MoistureAnomalyService.swift */; };
 		56F0F7DD2E564C2800B538AF /* MoistureAnomalyServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */; };
+		56F9D1A12E5B4E0D00A1B2C3 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */; };
 		56FD6C862E34194C00905984 /* SensorDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C852E34194C00905984 /* SensorDataManager.swift */; };
 		56FD6C892E34BF9300905984 /* ReliableFlowerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C882E34BF9300905984 /* ReliableFlowerManager.swift */; };
 		56FD6C8D2E36960300905984 /* FlowerManagerHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C8A2E36960300905984 /* FlowerManagerHistoryTests.swift */; };
@@ -136,8 +136,6 @@
 		565058C92E3F64F900CC6E2B /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
 		5654B2AB2CB44DA000EED3D3 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		5654B2B82CB4575C00EED3D3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		5699C0F02E126A5C00FA9A11 /* AppSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsView.swift; sourceTree = "<group>"; };
-		5699C0F12E126A5C00FA9A11 /* NotificationPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPreferenceStore.swift; sourceTree = "<group>"; };
 		5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataDecoderTests.swift; sourceTree = "<group>"; };
 		5654B2BC2CB46EDB00EED3D3 /* OverviewListViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewListViewModelTests.swift; sourceTree = "<group>"; };
 		5654B2C02CB4739400EED3D3 /* AddDeviceViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceViewModelTests.swift; sourceTree = "<group>"; };
@@ -153,6 +151,8 @@
 		568892072C832936000E8FAE /* SensorDataChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataChart.swift; sourceTree = "<group>"; };
 		5688920A2C84B4B9000E8FAE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		569417552E0DD9C000AE7586 /* CoreDataModels.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = CoreDataModels.xcdatamodel; sourceTree = "<group>"; };
+		5699C0F02E126A5C00FA9A11 /* AppSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsView.swift; sourceTree = "<group>"; };
+		5699C0F12E126A5C00FA9A11 /* NotificationPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPreferenceStore.swift; sourceTree = "<group>"; };
 		569B70EC2C10F221005B7BC9 /* DataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataService.swift; sourceTree = "<group>"; };
 		56A8C6E92D8ECF31004021C0 /* AddDeviceDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceDetails.swift; sourceTree = "<group>"; };
 		56A8C6EC2D8EF1E5004021C0 /* Alert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alert.swift; sourceTree = "<group>"; };
@@ -179,7 +179,6 @@
 		56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UUIDs.swift; sourceTree = "<group>"; };
 		56B44CC92D724D7200A6A75A /* OnbordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbordingView.swift; sourceTree = "<group>"; };
 		56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantMonitorService.swift; sourceTree = "<group>"; };
-		56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/NotificationService.swift; sourceTree = "<group>"; };
 		56B44CCD2D78E8EB00A6A75A /* print.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = print.swift; sourceTree = "<group>"; };
 		56BF5F9A2DFA5D6C00D9B2AE /* AddWithoutSensor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWithoutSensor.swift; sourceTree = "<group>"; };
 		56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWithoutSensorViewModel.swift; sourceTree = "<group>"; };
@@ -187,6 +186,7 @@
 		56DC56492DD9251C00041DBA /* flower.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = flower.db; sourceTree = "<group>"; };
 		56F0F7DA2E564C0400B538AF /* MoistureAnomalyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoistureAnomalyService.swift; sourceTree = "<group>"; };
 		56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoistureAnomalyServiceTests.swift; sourceTree = "<group>"; };
+		56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationService.swift; path = ../Core/NotificationService.swift; sourceTree = "<group>"; };
 		56FD6C852E34194C00905984 /* SensorDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataManager.swift; sourceTree = "<group>"; };
 		56FD6C882E34BF9300905984 /* ReliableFlowerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReliableFlowerManager.swift; sourceTree = "<group>"; };
 		56FD6C8A2E36960300905984 /* FlowerManagerHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerManagerHistoryTests.swift; sourceTree = "<group>"; };
@@ -285,20 +285,13 @@
 		565058CA2E3F64F900CC6E2B /* Utils */ = {
 			isa = PBXGroup;
 			children = (
+				56A8C6EB2D8EF1DD004021C0 /* Extensions */,
 				565058C82E3F64F900CC6E2B /* LogExportView.swift */,
 				565058C92E3F64F900CC6E2B /* Logger.swift */,
 				56F0F7DA2E564C0400B538AF /* MoistureAnomalyService.swift */,
+				56B44CCD2D78E8EB00A6A75A /* print.swift */,
 			);
 			path = Utils;
-			sourceTree = "<group>";
-		};
-		5699C0EF2E126A5C00FA9A11 /* AppSettings */ = {
-			isa = PBXGroup;
-			children = (
-				5699C0F02E126A5C00FA9A11 /* AppSettingsView.swift */,
-				5699C0F12E126A5C00FA9A11 /* NotificationPreferenceStore.swift */,
-			);
-			path = AppSettings;
 			sourceTree = "<group>";
 		};
 		5654B2B72CB4575700EED3D3 /* Settings */ = {
@@ -387,6 +380,24 @@
 			path = Componetns;
 			sourceTree = "<group>";
 		};
+		568EA33D2EB625CE00F6BB25 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */,
+				56B3B7382EA5181700AE41E9 /* WeeklySensorUpdateService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		5699C0EF2E126A5C00FA9A11 /* AppSettings */ = {
+			isa = PBXGroup;
+			children = (
+				5699C0F02E126A5C00FA9A11 /* AppSettingsView.swift */,
+				5699C0F12E126A5C00FA9A11 /* NotificationPreferenceStore.swift */,
+			);
+			path = AppSettings;
+			sourceTree = "<group>";
+		};
 		56A8C6E82D8ECF2C004021C0 /* Details */ = {
 			isa = PBXGroup;
 			children = (
@@ -454,15 +465,13 @@
 		56AF11172BDED05900887073 /* GrowGuard */ = {
 			isa = PBXGroup;
 			children = (
+				568EA33D2EB625CE00F6BB25 /* Services */,
 				560FAA592E6B43D800BFFC6D /* Strings */,
 				56241CDD2DFD1E6A0012B18E /* CircularProgress.swift */,
 				56DC56492DD9251C00041DBA /* flower.db */,
-				56A8C6EB2D8EF1DD004021C0 /* Extensions */,
-				56B44CCD2D78E8EB00A6A75A /* print.swift */,
 				56B44CC92D724D7200A6A75A /* OnbordingView.swift */,
 				56B44CC22D6E7B3F00A6A75A /* BLE */,
 				5688920A2C84B4B9000E8FAE /* AppDelegate.swift */,
-				56B3B7382EA5181700AE41E9 /* WeeklySensorUpdateService.swift */,
 				562628FF2C42E32200B5DB2A /* AppIntent.swift */,
 				565058CA2E3F64F900CC6E2B /* Utils */,
 				5699C0EF2E126A5C00FA9A11 /* AppSettings */,
@@ -473,7 +482,6 @@
 				56AF11452BE2492300887073 /* Info.plist */,
 				56AF11182BDED05900887073 /* GrowGuardApp.swift */,
 				56AF111A2BDED05900887073 /* ContentView.swift */,
-				56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */,
 				56FD6C852E34194C00905984 /* SensorDataManager.swift */,
 				56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */,
 				56AF111E2BDED05B00887073 /* Assets.xcassets */,
@@ -635,28 +643,6 @@
 		};
 /* End PBXProject section */
 
-/* Begin PBXShellScriptBuildPhase section */
-		5674A8F02E36A7B80084A296 /* Update Build Number */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PROJECT_DIR}/Scripts/update_build_number.sh",
-			);
-			name = "Update Build Number";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PROJECT_DIR}/Scripts/update_build_number.sh\"\n";
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXResourcesBuildPhase section */
 		56AF11132BDED05900887073 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
@@ -684,6 +670,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		5674A8F02E36A7B80084A296 /* Update Build Number */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PROJECT_DIR}/Scripts/update_build_number.sh",
+			);
+			name = "Update Build Number";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/Scripts/update_build_number.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		56AF11112BDED05900887073 /* Sources */ = {
