@@ -19,6 +19,18 @@ import CoreData
     var deviceUpdateSubscription: AnyCancellable?
     var groupingOption: Calendar.Component = .day
     private let repositoryManager = RepositoryManager.shared
+
+    // MARK: - Connection Pool Migration (Parallel Implementation)
+    // Note: ConnectionPoolManager und DeviceConnection müssen im Xcode Target sein!
+    // Falls Build-Fehler: Prüfe ob ConnectionPoolManager.swift und DeviceConnection.swift
+    // in Xcode zum GrowGuard Target gehören (File Inspector -> Target Membership)
+    // private let connectionPool = ConnectionPoolManager.shared
+    // private var deviceConnection: DeviceConnection?
+    // private var poolConnectionStateSubscription: AnyCancellable?
+    // private var poolSensorDataSubscription: AnyCancellable?
+
+    // Feature Flag: true = neue ConnectionPool Implementierung, false = alte FlowerCareManager
+    // private let useConnectionPool = false // TODO: später via UserDefaults oder Build Config
     
     // MARK: - Connection Quality & Distance
     var connectionDistanceHint: String = ""
@@ -104,13 +116,99 @@ import CoreData
             }
         }
     }
-    
+
+    // MARK: - Connection Pool Methods (New Implementation)
+    // WICHTIG: Zum Aktivieren dieser Implementierung:
+    // 1. In Xcode: ConnectionPoolManager.swift und DeviceConnection.swift zum Target hinzufügen
+    // 2. File Inspector öffnen -> Target Membership -> GrowGuard anhaken
+    // 3. Kommentare unten entfernen
+    // 4. useConnectionPool = true setzen zum Testen
+
+    /*
+    /// Verbindet zum Gerät über den ConnectionPoolManager (neue Implementierung)
+    private func connectViaPool() {
+        AppLogger.ble.bleConnection("DeviceDetailsViewModel: Connecting via ConnectionPool to device \(device.uuid)")
+
+        // Hole oder erstelle DeviceConnection vom Pool
+        deviceConnection = connectionPool.getConnection(for: device.uuid)
+
+        guard let connection = deviceConnection else {
+            AppLogger.ble.bleError("DeviceDetailsViewModel: Failed to get connection from pool")
+            return
+        }
+
+        // Subscribe zu Sensor-Daten vom ConnectionPool
+        poolSensorDataSubscription = connection.sensorDataPublisher.sink { [weak self] (data: SensorDataTemp) in
+            print("📡 DeviceDetailsViewModel (Pool): Received new sensor data from ConnectionPool")
+            Task { @MainActor in
+                guard let self = self else { return }
+                // Verarbeite Sensor-Daten
+                let success = await self.saveSensorData(data)
+                if success {
+                    await self.updateDeviceLastUpdate()
+                }
+            }
+        }
+
+        // Subscribe zu Connection State vom ConnectionPool
+        poolConnectionStateSubscription = connection.connectionStatePublisher.sink { [weak self] (state: DeviceConnection.ConnectionState) in
+            Task { @MainActor in
+                guard let self = self else { return }
+                AppLogger.ble.bleConnection("DeviceDetailsViewModel (Pool): Connection state changed to \(state)")
+
+                // Bei erfolgreicher Authentication: Fordere Live-Daten an
+                if state == .authenticated {
+                    AppLogger.ble.bleConnection("DeviceDetailsViewModel (Pool): Device authenticated, requesting live data")
+                    connection.requestLiveData()
+                }
+            }
+        }
+
+        // Starte Verbindung über ConnectionPool
+        connectionPool.connect(to: device.uuid)
+    }
+
+    /// Stoppt die Verbindung über den ConnectionPool
+    private func disconnectViaPool() {
+        AppLogger.ble.bleConnection("DeviceDetailsViewModel: Disconnecting via ConnectionPool from device \(device.uuid)")
+
+        // Cancel Subscriptions
+        poolSensorDataSubscription?.cancel()
+        poolConnectionStateSubscription?.cancel()
+
+        // Disconnecte vom Pool
+        connectionPool.disconnect(from: device.uuid)
+
+        // Cleanup
+        deviceConnection = nil
+    }
+    */
+
     func loadDetails() {
+        // Aktuell: Alte Implementierung (FlowerCareManager)
+        // TODO: Sobald ConnectionPoolManager zum Target hinzugefügt wurde,
+        // connectViaPool() auskommentieren und useConnectionPool Flag nutzen
         ble.connectToKnownDevice(deviceUUID: device.uuid)
         ble.requestLiveData()
+
+        /*
+        // Neue Implementierung mit Feature-Flag (aktivieren nach Target-Setup)
+        if useConnectionPool {
+            // Neue Implementierung: Nutze ConnectionPoolManager
+            AppLogger.ble.bleConnection("DeviceDetailsViewModel: Using ConnectionPool implementation")
+            connectViaPool()
+        } else {
+            // Alte Implementierung: Nutze FlowerCareManager (Fallback)
+            AppLogger.ble.bleConnection("DeviceDetailsViewModel: Using legacy FlowerCareManager implementation")
+            ble.connectToKnownDevice(deviceUUID: device.uuid)
+            ble.requestLiveData()
+        }
+        */
     }
     
     func blinkLED() {
+        // Note: blinkLED() nutzt vorerst immer FlowerCareManager
+        // TODO: DeviceConnection.blinkLED() implementieren für ConnectionPool
         ble.connectToKnownDevice(deviceUUID: device.uuid)
         ble.blinkLED()
     }
@@ -252,7 +350,8 @@ import CoreData
 
     @MainActor
     func fetchHistoricalData() {
-        // Connect to the device
+        // Note: Historical Data nutzt vorerst immer FlowerCareManager
+        // TODO: DeviceConnection.requestHistoricalData() implementieren für ConnectionPool
         ble.connectToKnownDevice(deviceUUID: device.uuid)
         ble.requestHistoricalData()
     }
