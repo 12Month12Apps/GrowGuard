@@ -232,10 +232,17 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
     nonisolated func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         Task { @MainActor in
             let peripheralUUID = peripheral.identifier.uuidString
-            AppLogger.ble.bleConnection("Successfully connected to peripheral: \(peripheral.name ?? "Unknown") (\(peripheralUUID))")
 
-            // TODO: Connection wird in DeviceConnection verwaltet
-            // Hier müssen wir später die DeviceConnection informieren
+            AppLogger.ble.bleConnection("Connected to device: \(peripheralUUID)")
+
+            // Hole Connection aus Dictionary
+            guard let connection = connections[peripheralUUID] else {
+                AppLogger.ble.bleWarning("No connection found for connected device: \(peripheralUUID)")
+                return
+            }
+
+            // Informiere Connection über erfolgreiche Verbindung
+            connection.handleConnected()
         }
     }
 
@@ -243,14 +250,21 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
         Task { @MainActor in
             let peripheralUUID = peripheral.identifier.uuidString
 
+            // Logging basierend auf Error
             if let error = error {
-                AppLogger.ble.bleError("Disconnected from peripheral \(peripheralUUID) with error: \(error.localizedDescription)")
+                AppLogger.ble.bleError("Disconnected from device: \(peripheralUUID) with error: \(error.localizedDescription)")
             } else {
-                AppLogger.ble.bleConnection("Disconnected from peripheral: \(peripheralUUID)")
+                AppLogger.ble.bleConnection("Disconnected from device: \(peripheralUUID)")
             }
 
-            // TODO: Connection wird in DeviceConnection verwaltet
-            // Hier müssen wir später die DeviceConnection informieren
+            // Hole Connection aus Dictionary
+            guard let connection = connections[peripheralUUID] else {
+                AppLogger.ble.bleWarning("No connection found for disconnected device: \(peripheralUUID)")
+                return
+            }
+
+            // Informiere Connection über Disconnection
+            connection.handleDisconnected(error: error)
         }
     }
 }
