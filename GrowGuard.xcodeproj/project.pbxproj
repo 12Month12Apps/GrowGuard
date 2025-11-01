@@ -84,7 +84,6 @@
 		56F0F7DD2E564C2800B538AF /* MoistureAnomalyServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */; };
 		56F9D1A12E5B4E0D00A1B2C3 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */; };
 		56FD6C862E34194C00905984 /* SensorDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C852E34194C00905984 /* SensorDataManager.swift */; };
-		56FD6C892E34BF9300905984 /* ReliableFlowerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C882E34BF9300905984 /* ReliableFlowerManager.swift */; };
 		56FD6C8D2E36960300905984 /* FlowerManagerHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C8A2E36960300905984 /* FlowerManagerHistoryTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -188,7 +187,6 @@
 		56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoistureAnomalyServiceTests.swift; sourceTree = "<group>"; };
 		56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationService.swift; path = ../Core/NotificationService.swift; sourceTree = "<group>"; };
 		56FD6C852E34194C00905984 /* SensorDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataManager.swift; sourceTree = "<group>"; };
-		56FD6C882E34BF9300905984 /* ReliableFlowerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReliableFlowerManager.swift; sourceTree = "<group>"; };
 		56FD6C8A2E36960300905984 /* FlowerManagerHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerManagerHistoryTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -523,7 +521,6 @@
 			isa = PBXGroup;
 			children = (
 				56B44CBE2D6E7B3F00A6A75A /* FlowerManager.swift */,
-				56FD6C882E34BF9300905984 /* ReliableFlowerManager.swift */,
 				56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */,
 				56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */,
 				56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */,
@@ -708,7 +705,6 @@
 				56D35EB72E2BE5730059FEE6 /* PotView.swift in Sources */,
 				56B44CC32D6E7B3F00A6A75A /* FlowerManager.swift in Sources */,
 				56241CE12E03591C0012B18E /* FlowerPot.swift in Sources */,
-				56FD6C892E34BF9300905984 /* ReliableFlowerManager.swift in Sources */,
 				5622B0EE2E327ADD002C7E74 /* SensorDataDTO+CoreData.swift in Sources */,
 				569417562E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld in Sources */,
 				56B44CC42D6E7B3F00A6A75A /* HistoricalSensorData.swift in Sources */,
@@ -954,7 +950,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -997,7 +993,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -1014,7 +1010,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = G2PVUY2GRG;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.company.GrowGuardTests;
@@ -1037,7 +1033,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = G2PVUY2GRG;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.company.GrowGuardTests;
@@ -1059,7 +1055,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = G2PVUY2GRG;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.company.GrowGuardUITests;
@@ -1081,7 +1077,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = G2PVUY2GRG;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.company.GrowGuardUITests;

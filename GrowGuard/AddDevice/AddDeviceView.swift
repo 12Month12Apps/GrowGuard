@@ -11,7 +11,6 @@ import CoreBluetooth
 
 struct AddDeviceView: View {
     @State var viewModel: AddDeviceViewModel
-    @State var loading: Bool = false
 
     init(/*allSavedDevices: [FlowerDeviceDTO]*/) {
         self.viewModel = AddDeviceViewModel(/*allSavedDevices: allSavedDevices*/)

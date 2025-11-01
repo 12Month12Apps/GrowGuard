@@ -40,26 +40,12 @@ enum NavigationDestination: Hashable {
         path.append(NavigationDestination.deviceDetailsSpecies(flower))
     }
     
-    func navigateToDeviceList() {
-        path.append(NavigationDestination.deviceList)
-    }
-    
     func navigateToAddDeviceWithoutSensor() {
         path.append(NavigationDestination.addDeviceWithoutSensor)
     }
     
-    func navigateToHome() {
-        path.append(NavigationDestination.home)
-    }
-    
     func popToRoot() {
         path = NavigationPath()
-    }
-    
-    func pop() {
-        if !path.isEmpty {
-            path.removeLast()
-        }
     }
     
     func navigateToDeviceView(flowerDevice: FlowerDeviceDTO) {

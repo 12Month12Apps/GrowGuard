@@ -91,38 +91,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
     
-    /// Check current notification permission status (can be called anytime)
-    func checkNotificationPermissions() {
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            DispatchQueue.main.async {
-                print("📱 AppDelegate: Current notification permissions:")
-                print("   Authorization: \(settings.authorizationStatus.rawValue)")
-                print("   Time-Sensitive: \(settings.timeSensitiveSetting.rawValue)")
-                
-                switch settings.authorizationStatus {
-                case .notDetermined:
-                    print("⚪ Notifications: Not asked yet")
-                case .denied:
-                    print("🔴 Notifications: DENIED - Plant alerts won't work!")
-                case .authorized:
-                    print("🟢 Notifications: Authorized")
-                case .provisional:
-                    print("🟡 Notifications: Provisional (quiet)")
-                case .ephemeral:
-                    print("🟡 Notifications: Ephemeral")
-                @unknown default:
-                    print("❓ Notifications: Unknown status")
-                }
-                
-                if settings.timeSensitiveSetting == .enabled {
-                    print("🚨 Time-Sensitive: ENABLED - Urgent alerts will break through Do Not Disturb")
-                } else {
-                    print("⚠️ Time-Sensitive: DISABLED - Urgent alerts may be delayed")
-                }
-            }
-        }
-    }
-    
     func applicationDidEnterBackground(_ application: UIApplication) {
         // Schedule plant monitoring task when app goes to background
         schedulePlantMonitoringTask()
@@ -206,30 +174,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         
         // 4. Send test notification to validate the system (disabled for production)
         // await sendSystemValidationNotification()
-    }
-    
-    private func sendSystemValidationNotification() async {
-        print("🧪 AppDelegate: Sending system validation notification...")
-        
-        let content = UNMutableNotificationContent()
-        content.title = "✅ GrowGuard Notifications Active"
-        content.body = "Push notifications are working correctly! This test was sent automatically."
-        content.sound = .default
-        content.badge = 1
-        content.categoryIdentifier = "WATERING_REMINDER"
-        
-        let identifier = "system-validation-\(Date().timeIntervalSince1970)"
-        
-        // Use time interval of 2 seconds to ensure it shows up
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 2, repeats: false)
-        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-        
-        do {
-            try await UNUserNotificationCenter.current().add(request)
-            print("✅ AppDelegate: System validation notification scheduled")
-        } catch {
-            print("❌ AppDelegate: Failed to send validation notification: \(error)")
-        }
     }
     
 //    // Ergänze diese Methoden entsprechend dem Aufbau deiner App

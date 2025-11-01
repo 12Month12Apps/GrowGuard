@@ -81,31 +81,6 @@ import CoreData
     }
     
     @MainActor
-    func tapOnDevice(peripheral: CBPeripheral) async {
-        let isSaved = allSavedDevices.contains(where: { device in
-            device.uuid == peripheral.identifier.uuidString
-        })
-        
-        if isSaved == false {
-            self.addDevice = peripheral
-            let newDeviceDTO = FlowerDeviceDTO(
-                name: peripheral.name ?? "Unknown Device",
-                uuid: peripheral.identifier.uuidString,
-                peripheralID: peripheral.identifier,
-                added: Date(),
-                lastUpdate: Date()
-            )
-            
-            do {
-                try await repositoryManager.flowerDeviceRepository.saveDevice(newDeviceDTO)
-                await fetchSavedDevices()
-            } catch {
-                print("Error saving device: \(error.localizedDescription)")
-            }
-        }
-    }
-    
-    @MainActor
     func fetchSavedDevices() async {
         do {
             allSavedDevices = try await repositoryManager.flowerDeviceRepository.getAllDevices()

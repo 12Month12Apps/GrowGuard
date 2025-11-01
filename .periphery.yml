@@ -1,0 +1,5 @@
+project: GrowGuard.xcodeproj
+report_exclude:
+- '**/Strings+Generated.swift'
+schemes:
+- GrowGuard
