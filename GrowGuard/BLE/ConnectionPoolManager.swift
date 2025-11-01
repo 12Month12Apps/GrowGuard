@@ -34,25 +34,88 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
     // MARK: - Public API
 
     func getConnection(for deviceUUID: String) -> DeviceConnection {
-        // TODO: Implement
-        fatalError("Not implemented")
+        // Prüfe ob Connection bereits existiert
+        if let existingConnection = connections[deviceUUID] {
+            AppLogger.ble.bleConnection("Returning existing connection for device: \(deviceUUID)")
+            return existingConnection
+        }
+
+        // Erstelle neue Connection
+        AppLogger.ble.bleConnection("Creating new connection for device: \(deviceUUID)")
+        let newConnection = DeviceConnection(deviceUUID: deviceUUID)
+        connections[deviceUUID] = newConnection
+        return newConnection
     }
 
     func connect(to deviceUUID: String) {
-        // TODO: Implement
+        AppLogger.ble.bleConnection("Requested connection to device: \(deviceUUID)")
+
+        // Hole oder erstelle DeviceConnection
+        let connection = getConnection(for: deviceUUID)
+
+        // Prüfe ob bereits verbunden
+        if connection.connectionState == .connected || connection.connectionState == .authenticated {
+            AppLogger.ble.bleConnection("Device \(deviceUUID) is already connected")
+            return
+        }
+
+        // Erstelle UUID aus String
+        guard let uuid = UUID(uuidString: deviceUUID) else {
+            AppLogger.ble.bleError("Invalid device UUID: \(deviceUUID)")
+            return
+        }
+
+        // Versuche bekanntes Peripheral abzurufen
+        let peripherals = centralManager.retrievePeripherals(withIdentifiers: [uuid])
+
+        if let peripheral = peripherals.first {
+            // Peripheral gefunden - direkt verbinden
+            AppLogger.ble.bleConnection("Found known peripheral for device: \(deviceUUID)")
+            connection.setPeripheral(peripheral)
+            centralManager.connect(peripheral, options: nil)
+        } else {
+            // Peripheral nicht gefunden - Scan starten
+            AppLogger.ble.bleConnection("Known device not found, starting scan for: \(deviceUUID)")
+            devicesToScan.insert(deviceUUID)
+            startScanning()
+        }
     }
 
     func disconnect(from deviceUUID: String) {
-        // TODO: Implement
+        AppLogger.ble.bleConnection("Disconnecting from device: \(deviceUUID)")
+
+        // Hole Connection aus Dictionary
+        guard let connection = connections[deviceUUID] else {
+            AppLogger.ble.bleWarning("No connection found for device: \(deviceUUID)")
+            return
+        }
+
+        // Prüfe ob Peripheral existiert
+        guard let peripheral = connection.peripheral else {
+            AppLogger.ble.bleWarning("No peripheral found for device: \(deviceUUID)")
+            return
+        }
+
+        // Verbindung trennen
+        centralManager.cancelPeripheralConnection(peripheral)
+        AppLogger.ble.bleConnection("Cancelled connection for device: \(deviceUUID)")
     }
 
     func connectToMultiple(deviceUUIDs: [String]) {
-        // TODO: Implement
+        AppLogger.ble.bleConnection("Connecting to multiple devices: \(deviceUUIDs.count)")
+
+        for deviceUUID in deviceUUIDs {
+            connect(to: deviceUUID)
+        }
     }
 
     func getAllActiveConnections() -> [DeviceConnection] {
-        // TODO: Implement
-        return []
+        let activeConnections = connections.values.filter { connection in
+            connection.connectionState == .connected || connection.connectionState == .authenticated
+        }
+
+        AppLogger.ble.bleConnection("Active connections: \(activeConnections.count) out of \(connections.count) total")
+        return Array(activeConnections)
     }
 
     // MARK: - Private Methods

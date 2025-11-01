@@ -52,7 +52,7 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
     /// Das CoreBluetooth Peripheral Objekt
     /// Wird gesetzt sobald das Gerät gefunden wurde
-    private var peripheral: CBPeripheral?
+    private(set) var peripheral: CBPeripheral?
 
     /// Aktueller Authentifizierungs-Status
     /// true = Gerät ist authentifiziert und bereit für Datenübertragung
