@@ -268,6 +268,15 @@ struct LogExportView: View {
                     .foregroundColor(.red)
                 }
             }
+            
+            Section {
+                NavigationLink {
+                    MultiDeviceTestView()
+                } label: {
+                    Text("Mutli device test view")
+                }
+
+            }
 
             Section(header: Text("Sensor Data Management")) {
                 VStack(alignment: .leading, spacing: 8) {

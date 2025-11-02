@@ -42,6 +42,11 @@
 		5654B2C12CB4739C00EED3D3 /* AddDeviceViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2C02CB4739400EED3D3 /* AddDeviceViewModelTests.swift */; };
 		565DEC402C159B93002D784A /* DeviceDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */; };
 		565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */; };
+		5663FEB52EB684620038209F /* ConnectionPoolManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB42EB684620038209F /* ConnectionPoolManager.swift */; };
+		5663FEB72EB684800038209F /* DeviceConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB62EB684800038209F /* DeviceConnection.swift */; };
+		5663FEB92EB684900038209F /* InitialSensorDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB82EB684900038209F /* InitialSensorDataService.swift */; };
+		5663FEB92EB690AB0038209F /* InitialSensorDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */; };
+		5663FEBB2EB6A1310038209F /* MultiDeviceTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEBA2EB6A1310038209F /* MultiDeviceTestView.swift */; };
 		5667BD8A2C28925300D04382 /* SensorData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5667BD892C28924600D04382 /* SensorData.swift */; };
 		5684E2DB2C0F81C0005CD8B6 /* AddDeviceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2DA2C0F81C0005CD8B6 /* AddDeviceView.swift */; };
 		5684E2DD2C0F81E7005CD8B6 /* AddDeviceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2DC2C0F81E7005CD8B6 /* AddDeviceViewModel.swift */; };
@@ -140,6 +145,11 @@
 		5654B2C02CB4739400EED3D3 /* AddDeviceViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceViewModelTests.swift; sourceTree = "<group>"; };
 		565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsView.swift; sourceTree = "<group>"; };
 		565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsViewModel.swift; sourceTree = "<group>"; };
+		5663FEB42EB684620038209F /* ConnectionPoolManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionPoolManager.swift; sourceTree = "<group>"; };
+		5663FEB62EB684800038209F /* DeviceConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnection.swift; sourceTree = "<group>"; };
+		5663FEB82EB684900038209F /* InitialSensorDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitialSensorDataService.swift; sourceTree = "<group>"; };
+		5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitialSensorDataService.swift; sourceTree = "<group>"; };
+		5663FEBA2EB6A1310038209F /* MultiDeviceTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiDeviceTestView.swift; sourceTree = "<group>"; };
 		5667BD892C28924600D04382 /* SensorData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorData.swift; sourceTree = "<group>"; };
 		567465842E36A6A50084A296 /* GrowGuard.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = GrowGuard.xctestplan; sourceTree = "<group>"; };
 		5684E2DA2C0F81C0005CD8B6 /* AddDeviceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceView.swift; sourceTree = "<group>"; };
@@ -479,6 +489,7 @@
 				5684E2D92C0C9054005CD8B6 /* AddDevice */,
 				56AF11452BE2492300887073 /* Info.plist */,
 				56AF11182BDED05900887073 /* GrowGuardApp.swift */,
+				5663FEBA2EB6A1310038209F /* MultiDeviceTestView.swift */,
 				56AF111A2BDED05900887073 /* ContentView.swift */,
 				56FD6C852E34194C00905984 /* SensorDataManager.swift */,
 				56B44CCB2D725C2700A6A75A /* PlantMonitorService.swift */,
@@ -520,6 +531,10 @@
 		56B44CC22D6E7B3F00A6A75A /* BLE */ = {
 			isa = PBXGroup;
 			children = (
+				5663FEB42EB684620038209F /* ConnectionPoolManager.swift */,
+				5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */,
+				5663FEB62EB684800038209F /* DeviceConnection.swift */,
+				5663FEB82EB684900038209F /* InitialSensorDataService.swift */,
 				56B44CBE2D6E7B3F00A6A75A /* FlowerManager.swift */,
 				56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */,
 				56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */,
@@ -696,11 +711,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				565058CB2E3F64F900CC6E2B /* LogExportView.swift in Sources */,
+				5663FEB52EB684620038209F /* ConnectionPoolManager.swift in Sources */,
 				565058CC2E3F64F900CC6E2B /* Logger.swift in Sources */,
 				5684E2DB2C0F81C0005CD8B6 /* AddDeviceView.swift in Sources */,
 				5622B0CA2E3176F5002C7E74 /* PotSizeDTO.swift in Sources */,
 				5622B0CB2E3176F5002C7E74 /* SensorDataDTO.swift in Sources */,
 				5622B0CC2E3176F5002C7E74 /* OptimalRangeDTO.swift in Sources */,
+				5663FEB92EB690AB0038209F /* InitialSensorDataService.swift in Sources */,
 				5622B0CD2E3176F5002C7E74 /* FlowerDeviceDTO.swift in Sources */,
 				56D35EB72E2BE5730059FEE6 /* PotView.swift in Sources */,
 				56B44CC32D6E7B3F00A6A75A /* FlowerManager.swift in Sources */,
@@ -715,6 +732,8 @@
 				5622B0E32E317717002C7E74 /* RepositoryManager.swift in Sources */,
 				56A8C6EA2D8ECF37004021C0 /* AddDeviceDetails.swift in Sources */,
 				565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */,
+				5663FEB72EB684800038209F /* DeviceConnection.swift in Sources */,
+				5663FEB92EB684900038209F /* InitialSensorDataService.swift in Sources */,
 				5684E2DF2C0F820D005CD8B6 /* AddDeviceBLE.swift in Sources */,
 				56241CDE2DFD1E720012B18E /* CircularProgress.swift in Sources */,
 				56AF111B2BDED05900887073 /* ContentView.swift in Sources */,
@@ -735,6 +754,7 @@
 				560FAA5D2E6B440500BFFC6D /* Strings+Generated.swift in Sources */,
 				5622B0E02E317710002C7E74 /* CoreDataSensorDataRepository.swift in Sources */,
 				5622B0E12E317710002C7E74 /* FlowerDeviceRepository.swift in Sources */,
+				5663FEBB2EB6A1310038209F /* MultiDeviceTestView.swift in Sources */,
 				565058C72E3A98A200CC6E2B /* FlowerSelectionView.swift in Sources */,
 				56A948F92DE3A5370010575F /* SpeciesModel.swift in Sources */,
 				5684E2DD2C0F81E7005CD8B6 /* AddDeviceViewModel.swift in Sources */,

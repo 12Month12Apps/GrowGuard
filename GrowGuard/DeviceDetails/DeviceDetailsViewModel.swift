@@ -21,16 +21,16 @@ import CoreData
     private let repositoryManager = RepositoryManager.shared
 
     // MARK: - Connection Pool Migration (Parallel Implementation)
-    // Note: ConnectionPoolManager und DeviceConnection müssen im Xcode Target sein!
-    // Falls Build-Fehler: Prüfe ob ConnectionPoolManager.swift und DeviceConnection.swift
-    // in Xcode zum GrowGuard Target gehören (File Inspector -> Target Membership)
-    // private let connectionPool = ConnectionPoolManager.shared
-    // private var deviceConnection: DeviceConnection?
-    // private var poolConnectionStateSubscription: AnyCancellable?
-    // private var poolSensorDataSubscription: AnyCancellable?
+    // AKTIVIERT: ConnectionPool-Implementierung ist jetzt aktiv!
+    // WICHTIG: ConnectionPoolManager.swift und DeviceConnection.swift müssen im Xcode Target sein!
+    // Falls Build-Fehler: In Xcode -> File Inspector -> Target Membership -> GrowGuard anhaken
+    private let connectionPool = ConnectionPoolManager.shared
+    private var deviceConnection: DeviceConnection?
+    private var poolConnectionStateSubscription: AnyCancellable?
+    private var poolSensorDataSubscription: AnyCancellable?
 
     // Feature Flag: true = neue ConnectionPool Implementierung, false = alte FlowerCareManager
-    // private let useConnectionPool = false // TODO: später via UserDefaults oder Build Config
+    private let useConnectionPool = true // ✅ AKTIVIERT - ConnectionPool wird genutzt!
     
     // MARK: - Connection Quality & Distance
     var connectionDistanceHint: String = ""
@@ -118,15 +118,10 @@ import CoreData
     }
 
     // MARK: - Connection Pool Methods (New Implementation)
-    // WICHTIG: Zum Aktivieren dieser Implementierung:
-    // 1. In Xcode: ConnectionPoolManager.swift und DeviceConnection.swift zum Target hinzufügen
-    // 2. File Inspector öffnen -> Target Membership -> GrowGuard anhaken
-    // 3. Kommentare unten entfernen
-    // 4. useConnectionPool = true setzen zum Testen
+    // ✅ AKTIVIERT: ConnectionPool-Implementierung ist jetzt verfügbar!
 
-    /*
     /// Verbindet zum Gerät über den ConnectionPoolManager (neue Implementierung)
-    private func connectViaPool() {
+    @MainActor private func connectViaPool() {
         AppLogger.ble.bleConnection("DeviceDetailsViewModel: Connecting via ConnectionPool to device \(device.uuid)")
 
         // Hole oder erstelle DeviceConnection vom Pool
@@ -169,7 +164,7 @@ import CoreData
     }
 
     /// Stoppt die Verbindung über den ConnectionPool
-    private func disconnectViaPool() {
+    @MainActor private func disconnectViaPool() {
         AppLogger.ble.bleConnection("DeviceDetailsViewModel: Disconnecting via ConnectionPool from device \(device.uuid)")
 
         // Cancel Subscriptions
@@ -182,17 +177,11 @@ import CoreData
         // Cleanup
         deviceConnection = nil
     }
-    */
 
-    func loadDetails() {
-        // Aktuell: Alte Implementierung (FlowerCareManager)
-        // TODO: Sobald ConnectionPoolManager zum Target hinzugefügt wurde,
-        // connectViaPool() auskommentieren und useConnectionPool Flag nutzen
-        ble.connectToKnownDevice(deviceUUID: device.uuid)
-        ble.requestLiveData()
+    @MainActor func loadDetails() {
+        // ✅ AKTIVIERT: Nutzt jetzt ConnectionPool (wenn useConnectionPool = true)
+        // Fallback auf alte FlowerCareManager Implementierung (wenn useConnectionPool = false)
 
-        /*
-        // Neue Implementierung mit Feature-Flag (aktivieren nach Target-Setup)
         if useConnectionPool {
             // Neue Implementierung: Nutze ConnectionPoolManager
             AppLogger.ble.bleConnection("DeviceDetailsViewModel: Using ConnectionPool implementation")
@@ -203,7 +192,6 @@ import CoreData
             ble.connectToKnownDevice(deviceUUID: device.uuid)
             ble.requestLiveData()
         }
-        */
     }
     
     func blinkLED() {

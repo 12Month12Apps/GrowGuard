@@ -166,15 +166,15 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
     /// Verwendet den 2-Schritt Authentication Flow
     private func startAuthentication() {
         // Hole Authentication Characteristic aus Dictionary
-        guard let authCharacteristic = characteristics[authenticationCharacteristicUUID.uuidString] else {
-            AppLogger.ble.info("🔐 No authentication characteristic found for device \(deviceUUID), proceeding without auth")
+        guard let authCharacteristic = characteristics[authenticationCharacteristicUUID.uuidString.uppercased()] else {
+            AppLogger.ble.info("🔐 No authentication characteristic found for device \(self.deviceUUID), proceeding without auth")
             // Ohne Authentication direkt als authenticated markieren
             isAuthenticated = true
             stateSubject.send(.authenticated)
             return
         }
 
-        AppLogger.ble.info("🔐 Starting FlowerCare authentication for device \(deviceUUID)...")
+        AppLogger.ble.info("🔐 Starting FlowerCare authentication for device \(self.deviceUUID)...")
         authenticationStep = 1
         isAuthenticated = false
 
@@ -206,11 +206,11 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         case 1:
             // Validate challenge response
             if data.starts(with: expectedResponse?.prefix(4) ?? Data()) {
-                AppLogger.ble.info("✅ Authentication challenge successful for device \(deviceUUID)")
+                AppLogger.ble.info("✅ Authentication challenge successful for device \(self.deviceUUID)")
                 authenticationStep = 2
 
                 // Step 2: Send final authentication key
-                guard let authCharacteristic = characteristics[authenticationCharacteristicUUID.uuidString] else {
+                guard let authCharacteristic = characteristics[authenticationCharacteristicUUID.uuidString.uppercased()] else {
                     AppLogger.ble.bleError("❌ Authentication characteristic disappeared for device \(deviceUUID)")
                     return
                 }
@@ -225,7 +225,7 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
         case 2:
             // Final authentication step
-            AppLogger.ble.info("✅ Authentication completed successfully for device \(deviceUUID)")
+            AppLogger.ble.info("✅ Authentication completed successfully for device \(self.deviceUUID)")
             isAuthenticated = true
             authenticationStep = 0
             stateSubject.send(.authenticated)
@@ -253,7 +253,7 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         }
 
         // Hole Mode Change Characteristic aus Dictionary
-        guard let modeCharacteristic = characteristics[deviceModeChangeCharacteristicUUID.uuidString] else {
+        guard let modeCharacteristic = characteristics[deviceModeChangeCharacteristicUUID.uuidString.uppercased()] else {
             AppLogger.ble.bleWarning("Cannot request live data - mode characteristic not found for device \(deviceUUID)")
             return
         }
@@ -339,7 +339,7 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
         // Iteriere über alle gefundenen Characteristics
         for characteristic in discoveredCharacteristics {
-            let uuidString = characteristic.uuid.uuidString
+            let uuidString = characteristic.uuid.uuidString.uppercased()
 
             // Speichere Characteristic im Dictionary
             characteristics[uuidString] = characteristic
@@ -415,7 +415,7 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
             return
         }
 
-        AppLogger.sensor.info("✅ Decoded sensor data for device \(deviceUUID): temp=\(sensorData.temperature)°C, moisture=\(sensorData.moisture)%, light=\(sensorData.lightIntensity)lux, conductivity=\(sensorData.conductivity)µS/cm")
+        AppLogger.sensor.info("✅ Decoded sensor data for device \(self.deviceUUID): temp=\(sensorData.temperature)°C, moisture=\(sensorData.moisture)%, brightness=\(sensorData.brightness)lux, conductivity=\(sensorData.conductivity)µS/cm")
 
         // Sende Sensor-Daten via Publisher
         sensorDataSubject.send(sensorData)
@@ -429,7 +429,7 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
             return
         }
 
-        AppLogger.sensor.info("🔋 Device \(deviceUUID) battery: \(battery)%, firmware: \(firmware)")
+        AppLogger.sensor.info("🔋 Device \(self.deviceUUID) battery: \(battery)%, firmware: \(firmware)")
 
         // TODO: Update Device Info in Database (kommt später)
     }

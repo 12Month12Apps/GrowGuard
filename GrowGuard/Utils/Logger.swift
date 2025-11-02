@@ -171,6 +171,11 @@ extension Logger {
         self.error("❌ BLE Error: \(message)")
     }
     
+    /// Log BLE warnings
+    func bleWarning(_ message: String) {
+        self.warning("⚠️ BLE Warning: \(message)")
+    }
+    
     /// Log sensor data processing
     func sensorData(_ message: String) {
         self.info("📊 Sensor: \(message)")
