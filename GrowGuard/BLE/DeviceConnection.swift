@@ -219,6 +219,23 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         }
     }
 
+    /// Wird aufgerufen wenn die Verbindung nach mehreren Versuchen fehlgeschlagen ist
+    /// - Parameter error: Der Grund für das Fehlschlagen
+    func handleConnectionFailed(error: Error) {
+        AppLogger.ble.bleError("❌ Connection failed for device \(deviceUUID): \(error.localizedDescription)")
+
+        // Reset state
+        isAuthenticated = false
+
+        // Cleanup history flow if active
+        if isHistoryFlowActive {
+            cleanupHistoryFlow()
+        }
+
+        // Send error state
+        stateSubject.send(.error(error))
+    }
+
     // MARK: - Authentication
 
     /// Startet den Authentication-Prozess mit dem FlowerCare Sensor

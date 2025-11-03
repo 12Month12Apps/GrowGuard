@@ -231,6 +231,10 @@ import CoreData
         if useConnectionPool {
             // Neue Implementierung: Nutze ConnectionPoolManager
             AppLogger.ble.bleConnection("DeviceDetailsViewModel: Using ConnectionPool implementation")
+
+            // Reset retry counter for fresh start
+            connectionPool.resetRetryCounter(for: device.uuid)
+
             connectViaPool()
         } else {
             // Alte Implementierung: Nutze FlowerCareManager (Fallback)

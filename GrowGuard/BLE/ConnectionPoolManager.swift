@@ -9,6 +9,26 @@ import Foundation
 import CoreBluetooth
 import Combine
 
+enum ConnectionError: Error {
+    case maxRetriesExceeded
+    case timeout
+    case bluetoothUnavailable
+    case peripheralNotFound
+
+    var localizedDescription: String {
+        switch self {
+        case .maxRetriesExceeded:
+            return "Could not connect after multiple attempts"
+        case .timeout:
+            return "Connection timeout"
+        case .bluetoothUnavailable:
+            return "Bluetooth is not available"
+        case .peripheralNotFound:
+            return "Device not found"
+        }
+    }
+}
+
 @MainActor
 class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
 
@@ -23,6 +43,12 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
     private var devicesToScan: Set<String> = []
     private var isScanning: Bool = false
     private let scanningStateSubject = CurrentValueSubject<Bool, Never>(false)
+
+    // Connection retry management
+    private var connectionRetryCount: [String: Int] = [:]
+    private var connectionTimeouts: [String: Timer] = [:]
+    private let maxRetries = 3
+    private let connectionTimeout: TimeInterval = 15.0 // 15 seconds
 
     // MARK: - Initialization
 
@@ -59,11 +85,25 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
             return
         }
 
+        // Check retry count
+        let retryCount = connectionRetryCount[deviceUUID] ?? 0
+        if retryCount >= maxRetries {
+            AppLogger.ble.bleError("⛔️ Max connection retries (\(maxRetries)) reached for device \(deviceUUID)")
+            // Send error state
+            connection.handleConnectionFailed(error: ConnectionError.maxRetriesExceeded)
+            return
+        }
+
+        AppLogger.ble.bleConnection("Connection attempt \(retryCount + 1)/\(maxRetries) for device: \(deviceUUID)")
+
         // Erstelle UUID aus String
         guard let uuid = UUID(uuidString: deviceUUID) else {
             AppLogger.ble.bleError("Invalid device UUID: \(deviceUUID)")
             return
         }
+
+        // Start connection timeout
+        startConnectionTimeout(for: deviceUUID)
 
         // Versuche bekanntes Peripheral abzurufen
         let peripherals = centralManager.retrievePeripherals(withIdentifiers: [uuid])
@@ -81,8 +121,63 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
         }
     }
 
+    private func startConnectionTimeout(for deviceUUID: String) {
+        // Cancel existing timeout
+        connectionTimeouts[deviceUUID]?.invalidate()
+
+        // Create new timeout
+        let timer = Timer.scheduledTimer(withTimeInterval: connectionTimeout, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+            Task { @MainActor in
+                AppLogger.ble.bleWarning("⏰ Connection timeout for device \(deviceUUID)")
+                self.handleConnectionTimeout(for: deviceUUID)
+            }
+        }
+
+        connectionTimeouts[deviceUUID] = timer
+        AppLogger.ble.bleConnection("⏱ Connection timeout started for device \(deviceUUID) (\(connectionTimeout)s)")
+    }
+
+    private func cancelConnectionTimeout(for deviceUUID: String) {
+        connectionTimeouts[deviceUUID]?.invalidate()
+        connectionTimeouts[deviceUUID] = nil
+        AppLogger.ble.bleConnection("⏱ Connection timeout cancelled for device \(deviceUUID)")
+    }
+
+    private func handleConnectionTimeout(for deviceUUID: String) {
+        AppLogger.ble.bleWarning("⏰ Handling connection timeout for device \(deviceUUID)")
+
+        // Cancel the connection attempt
+        if let connection = connections[deviceUUID],
+           let peripheral = connection.peripheral {
+            centralManager.cancelPeripheralConnection(peripheral)
+        }
+
+        // Increment retry counter
+        let retryCount = (connectionRetryCount[deviceUUID] ?? 0) + 1
+        connectionRetryCount[deviceUUID] = retryCount
+
+        if retryCount < maxRetries {
+            // Calculate exponential backoff delay
+            let delay = min(pow(2.0, Double(retryCount)), 8.0) // Max 8 seconds
+            AppLogger.ble.bleConnection("🔄 Retrying connection in \(delay)s (attempt \(retryCount + 1)/\(maxRetries))")
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.connect(to: deviceUUID)
+            }
+        } else {
+            AppLogger.ble.bleError("⛔️ Max retries reached for device \(deviceUUID)")
+            if let connection = connections[deviceUUID] {
+                connection.handleConnectionFailed(error: ConnectionError.maxRetriesExceeded)
+            }
+        }
+    }
+
     func disconnect(from deviceUUID: String) {
         AppLogger.ble.bleConnection("Disconnecting from device: \(deviceUUID)")
+
+        // Cancel any pending timeouts
+        cancelConnectionTimeout(for: deviceUUID)
 
         // Hole Connection aus Dictionary
         guard let connection = connections[deviceUUID] else {
@@ -99,6 +194,13 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
         // Verbindung trennen
         centralManager.cancelPeripheralConnection(peripheral)
         AppLogger.ble.bleConnection("Cancelled connection for device: \(deviceUUID)")
+    }
+
+    /// Setzt den Retry Counter für ein Gerät zurück
+    /// Nützlich wenn User manuell eine neue Verbindung startet
+    func resetRetryCounter(for deviceUUID: String) {
+        connectionRetryCount[deviceUUID] = 0
+        AppLogger.ble.bleConnection("Reset retry counter for device: \(deviceUUID)")
     }
 
     func connectToMultiple(deviceUUIDs: [String]) {
@@ -233,7 +335,13 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
         Task { @MainActor in
             let peripheralUUID = peripheral.identifier.uuidString
 
-            AppLogger.ble.bleConnection("Connected to device: \(peripheralUUID)")
+            AppLogger.ble.bleConnection("✅ Successfully connected to device: \(peripheralUUID)")
+
+            // Cancel connection timeout
+            self.cancelConnectionTimeout(for: peripheralUUID)
+
+            // Reset retry counter on successful connection
+            self.connectionRetryCount[peripheralUUID] = 0
 
             // Hole Connection aus Dictionary
             guard let connection = connections[peripheralUUID] else {
@@ -249,6 +357,9 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
     nonisolated func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         Task { @MainActor in
             let peripheralUUID = peripheral.identifier.uuidString
+
+            // Cancel timeout if active
+            self.cancelConnectionTimeout(for: peripheralUUID)
 
             // Logging basierend auf Error
             if let error = error {
@@ -275,6 +386,36 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
                     guard let self = self else { return }
                     AppLogger.ble.info("🔄 Starting auto-reconnect for device \(peripheralUUID)")
                     self.connect(to: peripheralUUID)
+                }
+            }
+        }
+    }
+
+    nonisolated func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
+        Task { @MainActor in
+            let peripheralUUID = peripheral.identifier.uuidString
+
+            AppLogger.ble.bleError("❌ Failed to connect to device: \(peripheralUUID), error: \(error?.localizedDescription ?? "unknown")")
+
+            // Cancel timeout
+            self.cancelConnectionTimeout(for: peripheralUUID)
+
+            // Increment retry counter
+            let retryCount = (self.connectionRetryCount[peripheralUUID] ?? 0) + 1
+            self.connectionRetryCount[peripheralUUID] = retryCount
+
+            if retryCount < self.maxRetries {
+                // Calculate exponential backoff delay
+                let delay = min(pow(2.0, Double(retryCount)), 8.0) // Max 8 seconds
+                AppLogger.ble.bleConnection("🔄 Retrying connection in \(delay)s (attempt \(retryCount + 1)/\(self.maxRetries))")
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                    self?.connect(to: peripheralUUID)
+                }
+            } else {
+                AppLogger.ble.bleError("⛔️ Max retries reached for device \(peripheralUUID)")
+                if let connection = self.connections[peripheralUUID] {
+                    connection.handleConnectionFailed(error: error ?? ConnectionError.maxRetriesExceeded)
                 }
             }
         }
