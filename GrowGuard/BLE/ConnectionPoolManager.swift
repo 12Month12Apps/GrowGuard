@@ -48,7 +48,7 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
     private var connectionRetryCount: [String: Int] = [:]
     private var connectionTimeouts: [String: Timer] = [:]
     private let maxRetries = 3
-    private let connectionTimeout: TimeInterval = 15.0 // 15 seconds
+    private let connectionTimeout: TimeInterval = 10.0 // 10 seconds - schnellerer Timeout
 
     // MARK: - Initialization
 
@@ -158,8 +158,8 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
         connectionRetryCount[deviceUUID] = retryCount
 
         if retryCount < maxRetries {
-            // Calculate exponential backoff delay
-            let delay = min(pow(2.0, Double(retryCount)), 8.0) // Max 8 seconds
+            // Calculate shorter exponential backoff delay
+            let delay = min(Double(retryCount), 3.0) // 1s, 2s, 3s
             AppLogger.ble.bleConnection("🔄 Retrying connection in \(delay)s (attempt \(retryCount + 1)/\(maxRetries))")
 
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
@@ -379,10 +379,10 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
 
             // Prüfe ob automatischer Reconnect gewünscht ist (z.B. während History Flow)
             if connection.shouldAutoReconnect {
-                AppLogger.ble.info("🔄 Auto-reconnect requested for device \(peripheralUUID) - reconnecting in 1 second...")
+                AppLogger.ble.info("🔄 Auto-reconnect requested for device \(peripheralUUID) - reconnecting in 0.5 seconds...")
 
                 // Kurze Verzögerung vor Reconnect, um dem Gerät Zeit zur Stabilisierung zu geben
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                     guard let self = self else { return }
                     AppLogger.ble.info("🔄 Starting auto-reconnect for device \(peripheralUUID)")
                     self.connect(to: peripheralUUID)
@@ -405,8 +405,8 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
             self.connectionRetryCount[peripheralUUID] = retryCount
 
             if retryCount < self.maxRetries {
-                // Calculate exponential backoff delay
-                let delay = min(pow(2.0, Double(retryCount)), 8.0) // Max 8 seconds
+                // Calculate shorter exponential backoff delay
+                let delay = min(Double(retryCount), 3.0) // 1s, 2s, 3s
                 AppLogger.ble.bleConnection("🔄 Retrying connection in \(delay)s (attempt \(retryCount + 1)/\(self.maxRetries))")
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
