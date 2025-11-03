@@ -28,9 +28,16 @@ import CoreData
     private var deviceConnection: DeviceConnection?
     private var poolConnectionStateSubscription: AnyCancellable?
     private var poolSensorDataSubscription: AnyCancellable?
+    private var poolHistoricalDataSubscription: AnyCancellable?
+    private var poolHistoryProgressSubscription: AnyCancellable?
 
     // Feature Flag: true = neue ConnectionPool Implementierung, false = alte FlowerCareManager
     private let useConnectionPool = true // ✅ AKTIVIERT - ConnectionPool wird genutzt!
+
+    // MARK: - Historical Data Loading
+    var isLoadingHistory = false
+    var historyLoadingProgress: (current: Int, total: Int) = (0, 0)
+    private var historicalDataBatchCounter = 0
     
     // MARK: - Connection Quality & Distance
     var connectionDistanceHint: String = ""
@@ -111,6 +118,9 @@ import CoreData
         NotificationCenter.default.addObserver(forName: NSNotification.Name("HistoricalDataLoadingCompleted"), object: nil, queue: .main) { [weak self] notification in
             if let deviceUUID = notification.object as? String, deviceUUID == self?.device.uuid {
                 Task { @MainActor in
+                    // Reset batch counter
+                    self?.historicalDataBatchCounter = 0
+                    // Final refresh after all data loaded
                     await self?.refreshCurrentWeekSilently()
                 }
             }
@@ -145,6 +155,39 @@ import CoreData
             }
         }
 
+        // Subscribe zu Historical Data vom ConnectionPool
+        poolHistoricalDataSubscription = connection.historicalDataPublisher.sink { [weak self] (data: HistoricalSensorData) in
+            print("📡 DeviceDetailsViewModel (Pool): Received historical sensor data from ConnectionPool")
+            print("📅 Historical data date: \(data.date), temp: \(data.temperature)°C, moisture: \(data.moisture)%")
+            Task { @MainActor in
+                guard let self = self else { return }
+                await self.saveHistoricalSensorData(data)
+
+                // Check if History Flow is completed by listening to the connection
+                // Note: We'll set isLoadingHistory to false when connection disconnects or in completion handler
+            }
+        }
+
+        // Subscribe zu History Progress vom ConnectionPool
+        poolHistoryProgressSubscription = connection.historyProgressPublisher.sink { [weak self] (current: Int, total: Int) in
+            Task { @MainActor in
+                guard let self = self else { return }
+                print("📊 DeviceDetailsViewModel (Pool): History progress: \(current)/\(total)")
+                self.historyLoadingProgress = (current, total)
+            }
+        }
+
+        // Listen for historical data loading completion
+        NotificationCenter.default.addObserver(forName: NSNotification.Name("HistoricalDataLoadingCompleted"), object: device.uuid, queue: .main) { [weak self] _ in
+            Task { @MainActor in
+                self?.isLoadingHistory = false
+                // Reset batch counter
+                self?.historicalDataBatchCounter = 0
+                // Final refresh after all data loaded
+                await self?.refreshCurrentWeekSilently()
+            }
+        }
+
         // Subscribe zu Connection State vom ConnectionPool
         poolConnectionStateSubscription = connection.connectionStatePublisher.sink { [weak self] (state: DeviceConnection.ConnectionState) in
             Task { @MainActor in
@@ -169,6 +212,8 @@ import CoreData
 
         // Cancel Subscriptions
         poolSensorDataSubscription?.cancel()
+        poolHistoricalDataSubscription?.cancel()
+        poolHistoryProgressSubscription?.cancel()
         poolConnectionStateSubscription?.cancel()
 
         // Disconnecte vom Pool
@@ -176,6 +221,7 @@ import CoreData
 
         // Cleanup
         deviceConnection = nil
+        isLoadingHistory = false
     }
 
     @MainActor func loadDetails() {
@@ -228,7 +274,11 @@ import CoreData
         do {
             let weekData = try await sensorDataManager.getCurrentWeekData(for: device.uuid)
             print("📊 DeviceDetailsViewModel: Loaded \(weekData.count) sensor data entries for current week")
+            if let first = weekData.first, let last = weekData.last {
+                print("📅 Current week data range: \(first.date) to \(last.date)")
+            }
             currentWeekData = weekData
+            print("✅ DeviceDetailsViewModel: currentWeekData updated with \(currentWeekData.count) entries")
         } catch {
             print("Failed to refresh current week data silently: \(error)")
         }
@@ -246,7 +296,7 @@ import CoreData
             let startDate = data.date.addingTimeInterval(-3600) // 1 hour window
             let endDate = data.date.addingTimeInterval(3600)
             let recentData = try await repositoryManager.sensorDataRepository.getSensorDataInDateRange(for: device.uuid, startDate: startDate, endDate: endDate)
-            
+
             let isDuplicate = recentData.contains(where: {
                 abs($0.date.timeIntervalSince(data.date)) < 60 && // Within 1 minute
                 $0.temperature == data.temperature &&
@@ -254,17 +304,25 @@ import CoreData
                 Int16($0.moisture) == data.moisture &&
                 Int16($0.conductivity) == data.conductivity
             })
-            
+
             if !isDuplicate {
                 // Try to validate and save the data - if validation returns nil, the data is invalid and rejected
                 if let validatedData = try await PlantMonitorService.shared.validateHistoricSensorData(data, deviceUUID: device.uuid) {
-                    print("✅ Saved valid historical entry")
+                    print("✅ Saved valid historical entry dated \(data.date)")
+
+                    // Increment batch counter
+                    historicalDataBatchCounter += 1
+
+                    // Batch UI updates: Refresh UI every 50 entries for visual feedback without killing performance
+                    if historicalDataBatchCounter % 50 == 0 {
+                        print("🔄 DeviceDetailsViewModel: Batch update #\(historicalDataBatchCounter/50) after \(historicalDataBatchCounter) entries - refreshing UI NOW")
+                        await refreshCurrentWeekSilently()
+                    }
                 } else {
-                    print("🚨 Rejected invalid historical entry - not saved to database")
+                    print("🚨 Rejected invalid historical entry dated \(data.date) - not saved to database")
                 }
-                
-                // Note: Cache refresh moved to end of historical data loading for massive performance gain
-                // No need to clear cache and reload data after every single entry
+            } else {
+                print("⏭️ Skipped duplicate historical entry dated \(data.date)")
             }
         } catch {
             print("Error saving historical sensor data: \(error.localizedDescription)")
@@ -338,10 +396,39 @@ import CoreData
 
     @MainActor
     func fetchHistoricalData() {
-        // Note: Historical Data nutzt vorerst immer FlowerCareManager
-        // TODO: DeviceConnection.requestHistoricalData() implementieren für ConnectionPool
-        ble.connectToKnownDevice(deviceUUID: device.uuid)
-        ble.requestHistoricalData()
+        AppLogger.ble.info("📊 DeviceDetailsViewModel: Starting historical data fetch for device \(self.device.uuid)")
+
+        // Reset batch counter for new history flow
+        historicalDataBatchCounter = 0
+
+        if useConnectionPool {
+            // ✅ Neue Implementierung: Nutze ConnectionPool
+            AppLogger.ble.bleConnection("DeviceDetailsViewModel: Using ConnectionPool for historical data")
+
+            guard let connection = deviceConnection else {
+                AppLogger.ble.bleError("DeviceDetailsViewModel: No connection available, connecting first...")
+                // Verbinde zuerst, dann starte History Flow
+                connectViaPool()
+
+                // Warte kurz und starte dann History Flow
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                    guard let self = self, let connection = self.deviceConnection else { return }
+                    self.isLoadingHistory = true
+                    connection.startHistoryDataFlow()
+                }
+                return
+            }
+
+            // Connection existiert bereits - starte History Flow direkt
+            isLoadingHistory = true
+            connection.startHistoryDataFlow()
+
+        } else {
+            // Alte Implementierung: Nutze FlowerCareManager (Fallback)
+            AppLogger.ble.bleConnection("DeviceDetailsViewModel: Using legacy FlowerCareManager for historical data")
+            ble.connectToKnownDevice(deviceUUID: device.uuid)
+            ble.requestHistoricalData()
+        }
     }
     
     // MARK: - Settings Management

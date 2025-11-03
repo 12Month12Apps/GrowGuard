@@ -9,25 +9,34 @@ import SwiftUI
 import Combine
 
 struct HistoryLoadingView: View {
+    // Optional ViewModel for ConnectionPool mode
+    let viewModel: DeviceDetailsViewModel?
+
     @State private var progress: Double = 0
     @State private var currentCount: Int = 0
     @State private var totalCount: Int = 0
     @State private var loadingState: FlowerCareManager.LoadingState = .idle
     @State private var showingDetails: Bool = false
     @State private var connectionQuality: FlowerCareManager.ConnectionQuality = .unknown
-    
+
     @Environment(\.presentationMode) var presentationMode
-    
+
     @State private var cancellables = Set<AnyCancellable>()
-    
+
     // Track the device UUID for this loading session to prevent cross-contamination
     @State private var loadingDeviceUUID: String?
-    
+
     // Time tracking for accurate speed calculation
     @State private var loadingStartTime: Date?
     @State private var lastProgressTime: Date?
     @State private var recentSpeeds: [Double] = [] // Rolling average of recent speeds
     @State private var lastCount: Int = 0
+    @State private var progressTimer: Timer?
+
+    // Init with optional ViewModel for ConnectionPool mode
+    init(viewModel: DeviceDetailsViewModel? = nil) {
+        self.viewModel = viewModel
+    }
     
     var body: some View {
         ZStack {
@@ -353,76 +362,152 @@ struct HistoryLoadingView: View {
     
     private func cleanupLoadingSession() {
         AppLogger.ble.info("🧹 HistoryLoadingView: Cleaning up loading session")
-        
+
+        // Invalidate progress timer
+        progressTimer?.invalidate()
+        progressTimer = nil
+
         // Cancel all subscribers immediately to prevent further updates
         cancellables.removeAll()
-        
-        // Cancel any ongoing history data loading
-        FlowerCareManager.shared.cancelHistoryDataLoading()
-        
-        // Force complete cleanup to prevent data cross-contamination
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            // Ensure all pending history data processing is stopped
-            FlowerCareManager.shared.forceResetHistoryState()
+
+        // Only cleanup FlowerCareManager if not using ConnectionPool mode
+        if viewModel == nil {
+            // Cancel any ongoing history data loading
+            FlowerCareManager.shared.cancelHistoryDataLoading()
+
+            // Force complete cleanup to prevent data cross-contamination
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                // Ensure all pending history data processing is stopped
+                FlowerCareManager.shared.forceResetHistoryState()
+            }
         }
     }
     
     private func setupSubscribers() {
         AppLogger.ble.info("📡 HistoryLoadingView: Setting up subscribers for device UUID: \(loadingDeviceUUID ?? "unknown")")
-        
+
+        // Check if we should use ConnectionPool mode (via ViewModel)
+        if let viewModel = viewModel {
+            AppLogger.ble.info("📡 HistoryLoadingView: Using ConnectionPool mode via ViewModel")
+            setupConnectionPoolSubscribers(viewModel: viewModel)
+        } else {
+            AppLogger.ble.info("📡 HistoryLoadingView: Using legacy FlowerCareManager mode")
+            setupLegacySubscribers()
+        }
+    }
+
+    private func setupConnectionPoolSubscribers(viewModel: DeviceDetailsViewModel) {
+        // Monitor progress from ViewModel
+        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak viewModel] timer in
+            guard let viewModel = viewModel else {
+                timer.invalidate()
+                return
+            }
+
+            let (current, total) = viewModel.historyLoadingProgress
+
+            // Update UI with progress
+            let now = Date()
+
+            // Initialize timing if this is the first progress update
+            if self.loadingStartTime == nil && current > 0 {
+                self.loadingStartTime = now
+                self.lastProgressTime = now
+                self.lastCount = current
+            }
+
+            // Calculate speed if we have progress and time data
+            if let lastTime = self.lastProgressTime, current > self.lastCount {
+                let timeDiff = now.timeIntervalSince(lastTime)
+                if timeDiff > 0.5 { // Only update every 0.5 seconds to avoid noise
+                    let entriesDiff = current - self.lastCount
+                    let currentSpeed = Double(entriesDiff) / timeDiff // entries per second
+
+                    // Keep rolling average of recent speeds (last 10 measurements)
+                    self.recentSpeeds.append(currentSpeed)
+                    if self.recentSpeeds.count > 10 {
+                        self.recentSpeeds.removeFirst()
+                    }
+
+                    self.lastProgressTime = now
+                    self.lastCount = current
+                }
+            }
+
+            self.currentCount = current
+            self.totalCount = total
+            self.progress = total > 0 ? Double(current) / Double(total) : 0
+
+            // Update loading state based on isLoadingHistory
+            if viewModel.isLoadingHistory {
+                if total > 0 {
+                    self.loadingState = .loading
+                } else {
+                    self.loadingState = .idle
+                }
+            } else if total > 0 && current >= total {
+                self.loadingState = .completed
+            }
+
+            // Set connection quality to good for ConnectionPool (BLE is inherently good if connected)
+            self.connectionQuality = .good
+        }
+    }
+
+    private func setupLegacySubscribers() {
         FlowerCareManager.shared.loadingProgressPublisher
             .sink { current, total in
-                
+
                 // Safety check: Only process updates for the device we're loading for
                 guard let expectedDeviceUUID = self.loadingDeviceUUID,
                       FlowerCareManager.shared.currentDeviceUUID == expectedDeviceUUID else {
                     AppLogger.ble.warning("⚠️ HistoryLoadingView: Ignoring progress update for different device")
                     return
                 }
-                
+
                 let now = Date()
-                
+
                 // Initialize timing if this is the first progress update
                 if self.loadingStartTime == nil && current > 0 {
                     self.loadingStartTime = now
                     self.lastProgressTime = now
                     self.lastCount = current
                 }
-                
+
                 // Calculate speed if we have progress and time data
                 if let lastTime = self.lastProgressTime, current > self.lastCount {
                     let timeDiff = now.timeIntervalSince(lastTime)
                     if timeDiff > 0.5 { // Only update every 0.5 seconds to avoid noise
                         let entriesDiff = current - self.lastCount
                         let currentSpeed = Double(entriesDiff) / timeDiff // entries per second
-                        
+
                         // Keep rolling average of recent speeds (last 10 measurements)
                         self.recentSpeeds.append(currentSpeed)
                         if self.recentSpeeds.count > 10 {
                             self.recentSpeeds.removeFirst()
                         }
-                        
+
                         self.lastProgressTime = now
                         self.lastCount = current
                     }
                 }
-                
+
                 self.currentCount = current
                 self.totalCount = total
                 self.progress = total > 0 ? Double(current) / Double(total) : 0
             }
             .store(in: &cancellables)
-        
+
         FlowerCareManager.shared.loadingStatePublisher
             .sink { state in
-                
+
                 // Safety check: Only process state updates for our device
                 guard let expectedDeviceUUID = self.loadingDeviceUUID,
                       FlowerCareManager.shared.currentDeviceUUID == expectedDeviceUUID else {
                     AppLogger.ble.warning("⚠️ HistoryLoadingView: Ignoring state update for different device")
                     return
                 }
-                
+
                 // Reset timing when loading starts
                 if case .loading = state, case .idle = self.loadingState {
                     self.loadingStartTime = nil
@@ -430,21 +515,21 @@ struct HistoryLoadingView: View {
                     self.recentSpeeds = []
                     self.lastCount = 0
                 }
-                
+
                 self.loadingState = state
             }
             .store(in: &cancellables)
-        
+
         // Add subscriber for connection quality updates
         FlowerCareManager.shared.connectionQualityPublisher
             .sink { quality in
-                
+
                 // Safety check: Only process quality updates for our device
                 guard let expectedDeviceUUID = self.loadingDeviceUUID,
                       FlowerCareManager.shared.currentDeviceUUID == expectedDeviceUUID else {
                     return
                 }
-                
+
                 self.connectionQuality = quality
             }
             .store(in: &cancellables)

@@ -265,6 +265,18 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
 
             // Informiere Connection über Disconnection
             connection.handleDisconnected(error: error)
+
+            // Prüfe ob automatischer Reconnect gewünscht ist (z.B. während History Flow)
+            if connection.shouldAutoReconnect {
+                AppLogger.ble.info("🔄 Auto-reconnect requested for device \(peripheralUUID) - reconnecting in 1 second...")
+
+                // Kurze Verzögerung vor Reconnect, um dem Gerät Zeit zur Stabilisierung zu geben
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                    guard let self = self else { return }
+                    AppLogger.ble.info("🔄 Starting auto-reconnect for device \(peripheralUUID)")
+                    self.connect(to: peripheralUUID)
+                }
+            }
         }
     }
 }

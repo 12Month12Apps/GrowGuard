@@ -51,37 +51,48 @@ class SensorDataDecoder {
     func decodeHistoricalSensorData(data: Data, deviceUUID: String) -> HistoricalSensorData? {
         // Check if data is at least 12 bytes long (4+2+4+1+2+1) 1 is skipped
         guard data.count >= 14 else {
-            print("Historical data too short: \(data.count) bytes")
-            return nil
-        }
-        guard let secondsSinceBoot = secondsSinceBoot else {
-            print("secondsSinceBoot not there")
+            print("❌ Historical data too short: \(data.count) bytes")
             return nil
         }
 
-        
+        // Log raw bytes for debugging
+        let hexString = data.map { String(format: "%02x", $0) }.joined(separator: " ")
+        print("📦 Raw historical data (\(data.count) bytes): \(hexString)")
+
+        guard let secondsSinceBoot = secondsSinceBoot else {
+            print("❌ secondsSinceBoot not available - device time not read yet")
+            return nil
+        }
+
+
         // Extract timestamp (4 bytes)
         let timestamp = data.subdata(in: 0..<4).withUnsafeBytes { $0.load(as: UInt32.self) }.littleEndian
-        if secondsSinceBoot < timestamp { return nil }
-        
+
+        // Validate timestamp
+        if secondsSinceBoot < timestamp {
+            print("❌ Invalid timestamp: \(timestamp) > secondsSinceBoot: \(secondsSinceBoot)")
+            return nil
+        }
+
         let now = Date()
-        let dateTime = now.addingTimeInterval(-Double(secondsSinceBoot - timestamp))
-        
+        let secondsAgo = secondsSinceBoot - timestamp
+        let dateTime = now.addingTimeInterval(-Double(secondsAgo))
+
         // Extract temperature (2 bytes) and convert to Celsius
         let temperatureRaw = data.subdata(in: 4..<6).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian
         let temperature = Double(temperatureRaw) / 10.0
-        
+
         // Extract brightness (4 bytes)
         let brightness = data.subdata(in: 7..<11).withUnsafeBytes { $0.load(as: UInt32.self) }.littleEndian
-        
+
         // Extract moisture (1 byte)
         let moisture = UInt8(data[11])
-        
+
         // Extract conductivity (2 bytes)
         let conductivity = data.subdata(in: 12..<14).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian
-        
-        print("Historic:", timestamp, moisture, temperature, conductivity, dateTime)
-        
+
+        print("✅ Decoded historic data: temp=\(temperature)°C, moisture=\(moisture)%, brightness=\(brightness)lx, conductivity=\(conductivity)µS/cm, date=\(dateTime) (timestamp=\(timestamp), secondsAgo=\(secondsAgo))")
+
         return HistoricalSensorData(
             deviceUUID: deviceUUID,
             timestamp: timestamp,

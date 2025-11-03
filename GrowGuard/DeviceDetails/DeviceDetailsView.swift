@@ -101,24 +101,33 @@ struct DeviceDetailsView: View {
                                 showingLoadingScreen = true
                             } label: {
                                 HStack {
-                                    Image(systemName: "clock.arrow.circlepath")
-                                        .font(.body)
-                                    Text(L10n.Device.loadHistoricalData)
+                                    if viewModel.isLoadingHistory {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle())
+                                            .scaleEffect(0.8)
+                                    } else {
+                                        Image(systemName: "clock.arrow.circlepath")
+                                            .font(.body)
+                                    }
+                                    Text(viewModel.isLoadingHistory ? "Loading History..." : L10n.Device.loadHistoricalData)
                                         .font(.subheadline)
                                     Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
+                                    if !viewModel.isLoadingHistory {
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
                                 }
                                 .padding()
                                 .background(Color(.systemBackground))
-                                .foregroundColor(.blue)
+                                .foregroundColor(viewModel.isLoadingHistory ? .secondary : .blue)
                                 .cornerRadius(12)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                                        .stroke(viewModel.isLoadingHistory ? Color.secondary.opacity(0.2) : Color.blue.opacity(0.2), lineWidth: 1)
                                 )
                             }
+                            .disabled(viewModel.isLoadingHistory)
 
                             NavigationLink(destination: HistoryListView(device: viewModel.device)) {
                                 HStack {
@@ -338,7 +347,7 @@ struct DeviceDetailsView: View {
                             VStack(spacing: 20) {
                                 SensorDataChart(isOverview: false,
                                                 componet: viewModel.groupingOption,
-                                                data: .constant(viewModel.currentWeekData),
+                                                data: $viewModel.currentWeekData,
                                                 keyPath: \.brightness,
                                                 title: L10n.Sensor.brightness,
                                                 dataType: L10n.Sensor.Unit.lux,
@@ -348,7 +357,7 @@ struct DeviceDetailsView: View {
 
                                 SensorDataChart(isOverview: false,
                                                 componet: viewModel.groupingOption,
-                                                data: .constant(viewModel.currentWeekData),
+                                                data: $viewModel.currentWeekData,
                                                 keyPath: \.moisture,
                                                 title: L10n.Sensor.moisture,
                                                 dataType: L10n.Sensor.Unit.percent,
@@ -358,7 +367,7 @@ struct DeviceDetailsView: View {
 
                                 SensorDataChart(isOverview: false,
                                                 componet: viewModel.groupingOption,
-                                                data: .constant(viewModel.currentWeekData),
+                                                data: $viewModel.currentWeekData,
                                                 keyPath: \.temperature,
                                                 title: L10n.Sensor.temperature,
                                                 dataType: L10n.Sensor.Unit.celsius,
@@ -432,7 +441,7 @@ struct DeviceDetailsView: View {
                             SensorDataChart(
                                 isOverview: false,
                                 componet: viewModel.groupingOption,
-                                data: .constant(viewModel.currentWeekData),
+                                data: $viewModel.currentWeekData,
                                 keyPath: \.moisture,
                                 title: L10n.Sensor.moisture,
                                 dataType: "%",
@@ -506,7 +515,7 @@ struct DeviceDetailsView: View {
             }
         }
         .sheet(isPresented: $showingLoadingScreen) {
-            HistoryLoadingView()
+            HistoryLoadingView(viewModel: viewModel)
         }
         .onChange(of: showingLoadingScreen) { isShowing in
             // Ensure cleanup when sheet is dismissed
