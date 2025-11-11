@@ -12,6 +12,7 @@ struct DeviceDetailsView: View {
     @State var showSetting: Bool = false
     @State private var showCopyAlert = false
     @State private var showingLoadingScreen = false
+    @State private var showingBenchmark = false // Temporarily disabled until BenchmarkView is added to Xcode project
     @State private var wateringPrediction: WateringPrediction? = nil
     @State private var justWatered = false
 
@@ -128,6 +129,31 @@ struct DeviceDetailsView: View {
                                 )
                             }
                             .disabled(viewModel.isLoadingHistory)
+
+                            #if DEBUG
+                            Button {
+                                showingBenchmark = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: "speedometer")
+                                        .font(.body)
+                                    Text("Run Performance Benchmark")
+                                        .font(.subheadline)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding()
+                                .background(Color(.systemBackground))
+                                .foregroundColor(.purple)
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.purple.opacity(0.2), lineWidth: 1)
+                                )
+                            }
+                            #endif
 
                             NavigationLink(destination: HistoryListView(device: viewModel.device)) {
                                 HStack {
@@ -516,6 +542,9 @@ struct DeviceDetailsView: View {
         }
         .sheet(isPresented: $showingLoadingScreen) {
             HistoryLoadingView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showingBenchmark) {
+            BenchmarkView(deviceUUID: viewModel.device.uuid)
         }
         .onChange(of: showingLoadingScreen) { isShowing in
             // Ensure cleanup when sheet is dismissed

@@ -47,6 +47,8 @@
 		5663FEB92EB684900038209F /* InitialSensorDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB82EB684900038209F /* InitialSensorDataService.swift */; };
 		5663FEB92EB690AB0038209F /* InitialSensorDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */; };
 		5663FEBB2EB6A1310038209F /* MultiDeviceTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEBA2EB6A1310038209F /* MultiDeviceTestView.swift */; };
+		5663FEBD2EC3CD000038209F /* BenchmarkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEBC2EC3CD000038209F /* BenchmarkView.swift */; };
+		5663FEBF2EC3CD0F0038209F /* BLEBenchmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEBE2EC3CD0F0038209F /* BLEBenchmark.swift */; };
 		5667BD8A2C28925300D04382 /* SensorData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5667BD892C28924600D04382 /* SensorData.swift */; };
 		5684E2DB2C0F81C0005CD8B6 /* AddDeviceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2DA2C0F81C0005CD8B6 /* AddDeviceView.swift */; };
 		5684E2DD2C0F81E7005CD8B6 /* AddDeviceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2DC2C0F81E7005CD8B6 /* AddDeviceViewModel.swift */; };
@@ -150,6 +152,8 @@
 		5663FEB82EB684900038209F /* InitialSensorDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitialSensorDataService.swift; sourceTree = "<group>"; };
 		5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitialSensorDataService.swift; sourceTree = "<group>"; };
 		5663FEBA2EB6A1310038209F /* MultiDeviceTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiDeviceTestView.swift; sourceTree = "<group>"; };
+		5663FEBC2EC3CD000038209F /* BenchmarkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchmarkView.swift; sourceTree = "<group>"; };
+		5663FEBE2EC3CD0F0038209F /* BLEBenchmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEBenchmark.swift; sourceTree = "<group>"; };
 		5667BD892C28924600D04382 /* SensorData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorData.swift; sourceTree = "<group>"; };
 		567465842E36A6A50084A296 /* GrowGuard.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = GrowGuard.xctestplan; sourceTree = "<group>"; };
 		5684E2DA2C0F81C0005CD8B6 /* AddDeviceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceView.swift; sourceTree = "<group>"; };
@@ -338,6 +342,7 @@
 				5654B2B72CB4575700EED3D3 /* Settings */,
 				568892062C83292D000E8FAE /* Componetns */,
 				565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */,
+				5663FEBC2EC3CD000038209F /* BenchmarkView.swift */,
 				565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */,
 			);
 			path = DeviceDetails;
@@ -531,6 +536,7 @@
 		56B44CC22D6E7B3F00A6A75A /* BLE */ = {
 			isa = PBXGroup;
 			children = (
+				5663FEBE2EC3CD0F0038209F /* BLEBenchmark.swift */,
 				5663FEB42EB684620038209F /* ConnectionPoolManager.swift */,
 				5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */,
 				5663FEB62EB684800038209F /* DeviceConnection.swift */,
@@ -737,6 +743,7 @@
 				5684E2DF2C0F820D005CD8B6 /* AddDeviceBLE.swift in Sources */,
 				56241CDE2DFD1E720012B18E /* CircularProgress.swift in Sources */,
 				56AF111B2BDED05900887073 /* ContentView.swift in Sources */,
+				5663FEBF2EC3CD0F0038209F /* BLEBenchmark.swift in Sources */,
 				5684E2E42C0FA2FA005CD8B6 /* OverviewListViewModel.swift in Sources */,
 				569B70ED2C10F221005B7BC9 /* DataService.swift in Sources */,
 				5667BD8A2C28925300D04382 /* SensorData.swift in Sources */,
@@ -750,6 +757,7 @@
 				5622B0DD2E317710002C7E74 /* SensorDataRepository.swift in Sources */,
 				5622B0DE2E317710002C7E74 /* CoreDataOptimalRangeRepository.swift in Sources */,
 				5622B0DF2E317710002C7E74 /* CoreDataFlowerDeviceRepository.swift in Sources */,
+				5663FEBD2EC3CD000038209F /* BenchmarkView.swift in Sources */,
 				56FD6C862E34194C00905984 /* SensorDataManager.swift in Sources */,
 				560FAA5D2E6B440500BFFC6D /* Strings+Generated.swift in Sources */,
 				5622B0E02E317710002C7E74 /* CoreDataSensorDataRepository.swift in Sources */,
