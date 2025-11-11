@@ -15,6 +15,7 @@
 	<array>
 		<string>fetch</string>
 		<string>processing</string>
+		<string>bluetooth-central</string>
 	</array>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>GrowGuard sendet wichtige Benachrichtigungen über den Wasserbedarf Ihrer Pflanzen. Dringliche Benachrichtigungen stellen sicher, dass Sie kritische Pflegeerinnerungen auch im "Nicht stören"-Modus erhalten.</string>

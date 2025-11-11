@@ -176,6 +176,25 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         AppLogger.ble.bleConnection("Peripheral set for device \(deviceUUID): \(peripheral.name ?? "Unknown")")
     }
 
+    /// Startet RSSI Monitoring für Verbindungsqualität
+    func startRSSIMonitoring() {
+        guard let peripheral = peripheral, peripheral.state == .connected else {
+            return
+        }
+
+        // Read RSSI periodically (every 5 seconds)
+        Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] timer in
+            guard let self = self,
+                  let peripheral = self.peripheral,
+                  peripheral.state == .connected else {
+                timer.invalidate()
+                return
+            }
+
+            peripheral.readRSSI()
+        }
+    }
+
     /// Wird aufgerufen wenn das Peripheral erfolgreich verbunden wurde
     /// Startet die Service Discovery
     func handleConnected() {
@@ -184,8 +203,13 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
         AppLogger.ble.bleConnection("Device \(deviceUUID) connected, discovering services")
 
-        // Starte Service Discovery
-        peripheral?.discoverServices([flowerCareServiceUUID, dataServiceUUID, historyServiceUUID])
+        // Starte RSSI Monitoring für Verbindungsqualität
+        startRSSIMonitoring()
+
+        // CRITICAL FIX: Discover ALL services, not just specific ones!
+        // FlowerCare sensors may have different service UUIDs or additional services
+        peripheral?.discoverServices(nil)
+        AppLogger.ble.bleConnection("⚠️ Discovering ALL services (like FlowerManager)")
     }
 
     /// Wird aufgerufen wenn das Peripheral disconnected wurde
@@ -248,21 +272,23 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
             isAuthenticated = true
             stateSubject.send(.authenticated)
 
-            // Resume History Flow if it was active before disconnect
-            if isHistoryFlowActive && totalEntries > 0 && currentEntryIndex < totalEntries {
-                // Check if required characteristics are available
-                if historyControlCharacteristic != nil &&
-                   historyDataCharacteristic != nil &&
-                   deviceTimeCharacteristic != nil {
-                    AppLogger.ble.info("🔄 Resuming history flow after reconnect at entry \(self.currentEntryIndex)/\(self.totalEntries)")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                        guard let self = self else { return }
-                        self.startHistoryDataFlow()
-                    }
+            // CRITICAL FIX: Start history flow (like FlowerManager)
+            // Check if required characteristics are available
+            if historyControlCharacteristic != nil &&
+               historyDataCharacteristic != nil &&
+               deviceTimeCharacteristic != nil {
+                if isHistoryFlowActive && totalEntries > 0 && currentEntryIndex < totalEntries {
+                    AppLogger.ble.info("🔄 Resuming history flow (no auth) at entry \(self.currentEntryIndex)/\(self.totalEntries)")
                 } else {
-                    AppLogger.ble.info("⏳ History flow needs to resume but characteristics not ready yet, waiting for discovery")
-                    waitingForCharacteristicsForHistoryResume = true
+                    AppLogger.ble.info("🆕 Starting fresh history flow (no auth required)")
                 }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    guard let self = self else { return }
+                    self.startHistoryDataFlow()
+                }
+            } else {
+                AppLogger.ble.info("⏳ History flow needs to start but characteristics not ready yet, waiting for discovery")
+                waitingForCharacteristicsForHistoryResume = true
             }
             return
         }
@@ -340,22 +366,24 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
             authenticationStep = 0
             stateSubject.send(.authenticated)
 
-            // Resume History Flow if it was active before disconnect
-            if isHistoryFlowActive && totalEntries > 0 && currentEntryIndex < totalEntries {
-                // Check if required characteristics are available
-                if historyControlCharacteristic != nil &&
-                   historyDataCharacteristic != nil &&
-                   deviceTimeCharacteristic != nil {
-                    AppLogger.ble.info("🔄 Resuming history flow after reconnect at entry \(self.currentEntryIndex)/\(self.totalEntries)")
-                    // Small delay to let connection stabilize
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                        guard let self = self else { return }
-                        self.startHistoryDataFlow()
-                    }
+            // CRITICAL FIX: Start history flow after authentication (like FlowerManager)
+            // This handles both initial start AND resume
+            if historyControlCharacteristic != nil &&
+               historyDataCharacteristic != nil &&
+               deviceTimeCharacteristic != nil {
+                if isHistoryFlowActive && totalEntries > 0 && currentEntryIndex < totalEntries {
+                    AppLogger.ble.info("🔄 Resuming history flow after authentication at entry \(self.currentEntryIndex)/\(self.totalEntries)")
                 } else {
-                    AppLogger.ble.info("⏳ History flow needs to resume but characteristics not ready yet, waiting for discovery")
-                    waitingForCharacteristicsForHistoryResume = true
+                    AppLogger.ble.info("🆕 Starting fresh history flow after authentication")
                 }
+                // Small delay to let connection stabilize
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    guard let self = self else { return }
+                    self.startHistoryDataFlow()
+                }
+            } else {
+                AppLogger.ble.bleWarning("⏳ History flow needs to start but characteristics not ready yet, waiting for discovery")
+                waitingForCharacteristicsForHistoryResume = true
             }
 
         default:
@@ -714,11 +742,16 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
             }
         }
 
-        // Starte Authentication nachdem alle Characteristics entdeckt wurden
-        // Authentication wird nur einmal gestartet nach dem ersten Service Discovery
-        if !isAuthenticated && authenticationStep == 0 {
-            AppLogger.ble.bleConnection("All characteristics discovered for device \(deviceUUID), starting authentication")
+        // CRITICAL FIX: Only start authentication when ALL required characteristics are found
+        // This matches FlowerManager's behavior
+        if !isAuthenticated && authenticationStep == 0 &&
+           historyControlCharacteristic != nil &&
+           historyDataCharacteristic != nil &&
+           deviceTimeCharacteristic != nil {
+            AppLogger.ble.bleConnection("✅ All required characteristics discovered for device \(deviceUUID), starting authentication")
             startAuthentication()
+        } else if !isAuthenticated && authenticationStep == 0 {
+            AppLogger.ble.bleWarning("⚠️ Not all characteristics found yet, waiting... (history control: \(historyControlCharacteristic != nil), history data: \(historyDataCharacteristic != nil), device time: \(deviceTimeCharacteristic != nil))")
         }
     }
 
@@ -962,6 +995,31 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
         // Notification aktiviert/deaktiviert
         // Implementierung kommt später
+    }
+
+    /// Callback wenn RSSI gelesen wurde
+    /// - Parameters:
+    ///   - peripheral: Das Peripheral
+    ///   - RSSI: Der RSSI-Wert in dBm
+    ///   - error: Optional error
+    func peripheral(_ peripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
+        if let error = error {
+            AppLogger.ble.bleWarning("RSSI read error for device \(deviceUUID): \(error.localizedDescription)")
+            return
+        }
+
+        let rssiValue = RSSI.intValue
+        AppLogger.ble.bleConnection("📶 RSSI for device \(deviceUUID): \(rssiValue) dBm")
+
+        // Signal Quality Classification:
+        // > -50 dBm: Excellent
+        // -50 to -60 dBm: Good
+        // -60 to -70 dBm: Fair
+        // < -70 dBm: Poor
+
+        if rssiValue < -70 {
+            AppLogger.ble.bleWarning("⚠️ Weak signal for device \(deviceUUID): \(rssiValue) dBm")
+        }
     }
 
     // MARK: - Cleanup

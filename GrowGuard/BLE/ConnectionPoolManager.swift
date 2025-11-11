@@ -54,7 +54,14 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
 
     private override init() {
         super.init()
-        centralManager = CBCentralManager(delegate: self, queue: nil)
+
+        // Initialize with options for better connection stability
+        let options: [String: Any] = [
+            CBCentralManagerOptionRestoreIdentifierKey: "pro.veit.GrowGuard.centralManager",
+            CBCentralManagerOptionShowPowerAlertKey: true
+        ]
+
+        centralManager = CBCentralManager(delegate: self, queue: nil, options: options)
     }
 
     // MARK: - Public API
@@ -112,7 +119,16 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
             // Peripheral gefunden - direkt verbinden
             AppLogger.ble.bleConnection("Found known peripheral for device: \(deviceUUID)")
             connection.setPeripheral(peripheral)
-            centralManager.connect(peripheral, options: nil)
+
+            // iOS Connection Options für stabilere Verbindung
+            let options: [String: Any] = [
+                CBConnectPeripheralOptionNotifyOnConnectionKey: true,
+                CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
+                CBConnectPeripheralOptionNotifyOnNotificationKey: true,
+                CBConnectPeripheralOptionStartDelayKey: 0 // Sofort verbinden
+            ]
+
+            centralManager.connect(peripheral, options: options)
         } else {
             // Peripheral nicht gefunden - Scan starten
             AppLogger.ble.bleConnection("Known device not found, starting scan for: \(deviceUUID)")
@@ -315,8 +331,16 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
             // Setze Peripheral
             connection.setPeripheral(peripheral)
 
+            // iOS Connection Options für stabilere Verbindung
+            let options: [String: Any] = [
+                CBConnectPeripheralOptionNotifyOnConnectionKey: true,
+                CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
+                CBConnectPeripheralOptionNotifyOnNotificationKey: true,
+                CBConnectPeripheralOptionStartDelayKey: 0 // Sofort verbinden
+            ]
+
             // Verbinde
-            central.connect(peripheral, options: nil)
+            central.connect(peripheral, options: options)
             AppLogger.ble.bleConnection("Connecting to peripheral: \(peripheralUUID)")
 
             // Entferne aus Scan-Liste
@@ -417,6 +441,39 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
                 if let connection = self.connections[peripheralUUID] {
                     connection.handleConnectionFailed(error: error ?? ConnectionError.maxRetriesExceeded)
                 }
+            }
+        }
+    }
+
+    // MARK: - State Restoration
+
+    /// Wird aufgerufen wenn iOS den CentralManager nach einem App-Kill wiederherstellt
+    nonisolated func centralManager(_ central: CBCentralManager, willRestoreState dict: [String : Any]) {
+        Task { @MainActor in
+            AppLogger.ble.bleConnection("🔄 Restoring Central Manager state")
+
+            // Restore connected peripherals
+            if let peripherals = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral] {
+                AppLogger.ble.bleConnection("📱 Restoring \(peripherals.count) peripherals")
+
+                for peripheral in peripherals {
+                    let peripheralUUID = peripheral.identifier.uuidString
+                    AppLogger.ble.bleConnection("🔄 Restoring connection for device: \(peripheralUUID)")
+
+                    let connection = self.getConnection(for: peripheralUUID)
+                    connection.setPeripheral(peripheral)
+
+                    // If peripheral is already connected, trigger handleConnected
+                    if peripheral.state == .connected {
+                        AppLogger.ble.bleConnection("✅ Device \(peripheralUUID) already connected after restore")
+                        connection.handleConnected()
+                    }
+                }
+            }
+
+            // Restore scan state if needed
+            if let scanServices = dict[CBCentralManagerRestoredStateScanServicesKey] as? [CBUUID] {
+                AppLogger.ble.bleConnection("🔍 Restoring scan for \(scanServices.count) services")
             }
         }
     }
