@@ -212,6 +212,64 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
         AppLogger.ble.bleConnection("Cancelled connection for device: \(deviceUUID)")
     }
 
+    /// Option A: Fast reconnect by trying retrievePeripherals multiple times before scanning
+    /// This is much faster than scanning (instant vs 3-10 seconds)
+    private func attemptFastReconnect(for deviceUUID: String, connection: DeviceConnection) async {
+        guard let uuid = UUID(uuidString: deviceUUID) else {
+            AppLogger.ble.bleError("Invalid device UUID: \(deviceUUID)")
+            return
+        }
+
+        AppLogger.ble.info("🚀 Attempting fast reconnect with multiple retrieve attempts for device: \(deviceUUID)")
+
+        var foundPeripheral: CBPeripheral?
+
+        // Try retrievePeripherals 3 times with 300ms delay between attempts
+        for attempt in 1...3 {
+            AppLogger.ble.bleConnection("🔍 Retrieve attempt \(attempt)/3 for device: \(deviceUUID)")
+
+            let peripherals = await MainActor.run {
+                return self.centralManager.retrievePeripherals(withIdentifiers: [uuid])
+            }
+
+            if let peripheral = peripherals.first {
+                AppLogger.ble.info("✅ Fast reconnect SUCCESS on attempt \(attempt)! Found peripheral in cache for device: \(deviceUUID)")
+                foundPeripheral = peripheral
+                break
+            } else {
+                AppLogger.ble.bleConnection("❌ Retrieve attempt \(attempt) failed - peripheral not in cache")
+            }
+
+            // Wait 300ms before next attempt (unless it's the last attempt)
+            if attempt < 3 {
+                try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
+            }
+        }
+
+        // Process result on MainActor
+        await MainActor.run {
+            if let peripheral = foundPeripheral {
+                // Success - connect immediately
+                connection.setPeripheral(peripheral)
+
+                let options: [String: Any] = [
+                    CBConnectPeripheralOptionNotifyOnConnectionKey: true,
+                    CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
+                    CBConnectPeripheralOptionNotifyOnNotificationKey: true,
+                    CBConnectPeripheralOptionStartDelayKey: 0
+                ]
+
+                self.startConnectionTimeout(for: deviceUUID)
+                self.centralManager.connect(peripheral, options: options)
+            } else {
+                // All retrieve attempts failed - fall back to scanning
+                AppLogger.ble.info("📡 All fast reconnect attempts failed, falling back to scanning for device: \(deviceUUID)")
+                self.devicesToScan.insert(deviceUUID)
+                self.startScanning()
+            }
+        }
+    }
+
     /// Setzt den Retry Counter für ein Gerät zurück
     /// Nützlich wenn User manuell eine neue Verbindung startet
     func resetRetryCounter(for deviceUUID: String) {
@@ -403,13 +461,19 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
 
             // Prüfe ob automatischer Reconnect gewünscht ist (z.B. während History Flow)
             if connection.shouldAutoReconnect {
-                AppLogger.ble.info("🔄 Auto-reconnect requested for device \(peripheralUUID) - reconnecting in 0.5 seconds...")
+                AppLogger.ble.info("🔄 Auto-reconnect requested for device \(peripheralUUID) - reconnecting in 1.0 seconds...")
 
-                // Kurze Verzögerung vor Reconnect, um dem Gerät Zeit zur Stabilisierung zu geben
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                // Längere Verzögerung für stabileren Reconnect (wie FlowerManager)
+                Task { [weak self] in
                     guard let self = self else { return }
-                    AppLogger.ble.info("🔄 Starting auto-reconnect for device \(peripheralUUID)")
-                    self.connect(to: peripheralUUID)
+                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1.0s
+
+                    await MainActor.run {
+                        AppLogger.ble.info("🔄 Starting auto-reconnect for device \(peripheralUUID)")
+                    }
+
+                    // Option A: Try fast reconnect with multiple retrievePeripherals attempts
+                    await self.attemptFastReconnect(for: peripheralUUID, connection: connection)
                 }
             }
         }

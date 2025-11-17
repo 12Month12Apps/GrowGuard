@@ -84,8 +84,9 @@ class BLEBenchmark: ObservableObject {
         // Test 1: FlowerManager (Legacy)
         await testFlowerManager(deviceUUID: deviceUUID)
 
-        // Wait between tests
-        try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
+        // Wait between tests to ensure clean state
+        log("⏸️ Waiting 5 seconds between tests for clean state...")
+        try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
 
         // Test 2: ConnectionPool (New)
         await testConnectionPool(deviceUUID: deviceUUID)
@@ -154,7 +155,24 @@ class BLEBenchmark: ObservableObject {
         // Start test
         connectionStartTime = Date()
         flowerManager.connectToKnownDevice(deviceUUID: deviceUUID)
-        flowerManager.requestHistoricalData()
+
+        // Wait for authentication before requesting history
+        log("⏳ Waiting for authentication...")
+        var authenticated = false
+        for _ in 0..<30 { // Max 30 seconds for authentication
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            if currentState == "ready" {
+                authenticated = true
+                log("✅ Device authenticated, requesting historical data")
+                flowerManager.requestHistoricalData()
+                break
+            }
+        }
+
+        if !authenticated {
+            log("❌ Authentication timeout - aborting test")
+            return
+        }
 
         // Wait for completion (max 10 minutes for full history)
         log("⏱ Waiting up to 10 minutes for complete history download...")
@@ -263,6 +281,16 @@ class BLEBenchmark: ObservableObject {
         startTime = Date()
 
         let pool = ConnectionPoolManager.shared
+
+        // Ensure device is fully disconnected first
+        log("🔌 Ensuring device is fully disconnected...")
+        pool.disconnect(from: deviceUUID)
+        try? await Task.sleep(nanoseconds: 2_000_000_000) // Wait 2 seconds for disconnect to complete
+
+        // Reset retry counter to ensure fresh start
+        pool.resetRetryCounter(for: deviceUUID)
+        log("🔄 Reset retry counter for clean test")
+
         let connection = pool.getConnection(for: deviceUUID)
 
         // Subscribe to state
@@ -272,29 +300,34 @@ class BLEBenchmark: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // Subscribe to historical data
+        // Subscribe to historical data (only for tracking first entry)
         connection.historicalDataPublisher
             .sink { [weak self] _ in
-                self?.entriesReceived += 1
-                if self?.entriesReceived == 1, self?.firstEntryTime == nil {
+                if self?.firstEntryTime == nil {
                     self?.firstEntryTime = Date()
-                }
-
-                // Log every 100 entries or the final entry
-                if let count = self?.entriesReceived, let total = self?.totalEntriesToLoad {
-                    if count % 100 == 0 || count == total {
-                        let percentage = total > 0 ? Int(Double(count) / Double(total) * 100) : 0
-                        self?.log("📊 ConnectionPool Progress: \(count)/\(total) (\(percentage)%)")
-                    }
                 }
             }
             .store(in: &cancellables)
 
-        // Subscribe to progress
+        // Subscribe to progress - this is the REAL counter (includes all entries, even duplicates)
         connection.historyProgressPublisher
             .sink { [weak self] progress in
                 let (current, total) = progress
+
+                // First entry detected
+                if current == 1 && self?.firstEntryTime == nil {
+                    self?.firstEntryTime = Date()
+                }
+
+                // Update counters
+                self?.entriesReceived = current
                 self?.totalEntriesToLoad = total
+
+                // Log every 100 entries or the final entry
+                if current % 100 == 0 || current == total {
+                    let percentage = total > 0 ? Int(Double(current) / Double(total) * 100) : 0
+                    self?.log("📊 ConnectionPool Progress: \(current)/\(total) (\(percentage)%)")
+                }
             }
             .store(in: &cancellables)
 

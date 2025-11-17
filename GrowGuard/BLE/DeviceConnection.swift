@@ -101,6 +101,9 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
     /// Timers für Historical Data Flow Management
     private var historyFlowTimers: [Timer] = []
 
+    /// Connection Quality Monitoring Timer
+    private var connectionMonitorTimer: Timer?
+
     /// Flag ob wir auf Characteristics Discovery warten für History Resume
     private var waitingForCharacteristicsForHistoryResume: Bool = false
 
@@ -148,9 +151,19 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
     }
 
     /// Gibt an, ob ein automatischer Reconnect gewünscht ist
-    /// True wenn History Flow aktiv ist und noch Entries zu laden sind
+    /// True wenn History Flow aktiv ist (auch wenn wir noch keine Metadata haben!)
     var shouldAutoReconnect: Bool {
-        return isHistoryFlowActive && totalEntries > 0 && currentEntryIndex < totalEntries
+        // Reconnect wenn History Flow aktiv ist, UNABHÄNGIG von totalEntries
+        // Das ist wichtig für den Fall dass wir disconnecten bevor wir Metadata bekommen
+        if isHistoryFlowActive {
+            // Wenn wir noch keine Metadata haben (totalEntries == 0), reconnecten
+            if totalEntries == 0 {
+                return true
+            }
+            // Wenn wir Metadata haben, nur reconnecten wenn noch Entries fehlen
+            return currentEntryIndex < totalEntries
+        }
+        return false
     }
 
     // MARK: - Initialization
@@ -467,6 +480,9 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
         isHistoryFlowActive = true
 
+        // Start connection quality monitoring (like FlowerManager)
+        startConnectionQualityMonitoring()
+
         // Add overall timeout for history flow (10 minutes max)
         let historyTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 600.0, repeats: false) { [weak self] timer in
             guard let self = self, self.isHistoryFlowActive else { return }
@@ -511,7 +527,8 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
             // If resuming, skip to fetching the current entry
             if isResumingHistory {
-                let resumeTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] _ in
+                // Longer delay for more stable resume (like FlowerManager: 0.2s)
+                let resumeTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { [weak self] _ in
                     guard let self = self,
                           let peripheral = self.peripheral,
                           peripheral.state == .connected else {
@@ -628,6 +645,37 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
             timer.invalidate()
         }
         historyFlowTimers.removeAll()
+
+        // Stop connection monitoring
+        stopConnectionQualityMonitoring()
+    }
+
+    // MARK: - Connection Quality Monitoring
+
+    /// Startet das Connection Quality Monitoring während History Flow
+    /// Prüft alle 5 Sekunden die Verbindungsqualität via RSSI
+    private func startConnectionQualityMonitoring() {
+        stopConnectionQualityMonitoring()
+
+        connectionMonitorTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            guard let self = self,
+                  self.totalEntries > 0,
+                  self.currentEntryIndex < self.totalEntries,
+                  let peripheral = self.peripheral,
+                  peripheral.state == .connected else {
+                self?.stopConnectionQualityMonitoring()
+                return
+            }
+
+            AppLogger.ble.bleConnection("📡 Checking connection quality for device \(self.deviceUUID)")
+            peripheral.readRSSI()
+        }
+    }
+
+    /// Stoppt das Connection Quality Monitoring
+    private func stopConnectionQualityMonitoring() {
+        connectionMonitorTimer?.invalidate()
+        connectionMonitorTimer = nil
     }
 
     /// Startet die Service Discovery für das Peripheral
