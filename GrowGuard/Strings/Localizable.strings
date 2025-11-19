@@ -140,6 +140,9 @@
 "settings.notificationSection" = "Notifications";
 "settings.dailyReminderTime" = "Daily Reminder Time";
 "settings.dailyReminderDescription" = "Choose when daily watering reminders should arrive.";
+"settings.connectionModeSection" = "BLE Connection";
+"settings.connectionModeToggle" = "Use Connection Pool";
+"settings.connectionModeDescription" = "Switch between the new multi-device ConnectionPool manager and the legacy FlowerCare Manager.";
 
 /* Notifications */
 "notification.debugTest" = "🧪 Debug: Test Notifications";

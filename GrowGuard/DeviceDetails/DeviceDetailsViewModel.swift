@@ -25,14 +25,16 @@ import CoreData
     // WICHTIG: ConnectionPoolManager.swift und DeviceConnection.swift müssen im Xcode Target sein!
     // Falls Build-Fehler: In Xcode -> File Inspector -> Target Membership -> GrowGuard anhaken
     private let connectionPool = ConnectionPoolManager.shared
+    private let settingsStore = SettingsStore.shared
     private var deviceConnection: DeviceConnection?
     private var poolConnectionStateSubscription: AnyCancellable?
     private var poolSensorDataSubscription: AnyCancellable?
     private var poolHistoricalDataSubscription: AnyCancellable?
     private var poolHistoryProgressSubscription: AnyCancellable?
+    private var connectionModeObserver: NSObjectProtocol?
 
     // Feature Flag: true = neue ConnectionPool Implementierung, false = alte FlowerCareManager
-    private let useConnectionPool = true // ✅ AKTIVIERT - ConnectionPool wird genutzt!
+    var useConnectionPool: Bool
 
     // MARK: - Historical Data Loading
     var isLoadingHistory = false
@@ -58,7 +60,8 @@ import CoreData
     
     init(device: FlowerDeviceDTO) {
         self.device = device
-        
+        self.useConnectionPool = settingsStore.useConnectionPool
+
         Task {
             try await PlantMonitorService.shared.checkDeviceStatus(device: device)
             
@@ -113,7 +116,22 @@ import CoreData
                 await self.saveHistoricalSensorData(data)
             }
         }
-        
+
+        connectionModeObserver = NotificationCenter.default.addObserver(
+            forName: .settingsDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard
+                let rawValue = notification.userInfo?[SettingsStore.changeUserInfoKey] as? String,
+                let key = SettingsStore.ChangeKey(rawValue: rawValue)
+            else { return }
+
+            if key == .connectionMode {
+                self?.handleConnectionModeChange(self?.settingsStore.connectionMode ?? .connectionPool)
+            }
+        }
+
         // Listen for historical data loading completion to refresh cache
         NotificationCenter.default.addObserver(forName: NSNotification.Name("HistoricalDataLoadingCompleted"), object: nil, queue: .main) { [weak self] notification in
             if let deviceUUID = notification.object as? String, deviceUUID == self?.device.uuid {
@@ -127,8 +145,29 @@ import CoreData
         }
     }
 
+    deinit {
+        if let observer = connectionModeObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+
     // MARK: - Connection Pool Methods (New Implementation)
     // ✅ AKTIVIERT: ConnectionPool-Implementierung ist jetzt verfügbar!
+
+    private func handleConnectionModeChange(_ mode: ConnectionMode) {
+        let shouldUsePool = (mode == .connectionPool)
+
+        Task { @MainActor in
+            guard shouldUsePool != self.useConnectionPool else { return }
+            self.useConnectionPool = shouldUsePool
+
+            if shouldUsePool {
+                self.connectionPool.resetRetryCounter(for: self.device.uuid)
+            } else {
+                self.disconnectViaPool()
+            }
+        }
+    }
 
     /// Verbindet zum Gerät über den ConnectionPoolManager (neue Implementierung)
     @MainActor private func connectViaPool() {

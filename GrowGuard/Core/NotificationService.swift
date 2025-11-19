@@ -6,14 +6,14 @@ final class NotificationService {
     static let shared = NotificationService()
 
     private let center: UNUserNotificationCenter
-    private let preferenceStore: NotificationPreferenceStore
+    private let settingsStore: SettingsStore
 
     init(
         center: UNUserNotificationCenter = .current(),
-        preferenceStore: NotificationPreferenceStore = .shared
+        settingsStore: SettingsStore = .shared
     ) {
         self.center = center
-        self.preferenceStore = preferenceStore
+        self.settingsStore = settingsStore
     }
 
     private enum Identifier {
@@ -74,7 +74,7 @@ final class NotificationService {
                     "notificationType": "dailyReminder"
                 ]
 
-                let preferenceComponents = preferenceStore.preferredReminderComponents()
+                let preferenceComponents = settingsStore.preferredReminderComponents()
                 let dailyTrigger = UNCalendarNotificationTrigger(dateMatching: preferenceComponents, repeats: true)
                 let dailyRequest = UNNotificationRequest(identifier: dailyIdentifier, content: dailyContent, trigger: dailyTrigger)
                 try await center.add(dailyRequest)
@@ -140,7 +140,7 @@ final class NotificationService {
     /// Reschedules any persistent watering reminders to match the current preferences.
     func reschedulePersistentWateringReminders() async {
         let pendingRequests = await center.pendingNotificationRequests()
-        let preferenceComponents = preferenceStore.preferredReminderComponents()
+        let preferenceComponents = settingsStore.preferredReminderComponents()
         let recurringRequests = pendingRequests.filter { $0.identifier.contains("watering-daily-") }
 
         guard !recurringRequests.isEmpty else {

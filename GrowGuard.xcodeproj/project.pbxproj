@@ -59,7 +59,7 @@
 		5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5688920A2C84B4B9000E8FAE /* AppDelegate.swift */; };
 		569417562E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 569417542E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld */; };
 		5699C0F42E126A5C00FA9A11 /* AppSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5699C0F02E126A5C00FA9A11 /* AppSettingsView.swift */; };
-		5699C0F52E126A5C00FA9A11 /* NotificationPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5699C0F12E126A5C00FA9A11 /* NotificationPreferenceStore.swift */; };
+		82C2F563DA3B44BCBC8B6AF8 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24F27E79B00A42959FBED19D /* SettingsStore.swift */; };
 		569B70ED2C10F221005B7BC9 /* DataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 569B70EC2C10F221005B7BC9 /* DataService.swift */; };
 		56A8C6EA2D8ECF37004021C0 /* AddDeviceDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6E92D8ECF31004021C0 /* AddDeviceDetails.swift */; };
 		56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6EC2D8EF1E5004021C0 /* Alert.swift */; };
@@ -165,7 +165,7 @@
 		5688920A2C84B4B9000E8FAE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		569417552E0DD9C000AE7586 /* CoreDataModels.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = CoreDataModels.xcdatamodel; sourceTree = "<group>"; };
 		5699C0F02E126A5C00FA9A11 /* AppSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsView.swift; sourceTree = "<group>"; };
-		5699C0F12E126A5C00FA9A11 /* NotificationPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPreferenceStore.swift; sourceTree = "<group>"; };
+		24F27E79B00A42959FBED19D /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		569B70EC2C10F221005B7BC9 /* DataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataService.swift; sourceTree = "<group>"; };
 		56A8C6E92D8ECF31004021C0 /* AddDeviceDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceDetails.swift; sourceTree = "<group>"; };
 		56A8C6EC2D8EF1E5004021C0 /* Alert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alert.swift; sourceTree = "<group>"; };
@@ -406,7 +406,7 @@
 			isa = PBXGroup;
 			children = (
 				5699C0F02E126A5C00FA9A11 /* AppSettingsView.swift */,
-				5699C0F12E126A5C00FA9A11 /* NotificationPreferenceStore.swift */,
+				24F27E79B00A42959FBED19D /* SettingsStore.swift */,
 			);
 			path = AppSettings;
 			sourceTree = "<group>";
@@ -784,7 +784,7 @@
 				5622B0EC2E317737002C7E74 /* PotSize+DTO.swift in Sources */,
 				5654B2B92CB4575E00EED3D3 /* SettingsView.swift in Sources */,
 				5699C0F42E126A5C00FA9A11 /* AppSettingsView.swift in Sources */,
-				5699C0F52E126A5C00FA9A11 /* NotificationPreferenceStore.swift in Sources */,
+				82C2F563DA3B44BCBC8B6AF8 /* SettingsStore.swift in Sources */,
 				56BF5F9D2DFA5E9100D9B2AE /* AddWithoutSensorViewModel.swift in Sources */,
 				56BF5F9B2DFA5D7300D9B2AE /* AddWithoutSensor.swift in Sources */,
 				565DEC402C159B93002D784A /* DeviceDetailsView.swift in Sources */,
