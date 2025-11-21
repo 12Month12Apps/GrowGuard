@@ -45,9 +45,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // ⚠️ CRITICAL: Set the notification delegate - this is required for notifications to work!
         UNUserNotificationCenter.current().delegate = self
         
-        // Register background task for daily plant monitoring
+        // Register background task for daily plant monitoring (quick refresh)
         BGTaskScheduler.shared.register(forTaskWithIdentifier: "pro.veit.GrowGuard.plantMonitor", using: nil) { task in
             self.handlePlantMonitoringTask(task: task as! BGAppRefreshTask)
+        }
+
+        // Register background processing task for longer operations (historical sync)
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.growguard.processing", using: nil) { task in
+            self.handleProcessingTask(task: task as! BGProcessingTask)
         }
         
         // Anfrage für die Berechtigung, Benachrichtigungen zu senden (inkl. Time-Sensitive)
@@ -94,11 +99,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func applicationDidEnterBackground(_ application: UIApplication) {
         // Schedule plant monitoring task when app goes to background
         schedulePlantMonitoringTask()
+
+        // Schedule processing task for historical sync (requires charging)
+        scheduleProcessingTask()
     }
     
     private func schedulePlantMonitoringTask() {
         let request = BGAppRefreshTaskRequest(identifier: "pro.veit.GrowGuard.plantMonitor")
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 12 * 60 * 60) // Check every 12 hours
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 1 * 60 * 60) // Check every 1 hour
         
         do {
             try BGTaskScheduler.shared.submit(request)
@@ -111,36 +119,121 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     private func handlePlantMonitoringTask(task: BGAppRefreshTask) {
         // Schedule next monitoring task
         schedulePlantMonitoringTask()
-        
+
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = 1
-        
+
         let operation = BlockOperation {
-            // Perform daily device monitoring in background
+            // Perform device monitoring in background with sensor data fetch
             let group = DispatchGroup()
             group.enter()
-            
-            Task {
+
+            Task { @MainActor in
                 defer { group.leave() }
+
+                print("🔄 AppDelegate: Starting background sensor data fetch")
+
+                // Step 1: Fetch fresh sensor data from devices using ConnectionPool
+                let fetchResult = await BackgroundSensorDataService.shared.fetchSensorDataInBackground()
+
+                print("📊 AppDelegate: Background fetch completed - \(fetchResult.successfulDevices.count) devices, \(fetchResult.totalDataPoints) data points in \(String(format: "%.1f", fetchResult.duration))s")
+
+                // Track execution for debugging
+                BackgroundTaskTracker.shared.recordRefreshTaskExecution(result: fetchResult)
+                BackgroundTaskTracker.shared.printSummary()
+
+                // Step 2: Perform device status checks with the new data
                 await PlantMonitorService.shared.performDailyDeviceCheck()
+
                 print("✅ AppDelegate: Completed plant monitoring task")
             }
-            
+
             group.wait()
         }
-        
+
         task.expirationHandler = {
-            print("⏰ AppDelegate: Plant monitoring task expired")
+            print("⏰ AppDelegate: Plant monitoring task expired, cancelling fetch")
+            Task { @MainActor in
+                BackgroundSensorDataService.shared.cancelFetch()
+            }
             queue.cancelAllOperations()
         }
-        
+
         operation.completionBlock = {
             task.setTaskCompleted(success: !operation.isCancelled)
         }
-        
+
         queue.addOperation(operation)
     }
-    
+
+    // MARK: - Background Processing Task (Historical Sync)
+
+    private func scheduleProcessingTask() {
+        let request = BGProcessingTaskRequest(identifier: "com.growguard.processing")
+        request.requiresNetworkConnectivity = false
+        request.requiresExternalPower = true // Only run when charging
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 1 * 60 * 60) // 1 hour from now (when charging)
+
+        do {
+            try BGTaskScheduler.shared.submit(request)
+            print("✅ AppDelegate: Scheduled processing task for historical sync")
+        } catch {
+            print("❌ AppDelegate: Unable to submit processing task: \(error.localizedDescription)")
+        }
+    }
+
+    private func handleProcessingTask(task: BGProcessingTask) {
+        // Schedule next processing task
+        scheduleProcessingTask()
+
+        print("🔄 AppDelegate: Starting background processing task for historical sync")
+
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = 1
+
+        let operation = BlockOperation {
+            let group = DispatchGroup()
+            group.enter()
+
+            Task { @MainActor in
+                defer { group.leave() }
+
+                // Processing task has more time - fetch data and sync historical if needed
+                print("📊 AppDelegate: Processing task - fetching sensor data with extended time")
+
+                // Use extended timeout for processing task (up to 5 minutes)
+                let fetchResult = await BackgroundSensorDataService.shared.fetchSensorDataInBackground()
+
+                print("📊 AppDelegate: Processing fetch completed - \(fetchResult.successfulDevices.count) devices in \(String(format: "%.1f", fetchResult.duration))s")
+
+                // Track execution for debugging
+                BackgroundTaskTracker.shared.recordProcessingTaskExecution(result: fetchResult)
+                BackgroundTaskTracker.shared.printSummary()
+
+                // Run device checks
+                await PlantMonitorService.shared.performDailyDeviceCheck()
+
+                print("✅ AppDelegate: Completed processing task")
+            }
+
+            group.wait()
+        }
+
+        task.expirationHandler = {
+            print("⏰ AppDelegate: Processing task expired")
+            Task { @MainActor in
+                BackgroundSensorDataService.shared.cancelFetch()
+            }
+            queue.cancelAllOperations()
+        }
+
+        operation.completionBlock = {
+            task.setTaskCompleted(success: !operation.isCancelled)
+        }
+
+        queue.addOperation(operation)
+    }
+
     // MARK: - Notification System Validation
     
     private func validateNotificationSystem() async {
