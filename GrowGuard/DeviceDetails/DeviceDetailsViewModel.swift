@@ -181,6 +181,8 @@ import CoreData
             return
         }
 
+        connection.setAutoStartHistoryFlowEnabled(true)
+
         // Subscribe zu Sensor-Daten vom ConnectionPool
         poolSensorDataSubscription = connection.sensorDataPublisher.sink { [weak self] (data: SensorDataTemp) in
             print("📡 DeviceDetailsViewModel (Pool): Received new sensor data from ConnectionPool")

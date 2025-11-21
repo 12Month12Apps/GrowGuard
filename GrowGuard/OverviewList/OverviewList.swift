@@ -15,6 +15,10 @@ struct OverviewList: View {
     @State private var deviceToDelete: IndexSet?
     @State private var showDeleteConfirmation = false
     @State private var showDeleteError = false
+    @State private var hasRequestedDashboardLiveRefresh = false
+
+    private let settingsStore = SettingsStore.shared
+    private let initialSensorDataService = InitialSensorDataService.shared
 
     init() {
         self.viewModel = OverviewListViewModel()
@@ -143,9 +147,10 @@ struct OverviewList: View {
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
             self.loading = true
-            Task {
+            Task { @MainActor in
                 await viewModel.fetchSavedDevices()
                 self.loading = false
+                await triggerDashboardLiveRefreshIfNeeded()
             }
         }
         .overlay {
@@ -177,6 +182,9 @@ struct OverviewList: View {
         .onChange(of: viewModel.deleteError) { _, newError in
             showDeleteError = newError != nil
         }
+        .onDisappear {
+            hasRequestedDashboardLiveRefresh = false
+        }
     }
     
     func delete(at offsets: IndexSet) {
@@ -190,6 +198,31 @@ struct OverviewList: View {
             await viewModel.deleteDevice(at: offsets)
         }
         deviceToDelete = nil
+    }
+
+    @MainActor
+    private func triggerDashboardLiveRefreshIfNeeded() async {
+        guard settingsStore.useConnectionPool else {
+            AppLogger.ble.info("📡 OverviewList: Skipping live refresh - ConnectionPool mode disabled")
+            return
+        }
+        guard !hasRequestedDashboardLiveRefresh else {
+            AppLogger.ble.info("📡 OverviewList: Live refresh already triggered for this appearance")
+            return
+        }
+
+        let sensorUUIDs = viewModel.allSavedDevices
+            .filter { $0.isSensor }
+            .map { $0.uuid }
+
+        guard !sensorUUIDs.isEmpty else {
+            AppLogger.ble.info("📡 OverviewList: No sensor devices available for live refresh")
+            return
+        }
+
+        hasRequestedDashboardLiveRefresh = true
+        AppLogger.ble.info("📡 OverviewList: Triggering ConnectionPool live refresh for \(sensorUUIDs.count) sensor(s)")
+        await initialSensorDataService.requestLiveData(for: sensorUUIDs)
     }
 }
 

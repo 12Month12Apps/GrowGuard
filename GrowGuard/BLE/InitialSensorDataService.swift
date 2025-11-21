@@ -9,8 +9,8 @@
 import Foundation
 import Combine
 
-/// Service für die automatische initiale Abfrage aller Sensoren beim App-Start
-/// Lädt alle gespeicherten Geräte und fordert einmal Live-Daten von jedem Gerät an
+/// Service für gesteuerte Live-Anfragen an alle Sensoren via ConnectionPool
+/// Lädt auf Wunsch alle Geräte und fordert genau eine Live-Daten-Aktualisierung pro Gerät an
 @MainActor
 class InitialSensorDataService {
 
@@ -35,7 +35,7 @@ class InitialSensorDataService {
     // MARK: - Public Methods
 
     /// Startet die initiale Sensor-Abfrage für alle gespeicherten Geräte
-    /// Diese Methode sollte beim App-Start aufgerufen werden
+    /// (z.B. beim manuellen Refresh auf dem Dashboard)
     func startInitialDataCollection() async {
         AppLogger.ble.info("🚀 Starting initial sensor data collection for all devices")
 
@@ -55,20 +55,42 @@ class InitialSensorDataService {
             return
         }
 
-        // Extrahiere Device UUIDs
-        let deviceUUIDs = devices.map { $0.uuid }
+        await requestLiveData(for: devices.map { $0.uuid })
+    }
 
-        // Verbinde mit allen Geräten über den Connection Pool
-        AppLogger.ble.info("🔄 Connecting to \(deviceUUIDs.count) device(s) via Connection Pool")
-        ConnectionPoolManager.shared.connectToMultiple(deviceUUIDs: deviceUUIDs)
+    /// Fordert genau eine Live-Daten-Aktualisierung für die angegebenen Geräte über den ConnectionPool an
+    /// - Parameter deviceUUIDs: Liste der zu aktualisierenden Sensor-UUIDs
+    func requestLiveData(for deviceUUIDs: [String]) async {
+        // Stelle sicher, dass ConnectionPool genutzt werden soll
+        guard SettingsStore.shared.useConnectionPool else {
+            AppLogger.ble.info("⚙️ Skipping live data request - ConnectionPool mode disabled")
+            return
+        }
 
-        // Für jedes Gerät: Warte auf Authentication und fordere dann Live-Daten an
-        for deviceUUID in deviceUUIDs {
+        let targets = Array(Set(deviceUUIDs)).filter { !$0.isEmpty }
+        guard !targets.isEmpty else {
+            AppLogger.ble.info("ℹ️ No sensor UUIDs provided for live data refresh")
+            return
+        }
+
+        prepareNewSession()
+
+        AppLogger.ble.info("🔄 InitialSensorDataService: Connecting to \(targets.count) sensor(s) for one-time live refresh")
+
+        for deviceUUID in targets {
+            AppLogger.ble.bleConnection("🧭 InitialSensorDataService: Observing connection state for \(deviceUUID)")
             setupConnectionObserver(for: deviceUUID)
+            ConnectionPoolManager.shared.connect(to: deviceUUID, autoStartHistoryFlow: false)
         }
     }
 
     // MARK: - Private Methods
+
+    /// Bereitet internen Zustand für eine neue Refresh-Session vor
+    private func prepareNewSession() {
+        requestedDevices.removeAll()
+        cancellables.removeAll()
+    }
 
     /// Richtet einen Observer für den Connection State eines Geräts ein
     /// Fordert automatisch Live-Daten an, sobald das Gerät authentifiziert ist
@@ -105,7 +127,6 @@ class InitialSensorDataService {
     /// Setzt den Service zurück (z.B. für App-Neustart oder Testing)
     func reset() {
         AppLogger.ble.info("🔄 Resetting InitialSensorDataService")
-        requestedDevices.removeAll()
-        cancellables.removeAll()
+        prepareNewSession()
     }
 }

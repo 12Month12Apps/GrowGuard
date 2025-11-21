@@ -79,9 +79,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
                         // Schedule weekly sensor update reminder
                         await WeeklySensorUpdateService.shared.scheduleWeeklyReminder()
-
-                        // Start initial sensor data collection for all devices
-                        await InitialSensorDataService.shared.startInitialDataCollection()
                     }
                 } else if let error = error {
                     print("❌ AppDelegate: Failed to request authorization for notifications: \(error.localizedDescription)")

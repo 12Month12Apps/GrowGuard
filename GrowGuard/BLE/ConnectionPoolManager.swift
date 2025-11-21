@@ -41,6 +41,7 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
     private var centralManager: CBCentralManager!
     private var connections: [String: DeviceConnection] = [:]
     private var devicesToScan: Set<String> = []
+    private var pendingConnections: [String: Bool] = [:]
     private var isScanning: Bool = false
     private let scanningStateSubject = CurrentValueSubject<Bool, Never>(false)
 
@@ -80,11 +81,19 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
         return newConnection
     }
 
-    func connect(to deviceUUID: String) {
+    func connect(to deviceUUID: String, autoStartHistoryFlow: Bool = true) {
         AppLogger.ble.bleConnection("Requested connection to device: \(deviceUUID)")
 
         // Hole oder erstelle DeviceConnection
         let connection = getConnection(for: deviceUUID)
+        connection.setAutoStartHistoryFlowEnabled(autoStartHistoryFlow)
+
+        // Stelle sicher, dass Bluetooth bereit ist
+        guard centralManager.state == .poweredOn else {
+            AppLogger.ble.bleWarning("Bluetooth not powered on yet. Queuing connection request for \(deviceUUID)")
+            pendingConnections[deviceUUID] = autoStartHistoryFlow
+            return
+        }
 
         // Prüfe ob bereits verbunden
         if connection.connectionState == .connected || connection.connectionState == .authenticated {
@@ -352,6 +361,14 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
                 if !devicesToScan.isEmpty {
                     AppLogger.ble.bleConnection("Auto-starting scan for pending devices")
                     startScanning()
+                }
+                if !pendingConnections.isEmpty {
+                    let queued = pendingConnections
+                    pendingConnections.removeAll()
+                    AppLogger.ble.bleConnection("Processing \(queued.count) queued connection request(s) after Bluetooth became available")
+                    for (uuid, historyFlag) in queued {
+                        connect(to: uuid, autoStartHistoryFlow: historyFlag)
+                    }
                 }
             case .poweredOff:
                 AppLogger.ble.bleError("Bluetooth is powered off")

@@ -106,6 +106,7 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
     /// Flag ob wir auf Characteristics Discovery warten für History Resume
     private var waitingForCharacteristicsForHistoryResume: Bool = false
+    private var autoStartHistoryFlowEnabled: Bool = true
 
     // MARK: - Combine Publishers
 
@@ -175,6 +176,15 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         super.init()
 
         AppLogger.ble.bleConnection("DeviceConnection initialized for device: \(deviceUUID)")
+    }
+
+    /// Konfiguriert, ob der History Flow automatisch nach der Authentifizierung starten soll
+    func setAutoStartHistoryFlowEnabled(_ enabled: Bool) {
+        autoStartHistoryFlowEnabled = enabled
+        if !enabled {
+            waitingForCharacteristicsForHistoryResume = false
+        }
+        AppLogger.ble.bleConnection("Device \(deviceUUID) autoStartHistoryFlowEnabled set to \(enabled)")
     }
 
     // MARK: - Public Methods
@@ -287,6 +297,11 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
             // CRITICAL FIX: Start history flow (like FlowerManager)
             // Check if required characteristics are available
+            guard autoStartHistoryFlowEnabled else {
+                AppLogger.ble.info("⏭️ Auto history start disabled for device \(self.deviceUUID) - waiting for explicit trigger")
+                return
+            }
+
             if historyControlCharacteristic != nil &&
                historyDataCharacteristic != nil &&
                deviceTimeCharacteristic != nil {
@@ -327,7 +342,8 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
                 self.stateSubject.send(.authenticated)
 
                 // Resume History Flow if it was active before disconnect
-                if self.isHistoryFlowActive && self.totalEntries > 0 && self.currentEntryIndex < self.totalEntries {
+                if self.autoStartHistoryFlowEnabled,
+                   self.isHistoryFlowActive && self.totalEntries > 0 && self.currentEntryIndex < self.totalEntries {
                     // Check if required characteristics are available
                     if self.historyControlCharacteristic != nil &&
                        self.historyDataCharacteristic != nil &&
@@ -381,6 +397,11 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
             // CRITICAL FIX: Start history flow after authentication (like FlowerManager)
             // This handles both initial start AND resume
+            guard autoStartHistoryFlowEnabled else {
+                AppLogger.ble.info("⏭️ Auto history start disabled for device \(self.deviceUUID) - waiting for explicit trigger")
+                return
+            }
+
             if historyControlCharacteristic != nil &&
                historyDataCharacteristic != nil &&
                deviceTimeCharacteristic != nil {
@@ -396,7 +417,9 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
                 }
             } else {
                 AppLogger.ble.bleWarning("⏳ History flow needs to start but characteristics not ready yet, waiting for discovery")
-                waitingForCharacteristicsForHistoryResume = true
+                if autoStartHistoryFlowEnabled {
+                    waitingForCharacteristicsForHistoryResume = true
+                }
             }
 
         default:
@@ -781,12 +804,15 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
             waitingForCharacteristicsForHistoryResume = false
 
             // Resume history flow now that characteristics are available
-            if isHistoryFlowActive && totalEntries > 0 && currentEntryIndex < totalEntries && isAuthenticated {
+            if autoStartHistoryFlowEnabled,
+               isHistoryFlowActive && totalEntries > 0 && currentEntryIndex < totalEntries && isAuthenticated {
                 AppLogger.ble.info("🔄 Resuming history flow now at entry \(self.currentEntryIndex)/\(self.totalEntries)")
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                     guard let self = self else { return }
                     self.startHistoryDataFlow()
                 }
+            } else if !autoStartHistoryFlowEnabled {
+                AppLogger.ble.info("⏭️ Auto history start disabled for device \(self.deviceUUID) - not resuming history flow")
             }
         }
 
