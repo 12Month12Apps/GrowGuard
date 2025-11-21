@@ -659,7 +659,8 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
     }
 
     /// Räumt den Historical Data Flow auf und beendet ihn
-    private func cleanupHistoryFlow() {
+    /// Can be called externally to cancel an ongoing history flow
+    func cleanupHistoryFlow() {
         AppLogger.ble.info("🧹 Cleaning up history flow for device \(self.deviceUUID)")
         isHistoryFlowActive = false
 

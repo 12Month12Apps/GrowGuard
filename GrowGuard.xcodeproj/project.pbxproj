@@ -3,11 +3,14 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		3F13B333BDA24182B72236B6 /* HistoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F13B333BDA24182B72236B7 /* HistoryListView.swift */; };
+		560E9C352ED118AB00A595E1 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 560E9C342ED118AB00A595E1 /* WidgetKit.framework */; };
+		560E9C372ED118AB00A595E1 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 560E9C362ED118AB00A595E1 /* SwiftUI.framework */; };
+		560E9C462ED118AC00A595E1 /* GrowGuardWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 560E9C322ED118AB00A595E1 /* GrowGuardWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		560FAA5B2E6B43E900BFFC6D /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 560FAA5A2E6B43E900BFFC6D /* Localizable.strings */; };
 		560FAA5D2E6B440500BFFC6D /* Strings+Generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 560FAA5C2E6B440500BFFC6D /* Strings+Generated.swift */; };
 		5622B0CA2E3176F5002C7E74 /* PotSizeDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5622B0C72E3176F5002C7E74 /* PotSizeDTO.swift */; };
@@ -59,7 +62,6 @@
 		5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5688920A2C84B4B9000E8FAE /* AppDelegate.swift */; };
 		569417562E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 569417542E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld */; };
 		5699C0F42E126A5C00FA9A11 /* AppSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5699C0F02E126A5C00FA9A11 /* AppSettingsView.swift */; };
-		82C2F563DA3B44BCBC8B6AF8 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24F27E79B00A42959FBED19D /* SettingsStore.swift */; };
 		569B70ED2C10F221005B7BC9 /* DataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 569B70EC2C10F221005B7BC9 /* DataService.swift */; };
 		56A8C6EA2D8ECF37004021C0 /* AddDeviceDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6E92D8ECF31004021C0 /* AddDeviceDetails.swift */; };
 		56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56A8C6EC2D8EF1E5004021C0 /* Alert.swift */; };
@@ -75,8 +77,6 @@
 		56AF11372BDED05B00887073 /* GrowGuardUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11362BDED05B00887073 /* GrowGuardUITests.swift */; };
 		56AF11392BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11382BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift */; };
 		56B3B7392EA5181700AE41E9 /* WeeklySensorUpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B3B7382EA5181700AE41E9 /* WeeklySensorUpdateService.swift */; };
-		56BGSD012EC7000000000001 /* BackgroundSensorDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BGSD002EC7000000000001 /* BackgroundSensorDataService.swift */; };
-		56BGTR012EC7000000000002 /* BackgroundTaskTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */; };
 		56B44CC32D6E7B3F00A6A75A /* FlowerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CBE2D6E7B3F00A6A75A /* FlowerManager.swift */; };
 		56B44CC42D6E7B3F00A6A75A /* HistoricalSensorData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */; };
 		56B44CC52D6E7B3F00A6A75A /* SensorDataDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */; };
@@ -86,6 +86,8 @@
 		56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CCD2D78E8EB00A6A75A /* print.swift */; };
 		56BF5F9B2DFA5D7300D9B2AE /* AddWithoutSensor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BF5F9A2DFA5D6C00D9B2AE /* AddWithoutSensor.swift */; };
 		56BF5F9D2DFA5E9100D9B2AE /* AddWithoutSensorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */; };
+		56BGSD012EC7000000000001 /* BackgroundSensorDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BGSD002EC7000000000001 /* BackgroundSensorDataService.swift */; };
+		56BGTR012EC7000000000002 /* BackgroundTaskTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */; };
 		56D35EB72E2BE5730059FEE6 /* PotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D35EB62E2BE56C0059FEE6 /* PotView.swift */; };
 		56DC564A2DD9251C00041DBA /* flower.db in Resources */ = {isa = PBXBuildFile; fileRef = 56DC56492DD9251C00041DBA /* flower.db */; };
 		56DC564D2DD9256800041DBA /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 56DC564C2DD9256800041DBA /* GRDB */; };
@@ -94,9 +96,19 @@
 		56F9D1A12E5B4E0D00A1B2C3 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */; };
 		56FD6C862E34194C00905984 /* SensorDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C852E34194C00905984 /* SensorDataManager.swift */; };
 		56FD6C8D2E36960300905984 /* FlowerManagerHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C8A2E36960300905984 /* FlowerManagerHistoryTests.swift */; };
+		56HLA0022EC8000000000001 /* HistoryLoadingAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56HLA0012EC8000000000001 /* HistoryLoadingAttributes.swift */; };
+		56HLAS022EC8000000000002 /* HistoryLoadingActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56HLAS012EC8000000000002 /* HistoryLoadingActivityService.swift */; };
+		82C2F563DA3B44BCBC8B6AF8 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24F27E79B00A42959FBED19D /* SettingsStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		560E9C442ED118AC00A595E1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 56AF110D2BDED05900887073 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 560E9C312ED118AB00A595E1;
+			remoteInfo = GrowGuardWidgetsExtension;
+		};
 		56AF11292BDED05B00887073 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 56AF110D2BDED05900887073 /* Project object */;
@@ -113,8 +125,26 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		560E9C472ED118AC00A595E1 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				560E9C462ED118AC00A595E1 /* GrowGuardWidgetsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		24F27E79B00A42959FBED19D /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		3F13B333BDA24182B72236B7 /* HistoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryListView.swift; sourceTree = "<group>"; };
+		560E9C322ED118AB00A595E1 /* GrowGuardWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GrowGuardWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		560E9C342ED118AB00A595E1 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		560E9C362ED118AB00A595E1 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		560FAA5A2E6B43E900BFFC6D /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; path = Localizable.strings; sourceTree = "<group>"; };
 		560FAA5C2E6B440500BFFC6D /* Strings+Generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Strings+Generated.swift"; sourceTree = "<group>"; };
 		5622B0C52E3176F5002C7E74 /* FlowerDeviceDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerDeviceDTO.swift; sourceTree = "<group>"; };
@@ -167,7 +197,6 @@
 		5688920A2C84B4B9000E8FAE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		569417552E0DD9C000AE7586 /* CoreDataModels.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = CoreDataModels.xcdatamodel; sourceTree = "<group>"; };
 		5699C0F02E126A5C00FA9A11 /* AppSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsView.swift; sourceTree = "<group>"; };
-		24F27E79B00A42959FBED19D /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		569B70EC2C10F221005B7BC9 /* DataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataService.swift; sourceTree = "<group>"; };
 		56A8C6E92D8ECF31004021C0 /* AddDeviceDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceDetails.swift; sourceTree = "<group>"; };
 		56A8C6EC2D8EF1E5004021C0 /* Alert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alert.swift; sourceTree = "<group>"; };
@@ -188,8 +217,6 @@
 		56AF11382BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		56AF11452BE2492300887073 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		56B3B7382EA5181700AE41E9 /* WeeklySensorUpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklySensorUpdateService.swift; sourceTree = "<group>"; };
-		56BGSD002EC7000000000001 /* BackgroundSensorDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundSensorDataService.swift; sourceTree = "<group>"; };
-		56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskTracker.swift; sourceTree = "<group>"; };
 		56B44CBE2D6E7B3F00A6A75A /* FlowerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerManager.swift; sourceTree = "<group>"; };
 		56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalSensorData.swift; sourceTree = "<group>"; };
 		56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataDecoder.swift; sourceTree = "<group>"; };
@@ -199,6 +226,8 @@
 		56B44CCD2D78E8EB00A6A75A /* print.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = print.swift; sourceTree = "<group>"; };
 		56BF5F9A2DFA5D6C00D9B2AE /* AddWithoutSensor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWithoutSensor.swift; sourceTree = "<group>"; };
 		56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWithoutSensorViewModel.swift; sourceTree = "<group>"; };
+		56BGSD002EC7000000000001 /* BackgroundSensorDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundSensorDataService.swift; sourceTree = "<group>"; };
+		56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskTracker.swift; sourceTree = "<group>"; };
 		56D35EB62E2BE56C0059FEE6 /* PotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PotView.swift; sourceTree = "<group>"; };
 		56DC56492DD9251C00041DBA /* flower.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = flower.db; sourceTree = "<group>"; };
 		56F0F7DA2E564C0400B538AF /* MoistureAnomalyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoistureAnomalyService.swift; sourceTree = "<group>"; };
@@ -206,9 +235,34 @@
 		56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationService.swift; path = ../Core/NotificationService.swift; sourceTree = "<group>"; };
 		56FD6C852E34194C00905984 /* SensorDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataManager.swift; sourceTree = "<group>"; };
 		56FD6C8A2E36960300905984 /* FlowerManagerHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerManagerHistoryTests.swift; sourceTree = "<group>"; };
+		56HLA0012EC8000000000001 /* HistoryLoadingAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryLoadingAttributes.swift; sourceTree = "<group>"; };
+		56HLAS012EC8000000000002 /* HistoryLoadingActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryLoadingActivityService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		560E9C4A2ED118AC00A595E1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 560E9C312ED118AB00A595E1 /* GrowGuardWidgetsExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		560E9C382ED118AB00A595E1 /* GrowGuardWidgets */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (560E9C4A2ED118AC00A595E1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = GrowGuardWidgets; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
+		560E9C2F2ED118AB00A595E1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				560E9C372ED118AB00A595E1 /* SwiftUI.framework in Frameworks */,
+				560E9C352ED118AB00A595E1 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		56AF11122BDED05900887073 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -234,6 +288,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		560E9C332ED118AB00A595E1 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				560E9C342ED118AB00A595E1 /* WidgetKit.framework */,
+				560E9C362ED118AB00A595E1 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		560FAA592E6B43D800BFFC6D /* Strings */ = {
 			isa = PBXGroup;
 			children = (
@@ -402,6 +465,8 @@
 			children = (
 				56BGSD002EC7000000000001 /* BackgroundSensorDataService.swift */,
 				56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */,
+				56HLA0012EC8000000000001 /* HistoryLoadingAttributes.swift */,
+				56HLAS012EC8000000000002 /* HistoryLoadingActivityService.swift */,
 				56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */,
 				56B3B7382EA5181700AE41E9 /* WeeklySensorUpdateService.swift */,
 			);
@@ -467,6 +532,8 @@
 				56AF11172BDED05900887073 /* GrowGuard */,
 				56AF112B2BDED05B00887073 /* GrowGuardTests */,
 				56AF11352BDED05B00887073 /* GrowGuardUITests */,
+				560E9C382ED118AB00A595E1 /* GrowGuardWidgets */,
+				560E9C332ED118AB00A595E1 /* Frameworks */,
 				56AF11162BDED05900887073 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -477,6 +544,7 @@
 				56AF11152BDED05900887073 /* GrowGuard.app */,
 				56AF11282BDED05B00887073 /* GrowGuardTests.xctest */,
 				56AF11322BDED05B00887073 /* GrowGuardUITests.xctest */,
+				560E9C322ED118AB00A595E1 /* GrowGuardWidgetsExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -567,6 +635,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		560E9C312ED118AB00A595E1 /* GrowGuardWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 560E9C4B2ED118AC00A595E1 /* Build configuration list for PBXNativeTarget "GrowGuardWidgetsExtension" */;
+			buildPhases = (
+				560E9C2E2ED118AB00A595E1 /* Sources */,
+				560E9C2F2ED118AB00A595E1 /* Frameworks */,
+				560E9C302ED118AB00A595E1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				560E9C382ED118AB00A595E1 /* GrowGuardWidgets */,
+			);
+			name = GrowGuardWidgetsExtension;
+			packageProductDependencies = (
+			);
+			productName = GrowGuardWidgetsExtension;
+			productReference = 560E9C322ED118AB00A595E1 /* GrowGuardWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		56AF11142BDED05900887073 /* GrowGuard */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 56AF113C2BDED05B00887073 /* Build configuration list for PBXNativeTarget "GrowGuard" */;
@@ -575,10 +665,12 @@
 				56AF11122BDED05900887073 /* Frameworks */,
 				56AF11132BDED05900887073 /* Resources */,
 				5674A8F02E36A7B80084A296 /* Update Build Number */,
+				560E9C472ED118AC00A595E1 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				560E9C452ED118AC00A595E1 /* PBXTargetDependency */,
 			);
 			name = GrowGuard;
 			productName = GrowGuard;
@@ -628,9 +720,13 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1530;
+				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 1530;
 				TargetAttributes = {
+					560E9C312ED118AB00A595E1 = {
+						CreatedOnToolsVersion = 26.0.1;
+						LastSwiftMigration = 2600;
+					};
 					56AF11142BDED05900887073 = {
 						CreatedOnToolsVersion = 15.3;
 					};
@@ -663,11 +759,19 @@
 				56AF11142BDED05900887073 /* GrowGuard */,
 				56AF11272BDED05B00887073 /* GrowGuardTests */,
 				56AF11312BDED05B00887073 /* GrowGuardUITests */,
+				560E9C312ED118AB00A595E1 /* GrowGuardWidgetsExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		560E9C302ED118AB00A595E1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		56AF11132BDED05900887073 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -718,6 +822,13 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		560E9C2E2ED118AB00A595E1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		56AF11112BDED05900887073 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -786,6 +897,8 @@
 				56B3B7392EA5181700AE41E9 /* WeeklySensorUpdateService.swift in Sources */,
 				56BGSD012EC7000000000001 /* BackgroundSensorDataService.swift in Sources */,
 				56BGTR012EC7000000000002 /* BackgroundTaskTracker.swift in Sources */,
+				56HLA0022EC8000000000001 /* HistoryLoadingAttributes.swift in Sources */,
+				56HLAS022EC8000000000002 /* HistoryLoadingActivityService.swift in Sources */,
 				5622B0E92E317737002C7E74 /* OptimalRange+DTO.swift in Sources */,
 				5622B0EA2E317737002C7E74 /* SensorData+DTO.swift in Sources */,
 				5622B0EB2E317737002C7E74 /* FlowerDevice+DTO.swift in Sources */,
@@ -824,6 +937,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		560E9C452ED118AC00A595E1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 560E9C312ED118AB00A595E1 /* GrowGuardWidgetsExtension */;
+			targetProxy = 560E9C442ED118AC00A595E1 /* PBXContainerItemProxy */;
+		};
 		56AF112A2BDED05B00887073 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 56AF11142BDED05900887073 /* GrowGuard */;
@@ -837,6 +955,76 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		560E9C482ED118AC00A595E1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G2PVUY2GRG;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = GrowGuardWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = GrowGuardWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.company.GrowGuard.GrowGuardWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "GrowGuardWidgets/GrowGuardWidgetsExtension-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		560E9C492ED118AC00A595E1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G2PVUY2GRG;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = GrowGuardWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = GrowGuardWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pro.veit.company.GrowGuard.GrowGuardWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "GrowGuardWidgets/GrowGuardWidgetsExtension-Bridging-Header.h";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		56AF113A2BDED05B00887073 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1040,7 +1228,6 @@
 		56AF11402BDED05B00887073 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -1063,7 +1250,6 @@
 		56AF11412BDED05B00887073 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -1086,7 +1272,6 @@
 		56AF11432BDED05B00887073 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = G2PVUY2GRG;
@@ -1108,7 +1293,6 @@
 		56AF11442BDED05B00887073 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = G2PVUY2GRG;
@@ -1130,6 +1314,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		560E9C4B2ED118AC00A595E1 /* Build configuration list for PBXNativeTarget "GrowGuardWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				560E9C482ED118AC00A595E1 /* Debug */,
+				560E9C492ED118AC00A595E1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		56AF11102BDED05900887073 /* Build configuration list for PBXProject "GrowGuard" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

@@ -9,6 +9,7 @@ import Foundation
 import CoreBluetooth
 import Combine
 import CoreData
+import ActivityKit
 
 @Observable class DeviceDetailsViewModel {
     let ble = FlowerCareManager.shared
@@ -40,6 +41,10 @@ import CoreData
     var isLoadingHistory = false
     var historyLoadingProgress: (current: Int, total: Int) = (0, 0)
     private var historicalDataBatchCounter = 0
+
+    // MARK: - Live Activity for Background History Loading
+    private let liveActivityService = HistoryLoadingActivityService.shared
+    var isLiveActivityEnabled = true // User can toggle this
     
     // MARK: - Connection Quality & Distance
     var connectionDistanceHint: String = ""
@@ -215,17 +220,31 @@ import CoreData
                 guard let self = self else { return }
                 print("📊 DeviceDetailsViewModel (Pool): History progress: \(current)/\(total)")
                 self.historyLoadingProgress = (current, total)
+
+                // Update Live Activity with progress
+                if self.isLiveActivityEnabled && self.liveActivityService.hasActivity(for: self.device.uuid) {
+                    self.liveActivityService.updateProgress(
+                        currentEntry: current,
+                        totalEntries: total,
+                        connectionStatus: .loading
+                    )
+                }
             }
         }
 
         // Listen for historical data loading completion
         NotificationCenter.default.addObserver(forName: NSNotification.Name("HistoricalDataLoadingCompleted"), object: device.uuid, queue: .main) { [weak self] _ in
             Task { @MainActor in
-                self?.isLoadingHistory = false
+                guard let self = self else { return }
+                self.isLoadingHistory = false
                 // Reset batch counter
-                self?.historicalDataBatchCounter = 0
+                self.historicalDataBatchCounter = 0
+                // End Live Activity with completed status
+                if self.liveActivityService.hasActivity(for: self.device.uuid) {
+                    self.liveActivityService.endActivity(status: .completed)
+                }
                 // Final refresh after all data loaded
-                await self?.refreshCurrentWeekSilently()
+                await self.refreshCurrentWeekSilently()
             }
         }
 
@@ -234,6 +253,23 @@ import CoreData
             Task { @MainActor in
                 guard let self = self else { return }
                 AppLogger.ble.bleConnection("DeviceDetailsViewModel (Pool): Connection state changed to \(state)")
+
+                // Update Live Activity connection status
+                if self.isLoadingHistory && self.liveActivityService.hasActivity(for: self.device.uuid) {
+                    switch state {
+                    case .connecting:
+                        self.liveActivityService.updateConnectionStatus(.connecting)
+                    case .connected:
+                        self.liveActivityService.updateConnectionStatus(.connected)
+                    case .authenticated:
+                        self.liveActivityService.updateConnectionStatus(.loading)
+                    case .disconnected:
+                        // If still loading, show reconnecting status
+                        self.liveActivityService.updateConnectionStatus(.reconnecting, isPaused: true)
+                    case .error:
+                        self.liveActivityService.updateConnectionStatus(.reconnecting, isPaused: true)
+                    }
+                }
 
                 // Bei erfolgreicher Authentication: Fordere Live-Daten an
                 if state == .authenticated {
@@ -256,6 +292,11 @@ import CoreData
         poolHistoricalDataSubscription?.cancel()
         poolHistoryProgressSubscription?.cancel()
         poolConnectionStateSubscription?.cancel()
+
+        // End Live Activity if still running
+        if liveActivityService.hasActivity(for: device.uuid) {
+            liveActivityService.endActivity(status: HistoryLoadingAttributes.ConnectionStatus.failed)
+        }
 
         // Disconnecte vom Pool
         connectionPool.disconnect(from: device.uuid)
@@ -446,6 +487,20 @@ import CoreData
         // Reset batch counter for new history flow
         historicalDataBatchCounter = 0
 
+        // Start Live Activity for background progress tracking
+        if isLiveActivityEnabled {
+            let activityStarted = liveActivityService.startActivity(
+                deviceName: device.name,
+                deviceUUID: device.uuid,
+                totalEntries: 0 // Will be updated once we know the total
+            )
+            if activityStarted {
+                AppLogger.ble.info("📊 DeviceDetailsViewModel: Live Activity started for history loading")
+            } else {
+                AppLogger.ble.warning("📊 DeviceDetailsViewModel: Could not start Live Activity (may be disabled)")
+            }
+        }
+
         if useConnectionPool {
             // ✅ Neue Implementierung: Nutze ConnectionPool
             AppLogger.ble.bleConnection("DeviceDetailsViewModel: Using ConnectionPool for historical data")
@@ -473,6 +528,25 @@ import CoreData
             AppLogger.ble.bleConnection("DeviceDetailsViewModel: Using legacy FlowerCareManager for historical data")
             ble.connectToKnownDevice(deviceUUID: device.uuid)
             ble.requestHistoricalData()
+        }
+    }
+
+    /// Cancel the ongoing history loading and end Live Activity
+    @MainActor
+    func cancelHistoryLoading() {
+        AppLogger.ble.info("📊 DeviceDetailsViewModel: Cancelling history loading for device \(self.device.uuid)")
+
+        isLoadingHistory = false
+        historicalDataBatchCounter = 0
+
+        // End the Live Activity
+        if liveActivityService.hasActivity(for: self.device.uuid) {
+            liveActivityService.endActivity(status: HistoryLoadingAttributes.ConnectionStatus.failed)
+        }
+
+        // Stop the history flow on the connection
+        if useConnectionPool, let connection = deviceConnection {
+            connection.cleanupHistoryFlow()
         }
     }
     
