@@ -10,12 +10,20 @@ final class AppSettingsViewModel {
     var preferredReminderTime: Date
     var useConnectionPool: Bool
 
-    // Background Task Debug Info
+    // Background Task Debug Info - Execution
     var refreshTaskCount: Int = 0
     var processingTaskCount: Int = 0
     var lastRefreshDate: Date?
     var lastProcessingDate: Date?
     var executionHistory: [TaskExecution] = []
+
+    // Background Task Debug Info - Scheduling
+    var refreshScheduleCount: Int = 0
+    var processingScheduleCount: Int = 0
+    var scheduleFailureCount: Int = 0
+    var lastRefreshScheduledDate: Date?
+    var lastProcessingScheduledDate: Date?
+    var schedulingHistory: [SchedulingEvent] = []
 
     init(
         settingsStore: SettingsStore = .shared,
@@ -52,11 +60,21 @@ final class AppSettingsViewModel {
 
     func loadBackgroundTaskStats() {
         let tracker = BackgroundTaskTracker.shared
+
+        // Execution stats
         refreshTaskCount = tracker.refreshTaskCount
         processingTaskCount = tracker.processingTaskCount
         lastRefreshDate = tracker.lastRefreshDate
         lastProcessingDate = tracker.lastProcessingDate
         executionHistory = tracker.executionHistory
+
+        // Scheduling stats
+        refreshScheduleCount = tracker.refreshScheduleCount
+        processingScheduleCount = tracker.processingScheduleCount
+        scheduleFailureCount = tracker.scheduleFailureCount
+        lastRefreshScheduledDate = tracker.lastRefreshScheduledDate
+        lastProcessingScheduledDate = tracker.lastProcessingScheduledDate
+        schedulingHistory = tracker.schedulingHistory
     }
 
     func resetBackgroundTaskStats() {
@@ -117,28 +135,120 @@ struct AppSettingsView: View {
                     .padding(.top, 4)
             }
 
-            // Debug: Background Task Statistics
-            Section(header: Text("Background Tasks (Debug)")) {
+            // Debug: Background Task Scheduling
+            Section(header: Text("Task Scheduling (Debug)")) {
+                // Scheduling stats
+                HStack {
+                    Label("Refresh Scheduled", systemImage: "calendar.badge.clock")
+                    Spacer()
+                    Text("\(viewModel.refreshScheduleCount)x")
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack {
+                    Label("Processing Scheduled", systemImage: "calendar.badge.plus")
+                    Spacer()
+                    Text("\(viewModel.processingScheduleCount)x")
+                        .foregroundStyle(.secondary)
+                }
+
+                if viewModel.scheduleFailureCount > 0 {
+                    HStack {
+                        Label("Schedule Failures", systemImage: "exclamationmark.triangle.fill")
+                        Spacer()
+                        Text("\(viewModel.scheduleFailureCount)")
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                // Last scheduled times
+                if let lastScheduled = viewModel.lastRefreshScheduledDate {
+                    HStack {
+                        Label("Last Refresh Scheduled", systemImage: "clock")
+                        Spacer()
+                        Text(lastScheduled, style: .relative)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let lastScheduled = viewModel.lastProcessingScheduledDate {
+                    HStack {
+                        Label("Last Processing Scheduled", systemImage: "clock.fill")
+                        Spacer()
+                        Text(lastScheduled, style: .relative)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                // Scheduling history
+                if !viewModel.schedulingHistory.isEmpty {
+                    DisclosureGroup("Scheduling History (\(viewModel.schedulingHistory.count))") {
+                        ForEach(viewModel.schedulingHistory.prefix(10)) { event in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(event.type.rawValue)
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(event.type == .refresh ? Color.blue.opacity(0.2) : Color.orange.opacity(0.2))
+                                        .cornerRadius(4)
+
+                                    Image(systemName: event.success ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                        .foregroundStyle(event.success ? .green : .red)
+                                        .font(.caption)
+
+                                    Spacer()
+
+                                    Text(event.date, style: .relative)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                HStack {
+                                    Text(event.source.rawValue)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+
+                                    if let error = event.error {
+                                        Text("- \(error)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.red)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
+            }
+
+            // Debug: Background Task Execution
+            Section(header: Text("Task Execution (Debug)")) {
                 // Summary stats
                 HStack {
-                    Label("Refresh Tasks", systemImage: "arrow.clockwise")
+                    Label("Refresh Executed", systemImage: "arrow.clockwise")
                     Spacer()
-                    Text("\(viewModel.refreshTaskCount)")
+                    Text("\(viewModel.refreshTaskCount)x")
                         .foregroundStyle(.secondary)
                 }
 
                 HStack {
-                    Label("Processing Tasks", systemImage: "bolt.fill")
+                    Label("Processing Executed", systemImage: "bolt.fill")
                     Spacer()
-                    Text("\(viewModel.processingTaskCount)")
+                    Text("\(viewModel.processingTaskCount)x")
                         .foregroundStyle(.secondary)
                 }
 
-                HStack {
-                    Label("Total Executions", systemImage: "number")
-                    Spacer()
-                    Text("\(viewModel.refreshTaskCount + viewModel.processingTaskCount)")
-                        .fontWeight(.semibold)
+                // Conversion rate (scheduled vs executed)
+                if viewModel.refreshScheduleCount > 0 {
+                    HStack {
+                        Label("Refresh Success Rate", systemImage: "percent")
+                        Spacer()
+                        let rate = Double(viewModel.refreshTaskCount) / Double(viewModel.refreshScheduleCount) * 100
+                        Text(String(format: "%.0f%%", min(rate, 100)))
+                            .foregroundStyle(rate > 50 ? .green : (rate > 10 ? .orange : .red))
+                    }
                 }
 
                 // Last execution times
@@ -162,7 +272,7 @@ struct AppSettingsView: View {
 
                 // Execution history
                 if !viewModel.executionHistory.isEmpty {
-                    DisclosureGroup("Recent History (\(viewModel.executionHistory.count))") {
+                    DisclosureGroup("Execution History (\(viewModel.executionHistory.count))") {
                         ForEach(viewModel.executionHistory.prefix(10)) { execution in
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
@@ -202,7 +312,7 @@ struct AppSettingsView: View {
                 Button(role: .destructive) {
                     viewModel.resetBackgroundTaskStats()
                 } label: {
-                    Label("Reset Statistics", systemImage: "trash")
+                    Label("Reset All Statistics", systemImage: "trash")
                 }
 
                 Button {

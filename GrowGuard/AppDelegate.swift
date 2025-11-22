@@ -85,6 +85,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                         // Schedule weekly sensor update reminder
                         await WeeklySensorUpdateService.shared.scheduleWeeklyReminder()
                     }
+
+                    // Schedule background tasks on app launch (more aggressive scheduling)
+                    self.schedulePlantMonitoringTask(source: .appLaunch)
+                    self.scheduleProcessingTask(source: .appLaunch)
                 } else if let error = error {
                     print("❌ AppDelegate: Failed to request authorization for notifications: \(error.localizedDescription)")
                 } else {
@@ -98,27 +102,37 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     
     func applicationDidEnterBackground(_ application: UIApplication) {
         // Schedule plant monitoring task when app goes to background
-        schedulePlantMonitoringTask()
+        schedulePlantMonitoringTask(source: .enterBackground)
 
-        // Schedule processing task for historical sync (requires charging)
-        scheduleProcessingTask()
+        // Schedule processing task for historical sync
+        scheduleProcessingTask(source: .enterBackground)
     }
-    
-    private func schedulePlantMonitoringTask() {
+
+    private func schedulePlantMonitoringTask(source: SchedulingSource) {
         let request = BGAppRefreshTaskRequest(identifier: "pro.veit.GrowGuard.plantMonitor")
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 1 * 60 * 60) // Check every 1 hour
-        
+        // Use 15 minutes (iOS minimum for BGAppRefreshTask) for more frequent attempts
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
+
         do {
             try BGTaskScheduler.shared.submit(request)
-            print("✅ AppDelegate: Scheduled plant monitoring task")
+            BackgroundTaskTracker.shared.recordSchedulingAttempt(
+                type: .refresh,
+                success: true,
+                source: source
+            )
         } catch {
-            print("❌ AppDelegate: Unable to submit plant monitoring task: \(error.localizedDescription)")
+            BackgroundTaskTracker.shared.recordSchedulingAttempt(
+                type: .refresh,
+                success: false,
+                error: error.localizedDescription,
+                source: source
+            )
         }
     }
     
     private func handlePlantMonitoringTask(task: BGAppRefreshTask) {
         // Schedule next monitoring task
-        schedulePlantMonitoringTask()
+        schedulePlantMonitoringTask(source: .afterExecution)
 
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = 1
@@ -168,23 +182,33 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
     // MARK: - Background Processing Task (Historical Sync)
 
-    private func scheduleProcessingTask() {
+    private func scheduleProcessingTask(source: SchedulingSource) {
         let request = BGProcessingTaskRequest(identifier: "com.growguard.processing")
         request.requiresNetworkConnectivity = false
-        request.requiresExternalPower = true // Only run when charging
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 1 * 60 * 60) // 1 hour from now (when charging)
+        // Removed requiresExternalPower to allow running without charging
+        // This gives us more opportunities for background execution
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60) // 15 minutes
 
         do {
             try BGTaskScheduler.shared.submit(request)
-            print("✅ AppDelegate: Scheduled processing task for historical sync")
+            BackgroundTaskTracker.shared.recordSchedulingAttempt(
+                type: .processing,
+                success: true,
+                source: source
+            )
         } catch {
-            print("❌ AppDelegate: Unable to submit processing task: \(error.localizedDescription)")
+            BackgroundTaskTracker.shared.recordSchedulingAttempt(
+                type: .processing,
+                success: false,
+                error: error.localizedDescription,
+                source: source
+            )
         }
     }
 
     private func handleProcessingTask(task: BGProcessingTask) {
         // Schedule next processing task
-        scheduleProcessingTask()
+        scheduleProcessingTask(source: .afterExecution)
 
         print("🔄 AppDelegate: Starting background processing task for historical sync")
 
