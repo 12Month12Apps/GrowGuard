@@ -61,7 +61,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             DispatchQueue.main.async {
                 if granted {
                     print("✅ AppDelegate: Notification permissions granted (including Time-Sensitive)")
-                    
+
+                    // Register for remote notifications
+                    print("📲 AppDelegate: Registering for remote notifications...")
+                    application.registerForRemoteNotifications()
+
                     // Check if time-sensitive notifications are actually enabled
                     UNUserNotificationCenter.current().getNotificationSettings { settings in
                         print("📱 AppDelegate: Notification settings:")
@@ -70,14 +74,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                         print("   Sound Setting: \(settings.soundSetting.rawValue)")
                         print("   Badge Setting: \(settings.badgeSetting.rawValue)")
                         print("   Time Sensitive Setting: \(settings.timeSensitiveSetting.rawValue)")
-                        
+
                         if settings.timeSensitiveSetting == .enabled {
                             print("🚨 AppDelegate: Time-Sensitive notifications are ENABLED - urgent plant alerts will break through Do Not Disturb!")
                         } else {
                             print("⚠️ AppDelegate: Time-Sensitive notifications not fully enabled - some urgent alerts may be delayed")
                         }
                     }
-                    
+
                     // Validate notification system after permission is granted
                     Task {
                         await self.validateNotificationSystem()
@@ -106,6 +110,75 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
         // Schedule processing task for historical sync
         scheduleProcessingTask(source: .enterBackground)
+    }
+
+    // MARK: - Remote Notification Registration
+
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        // Convert device token to hex string
+        let tokenString = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        print("📲 AppDelegate: Received APNs device token: \(tokenString.prefix(16))...")
+
+        // Store token locally
+        SettingsStore.shared.deviceToken = tokenString
+
+        // Register token with server
+        Task {
+            await registerDeviceTokenWithServer(tokenString)
+        }
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("❌ AppDelegate: Failed to register for remote notifications: \(error.localizedDescription)")
+    }
+
+    /// Registers the device token with the GrowGuard server
+    private func registerDeviceTokenWithServer(_ token: String) async {
+        do {
+            let response = try await GrowGuardAPIClient.shared.registerDevice(token: token)
+            if response.success {
+                print("✅ AppDelegate: Device token registered with server successfully")
+            } else {
+                print("⚠️ AppDelegate: Server registration failed: \(response.message ?? "Unknown error")")
+            }
+        } catch {
+            print("❌ AppDelegate: Failed to register device token with server: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Remote Notification Handling (Silent Push)
+
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        print("📬 AppDelegate: Received remote notification (silent push)")
+
+        // Check if this is a silent/background notification
+        let isContentAvailable = (userInfo["aps"] as? [String: Any])?["content-available"] as? Int == 1
+
+        if isContentAvailable {
+            print("🔄 AppDelegate: Processing background notification - triggering sensor data fetch")
+
+            // Trigger background sensor data fetch
+            Task { @MainActor in
+                let fetchResult = await BackgroundSensorDataService.shared.fetchSensorDataInBackground()
+
+                print("📊 AppDelegate: Remote push fetch completed - \(fetchResult.successfulDevices.count) devices, \(fetchResult.totalDataPoints) data points in \(String(format: "%.1f", fetchResult.duration))s")
+
+                // Perform device status checks with the new data
+                await PlantMonitorService.shared.performDailyDeviceCheck()
+
+                // Report result to iOS
+                if fetchResult.successfulDevices.isEmpty && fetchResult.failedDevices.isEmpty {
+                    completionHandler(.noData)
+                } else if !fetchResult.successfulDevices.isEmpty {
+                    completionHandler(.newData)
+                } else {
+                    completionHandler(.failed)
+                }
+            }
+        } else {
+            print("ℹ️ AppDelegate: Non-silent notification received")
+            completionHandler(.noData)
+        }
     }
 
     private func schedulePlantMonitoringTask(source: SchedulingSource) {

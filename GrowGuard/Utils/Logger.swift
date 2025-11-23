@@ -29,6 +29,9 @@ struct AppLogger {
     
     /// General app lifecycle and errors
     static let general = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.growguard", category: "General")
+
+    /// Network/API communication
+    static let network = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.growguard", category: "Network")
     
     // MARK: - Log Export for Beta Testing
     

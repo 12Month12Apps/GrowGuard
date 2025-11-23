@@ -14,6 +14,7 @@ final class SettingsStore {
     enum ChangeKey: String {
         case connectionMode
         case reminderTime
+        case serverURL
     }
 
     static let shared = SettingsStore()
@@ -23,8 +24,13 @@ final class SettingsStore {
     private let reminderHourKey = "notification.dailyReminderHour"
     private let reminderMinuteKey = "notification.dailyReminderMinute"
     private let connectionModeKey = "ble.connectionMode"
+    private let serverURLKey = "server.url"
+    private let deviceTokenKey = "server.deviceToken"
     private let fallbackHour = 9
     private let fallbackMinute = 0
+
+    /// Default server URL - update this to your production server
+    private let defaultServerURL = "http://localhost:8080"
 
     private init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -80,6 +86,34 @@ final class SettingsStore {
         defaults.set(minute, forKey: reminderMinuteKey)
 
         notifyChange(.reminderTime)
+    }
+
+    // MARK: - Server Configuration
+
+    /// The URL of the GrowGuard server
+    var serverURL: String {
+        get {
+            defaults.string(forKey: serverURLKey) ?? defaultServerURL
+        }
+        set {
+            defaults.set(newValue, forKey: serverURLKey)
+            notifyChange(.serverURL)
+        }
+    }
+
+    /// The APNs device token stored locally (hex format)
+    var deviceToken: String? {
+        get {
+            defaults.string(forKey: deviceTokenKey)
+        }
+        set {
+            defaults.set(newValue, forKey: deviceTokenKey)
+        }
+    }
+
+    /// Whether the device is registered with the server for push notifications
+    var isRegisteredForPush: Bool {
+        deviceToken != nil && !deviceToken!.isEmpty
     }
 
     // MARK: - Helpers

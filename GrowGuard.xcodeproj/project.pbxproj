@@ -91,6 +91,7 @@
 		56D35EB72E2BE5730059FEE6 /* PotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D35EB62E2BE56C0059FEE6 /* PotView.swift */; };
 		56DC564A2DD9251C00041DBA /* flower.db in Resources */ = {isa = PBXBuildFile; fileRef = 56DC56492DD9251C00041DBA /* flower.db */; };
 		56DC564D2DD9256800041DBA /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 56DC564C2DD9256800041DBA /* GRDB */; };
+		56E9573D2ED3088100082A6F /* GrowGuardAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E9573C2ED3088100082A6F /* GrowGuardAPIClient.swift */; };
 		56F0F7DB2E564C0400B538AF /* MoistureAnomalyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F0F7DA2E564C0400B538AF /* MoistureAnomalyService.swift */; };
 		56F0F7DD2E564C2800B538AF /* MoistureAnomalyServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */; };
 		56F9D1A12E5B4E0D00A1B2C3 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */; };
@@ -230,6 +231,7 @@
 		56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskTracker.swift; sourceTree = "<group>"; };
 		56D35EB62E2BE56C0059FEE6 /* PotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PotView.swift; sourceTree = "<group>"; };
 		56DC56492DD9251C00041DBA /* flower.db */ = {isa = PBXFileReference; lastKnownFileType = file; path = flower.db; sourceTree = "<group>"; };
+		56E9573C2ED3088100082A6F /* GrowGuardAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardAPIClient.swift; sourceTree = "<group>"; };
 		56F0F7DA2E564C0400B538AF /* MoistureAnomalyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoistureAnomalyService.swift; sourceTree = "<group>"; };
 		56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoistureAnomalyServiceTests.swift; sourceTree = "<group>"; };
 		56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationService.swift; path = ../Core/NotificationService.swift; sourceTree = "<group>"; };
@@ -465,6 +467,7 @@
 			children = (
 				56BGSD002EC7000000000001 /* BackgroundSensorDataService.swift */,
 				56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */,
+				56E9573C2ED3088100082A6F /* GrowGuardAPIClient.swift */,
 				56HLA0012EC8000000000001 /* HistoryLoadingAttributes.swift */,
 				56HLAS012EC8000000000002 /* HistoryLoadingActivityService.swift */,
 				56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */,
@@ -888,6 +891,7 @@
 				56A8C6ED2D8EF1E7004021C0 /* Alert.swift in Sources */,
 				5684E2E22C0FA2EE005CD8B6 /* OverviewList.swift in Sources */,
 				562629002C42E32700B5DB2A /* AppIntent.swift in Sources */,
+				56E9573D2ED3088100082A6F /* GrowGuardAPIClient.swift in Sources */,
 				56A8C6EF2D8F38CD004021C0 /* Button.swift in Sources */,
 				56A948F72DE3A4790010575F /* FlowerSearch.swift in Sources */,
 				56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */,
@@ -1156,6 +1160,7 @@
 				INFOPLIST_FILE = GrowGuard/Info.plist;
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = test;
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = test;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -1199,6 +1204,7 @@
 				INFOPLIST_FILE = GrowGuard/Info.plist;
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = test;
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = test;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
