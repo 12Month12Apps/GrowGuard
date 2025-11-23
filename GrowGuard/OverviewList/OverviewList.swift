@@ -317,18 +317,31 @@ struct DeviceCard: View {
     let device: FlowerDeviceDTO
     let action: () -> Void
 
+    // Check if history loading is in progress for this device
+    @ObservedObject private var activityService = HistoryLoadingActivityService.shared
+
+    private var isLoadingHistory: Bool {
+        activityService.hasActivity(for: device.uuid)
+    }
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 16) {
-                // Plant icon
+                // Plant icon or loading spinner
                 ZStack {
                     Circle()
-                        .fill(Color.green.opacity(0.15))
+                        .fill(isLoadingHistory ? Color.orange.opacity(0.15) : Color.green.opacity(0.15))
                         .frame(width: 56, height: 56)
 
-                    Image(systemName: device.isSensor ? "sensor.fill" : "leaf.fill")
-                        .font(.title2)
-                        .foregroundColor(.green)
+                    if isLoadingHistory {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .orange))
+                            .scaleEffect(1.2)
+                    } else {
+                        Image(systemName: device.isSensor ? "sensor.fill" : "leaf.fill")
+                            .font(.title2)
+                            .foregroundColor(.green)
+                    }
                 }
 
                 // Device info
@@ -354,7 +367,16 @@ struct DeviceCard: View {
                                     .font(.caption)
                             }
 
-                            if !device.uuid.isEmpty {
+                            if isLoadingHistory {
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(Color.orange)
+                                        .frame(width: 6, height: 6)
+                                    Text("Loading History...")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                }
+                            } else if !device.uuid.isEmpty {
                                 HStack(spacing: 4) {
                                     Circle()
                                         .fill(Color.green)

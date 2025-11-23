@@ -151,6 +151,16 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         stateSubject.value
     }
 
+    /// Current history loading progress (current, total)
+    var currentHistoryProgress: (current: Int, total: Int) {
+        (currentEntryIndex, totalEntries)
+    }
+
+    /// Whether history flow is currently active
+    var isHistoryLoading: Bool {
+        isHistoryFlowActive && totalEntries > 0
+    }
+
     /// Gibt an, ob ein automatischer Reconnect gewünscht ist
     /// True wenn History Flow aktiv ist (auch wenn wir noch keine Metadata haben!)
     var shouldAutoReconnect: Bool {
@@ -672,6 +682,13 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
         // Stop connection monitoring
         stopConnectionQualityMonitoring()
+
+        // Reset history state to allow fresh start
+        totalEntries = 0
+        currentEntryIndex = 0
+        deviceBootTime = nil
+
+        AppLogger.ble.info("🧹 History flow cleanup complete for device \(self.deviceUUID) - state reset")
     }
 
     // MARK: - Connection Quality Monitoring

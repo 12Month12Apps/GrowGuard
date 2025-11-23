@@ -98,7 +98,11 @@ struct DeviceDetailsView: View {
                         // Data management buttons
                         VStack(spacing: 10) {
                             Button {
-                                viewModel.fetchHistoricalData()
+                                // If not already loading, start history loading
+                                if !viewModel.isLoadingHistory {
+                                    viewModel.fetchHistoricalData()
+                                }
+                                // Always open the sheet to show progress or start loading
                                 showingLoadingScreen = true
                             } label: {
                                 HStack {
@@ -110,25 +114,38 @@ struct DeviceDetailsView: View {
                                         Image(systemName: "clock.arrow.circlepath")
                                             .font(.body)
                                     }
-                                    Text(viewModel.isLoadingHistory ? "Loading History..." : L10n.Device.loadHistoricalData)
-                                        .font(.subheadline)
-                                    Spacer()
-                                    if !viewModel.isLoadingHistory {
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
+
+                                    if viewModel.isLoadingHistory {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Loading History...")
+                                                .font(.subheadline)
+                                            if viewModel.historyLoadingProgress.total > 0 {
+                                                Text("\(viewModel.historyLoadingProgress.current)/\(viewModel.historyLoadingProgress.total)")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                        }
+                                    } else {
+                                        Text(L10n.Device.loadHistoricalData)
+                                            .font(.subheadline)
                                     }
+
+                                    Spacer()
+
+                                    // Show chevron - indicates tappable to view details/cancel
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                 }
                                 .padding()
                                 .background(Color(.systemBackground))
-                                .foregroundColor(viewModel.isLoadingHistory ? .secondary : .blue)
+                                .foregroundColor(viewModel.isLoadingHistory ? .orange : .blue)
                                 .cornerRadius(12)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(viewModel.isLoadingHistory ? Color.secondary.opacity(0.2) : Color.blue.opacity(0.2), lineWidth: 1)
+                                        .stroke(viewModel.isLoadingHistory ? Color.orange.opacity(0.3) : Color.blue.opacity(0.2), lineWidth: 1)
                                 )
                             }
-                            .disabled(viewModel.isLoadingHistory)
 
                             #if DEBUG
                             Button {
@@ -546,15 +563,8 @@ struct DeviceDetailsView: View {
         .sheet(isPresented: $showingBenchmark) {
             BenchmarkView(deviceUUID: viewModel.device.uuid)
         }
-        .onChange(of: showingLoadingScreen) { isShowing in
-            // Ensure cleanup when sheet is dismissed
-            if !isShowing {
-                // Give a brief delay to allow proper cleanup
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    FlowerCareManager.shared.forceResetHistoryState()
-                }
-            }
-        }
+        // Note: No onChange handler needed - closing the sheet does NOT cancel loading.
+        // Loading continues in background with Live Activity. User must explicitly cancel via button.
     }
     
     // MARK: - Helper Methods

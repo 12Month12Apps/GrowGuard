@@ -58,7 +58,8 @@ struct HistoryLoadingView: View {
             loadingDeviceUUID = FlowerCareManager.shared.currentDeviceUUID
         }
         .onDisappear {
-            cleanupLoadingSession()
+            // Only clean up view resources - loading continues in background
+            cleanupViewResources()
         }
     }
     
@@ -116,7 +117,7 @@ struct HistoryLoadingView: View {
             if loadingState == .completed {
                 // Completed state - just the done button
                 Button("Done") {
-                    cleanupLoadingSession()
+                    cleanupViewResources()
                     presentationMode.wrappedValue.dismiss()
                 }
                 .buttonStyle(.borderedProminent)
@@ -129,13 +130,13 @@ struct HistoryLoadingView: View {
                         .progressViewStyle(LinearProgressViewStyle(tint: .green))
                         .frame(height: 8)
                         .scaleEffect(x: 1.0, y: 1.5)
-                    
+
                     if progress > 0 {
                         Text("\(Int(progress * 100))% complete")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     // Error message display (if there's an error)
                     if case .error(let message) = loadingState {
                         VStack(spacing: 4) {
@@ -147,7 +148,7 @@ struct HistoryLoadingView: View {
                                     .font(.caption)
                                     .foregroundColor(.orange)
                             }
-                            
+
                             Text(message)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
@@ -159,10 +160,10 @@ struct HistoryLoadingView: View {
                         .cornerRadius(8)
                     }
                 }
-                
+
                 // Connection status
                 connectionStatusView
-                
+
                 // Expandable details
                 Button(action: {
                     withAnimation(.spring()) {
@@ -179,11 +180,29 @@ struct HistoryLoadingView: View {
                             .rotationEffect(.degrees(showingDetails ? 180 : 0))
                     }
                 }
-                
+
                 if showingDetails {
                     detailsView
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
+
+                Spacer()
+                    .frame(height: 16)
+
+                // Cancel button - explicitly cancels history loading
+                Button(role: .destructive) {
+                    cancelHistoryLoading()
+                    presentationMode.wrappedValue.dismiss()
+                } label: {
+                    HStack {
+                        Image(systemName: "xmark.circle.fill")
+                        Text("Cancel Loading")
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
             }
         }
     }
@@ -359,25 +378,39 @@ struct HistoryLoadingView: View {
     }
     
     // MARK: - Cleanup and Session Management
-    
-    private func cleanupLoadingSession() {
-        AppLogger.ble.info("🧹 HistoryLoadingView: Cleaning up loading session")
+
+    /// Cleans up view resources (timers, subscribers) without cancelling the history loading.
+    /// Called when the sheet is dismissed - loading continues in background.
+    private func cleanupViewResources() {
+        AppLogger.ble.info("🧹 HistoryLoadingView: Cleaning up view resources (loading continues in background)")
 
         // Invalidate progress timer
         progressTimer?.invalidate()
         progressTimer = nil
 
-        // Cancel all subscribers immediately to prevent further updates
+        // Cancel all subscribers to prevent further UI updates
         cancellables.removeAll()
+    }
 
-        // Only cleanup FlowerCareManager if not using ConnectionPool mode
-        if viewModel == nil {
-            // Cancel any ongoing history data loading
+    /// Explicitly cancels the history loading operation.
+    /// Called only when user taps the Cancel button.
+    private func cancelHistoryLoading() {
+        AppLogger.ble.info("🚫 HistoryLoadingView: User cancelled history loading")
+
+        // Clean up view resources first
+        cleanupViewResources()
+
+        // Actually cancel the history loading
+        if let viewModel = viewModel {
+            // ConnectionPool mode: Cancel history loading via ViewModel
+            AppLogger.ble.info("🚫 HistoryLoadingView: Cancelling ConnectionPool history loading")
+            viewModel.cancelHistoryLoading()
+        } else {
+            // Legacy FlowerCareManager mode
             FlowerCareManager.shared.cancelHistoryDataLoading()
 
             // Force complete cleanup to prevent data cross-contamination
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                // Ensure all pending history data processing is stopped
                 FlowerCareManager.shared.forceResetHistoryState()
             }
         }

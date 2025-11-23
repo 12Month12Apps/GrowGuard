@@ -67,6 +67,14 @@ import ActivityKit
         self.device = device
         self.useConnectionPool = settingsStore.useConnectionPool
 
+        Task { @MainActor in
+            // Check immediately if history loading is already in progress for this device
+            if self.liveActivityService.hasActivity(for: device.uuid) {
+                self.isLoadingHistory = true
+                AppLogger.ble.info("📊 DeviceDetailsViewModel: History loading already in progress for device \(device.uuid)")
+            }
+        }
+
         Task {
             try await PlantMonitorService.shared.checkDeviceStatus(device: device)
             
@@ -186,7 +194,16 @@ import ActivityKit
             return
         }
 
+        // Enable auto-start for history flow - user can see progress and cancel anytime
         connection.setAutoStartHistoryFlowEnabled(true)
+
+        // Sync current history progress if loading is already in progress
+        if connection.isHistoryLoading {
+            let progress = connection.currentHistoryProgress
+            self.isLoadingHistory = true
+            self.historyLoadingProgress = progress
+            AppLogger.ble.info("📊 DeviceDetailsViewModel: Synced history progress \(progress.current)/\(progress.total)")
+        }
 
         // Subscribe zu Sensor-Daten vom ConnectionPool
         poolSensorDataSubscription = connection.sensorDataPublisher.sink { [weak self] (data: SensorDataTemp) in
@@ -219,6 +236,25 @@ import ActivityKit
             Task { @MainActor in
                 guard let self = self else { return }
                 print("📊 DeviceDetailsViewModel (Pool): History progress: \(current)/\(total)")
+
+                // Detect auto-start: if we receive progress but weren't loading, history auto-started
+                if total > 0 && !self.isLoadingHistory {
+                    AppLogger.ble.info("📊 DeviceDetailsViewModel: History loading auto-started, making it visible to user")
+                    self.isLoadingHistory = true
+
+                    // Start Live Activity for background progress tracking
+                    if self.isLiveActivityEnabled && !self.liveActivityService.hasActivity(for: self.device.uuid) {
+                        let activityStarted = self.liveActivityService.startActivity(
+                            deviceName: self.device.name,
+                            deviceUUID: self.device.uuid,
+                            totalEntries: total
+                        )
+                        if activityStarted {
+                            AppLogger.ble.info("📊 DeviceDetailsViewModel: Live Activity started for auto-started history loading")
+                        }
+                    }
+                }
+
                 self.historyLoadingProgress = (current, total)
 
                 // Update Live Activity with progress
@@ -239,6 +275,8 @@ import ActivityKit
                 self.isLoadingHistory = false
                 // Reset batch counter
                 self.historicalDataBatchCounter = 0
+                // Disable auto-start now that history loading is complete
+                self.deviceConnection?.setAutoStartHistoryFlowEnabled(false)
                 // End Live Activity with completed status
                 if self.liveActivityService.hasActivity(for: self.device.uuid) {
                     self.liveActivityService.endActivity(status: .completed)
@@ -513,6 +551,8 @@ import ActivityKit
                 // Warte kurz und starte dann History Flow
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
                     guard let self = self, let connection = self.deviceConnection else { return }
+                    // Enable auto-start for reconnection during history loading
+                    connection.setAutoStartHistoryFlowEnabled(true)
                     self.isLoadingHistory = true
                     connection.startHistoryDataFlow()
                 }
@@ -520,6 +560,8 @@ import ActivityKit
             }
 
             // Connection existiert bereits - starte History Flow direkt
+            // Enable auto-start for reconnection during history loading
+            connection.setAutoStartHistoryFlowEnabled(true)
             isLoadingHistory = true
             connection.startHistoryDataFlow()
 
@@ -544,9 +586,14 @@ import ActivityKit
             liveActivityService.endActivity(status: HistoryLoadingAttributes.ConnectionStatus.failed)
         }
 
-        // Stop the history flow on the connection
+        // Stop the history flow based on connection mode
         if useConnectionPool, let connection = deviceConnection {
+            // Disable auto-start to prevent unwanted resumption
+            connection.setAutoStartHistoryFlowEnabled(false)
             connection.cleanupHistoryFlow()
+        } else {
+            // Legacy FlowerCareManager mode
+            FlowerCareManager.shared.cancelHistoryDataLoading()
         }
     }
     
