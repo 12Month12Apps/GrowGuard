@@ -131,13 +131,17 @@ struct HistoryListView: View {
 
 struct HistoryEntryRow: View {
     let entry: SensorDataDTO
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(entry.date, format: .dateTime.hour().minute())
                     .font(.headline)
                     .foregroundColor(.primary)
+
+                // Source indicator
+                SourceBadge(source: entry.source)
+
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
                     HStack(spacing: 4) {
@@ -158,7 +162,7 @@ struct HistoryEntryRow: View {
                     }
                 }
             }
-            
+
             HStack(spacing: 16) {
                 HStack(spacing: 4) {
                     Image(systemName: "sun.max.fill")
@@ -168,7 +172,7 @@ struct HistoryEntryRow: View {
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
-                
+
                 HStack(spacing: 4) {
                     Image(systemName: "bolt.fill")
                         .foregroundColor(.green)
@@ -180,6 +184,45 @@ struct HistoryEntryRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+}
+
+/// Badge showing the data source
+struct SourceBadge: View {
+    let source: SensorDataSource
+
+    private var icon: String {
+        switch source {
+        case .liveUserTriggered: return "hand.tap.fill"
+        case .backgroundTask: return "clock.arrow.circlepath"
+        case .backgroundPush: return "bell.fill"
+        case .historyLoading: return "clock.fill"
+        case .unknown: return "questionmark.circle"
+        }
+    }
+
+    private var color: Color {
+        switch source {
+        case .liveUserTriggered: return .blue
+        case .backgroundTask: return .orange
+        case .backgroundPush: return .purple
+        case .historyLoading: return .gray
+        case .unknown: return .secondary
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Image(systemName: icon)
+                .font(.caption2)
+            Text(source.displayName)
+                .font(.caption2)
+        }
+        .foregroundColor(color)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(color.opacity(0.15))
+        .cornerRadius(4)
     }
 }
 

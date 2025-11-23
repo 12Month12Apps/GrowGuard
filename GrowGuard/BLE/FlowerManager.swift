@@ -270,8 +270,8 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                let sensorData = decoder.decodeMiBeaconAdvertisement(data: data, deviceUUID: deviceUUID) {
                 Task {
                     do {
-                        // Validate the sensor data directly
-                        if let validatedData = try await PlantMonitorService.shared.validateSensorData(sensorData, deviceUUID: deviceUUID) {
+                        // Validate the sensor data directly (user triggered via BLE scan)
+                        if let validatedData = try await PlantMonitorService.shared.validateSensorData(sensorData, deviceUUID: deviceUUID, source: .liveUserTriggered) {
                             // Convert to Core Data format for backward compatibility
                             if let coreDataSensorData = validatedData.toCoreDataSensorData() {
                                 DispatchQueue.main.async {
@@ -296,8 +296,8 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                let sensorData = decoder.decodeServiceAdvertisement(data: data, deviceUUID: deviceUUID) {
                 Task {
                     do {
-                        // Validate the sensor data directly
-                        if let validatedData = try await PlantMonitorService.shared.validateSensorData(sensorData, deviceUUID: deviceUUID) {
+                        // Validate the sensor data directly (user triggered via BLE scan)
+                        if let validatedData = try await PlantMonitorService.shared.validateSensorData(sensorData, deviceUUID: deviceUUID, source: .liveUserTriggered) {
                             // Convert to Core Data format for backward compatibility
                             if let coreDataSensorData = validatedData.toCoreDataSensorData() {
                                 DispatchQueue.main.async {
@@ -1258,8 +1258,8 @@ class FlowerCareManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         if let decodedData = decoder.decodeRealTimeSensorValues(data: rawData, deviceUUID: deviceUUID) {
             Task {
                 do {
-                    // Validate the sensor data
-                    if let validatedData = try await PlantMonitorService.shared.validateSensorData(decodedData, deviceUUID: deviceUUID) {
+                    // Validate the sensor data (user triggered live data request)
+                    if let validatedData = try await PlantMonitorService.shared.validateSensorData(decodedData, deviceUUID: deviceUUID, source: .liveUserTriggered) {
                         // Reset retry counter on valid data
                         invalidDataRetryCount = 0
                         // Convert to Core Data format for backward compatibility

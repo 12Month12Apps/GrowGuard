@@ -338,8 +338,8 @@ import ActivityKit
         do {
             if let deviceUUID = data.device {
                 print("💾 DeviceDetailsViewModel: Saving sensor data for device \(deviceUUID)")
-                _ = try await PlantMonitorService.shared.validateSensorData(data, deviceUUID: deviceUUID)
-                
+                _ = try await PlantMonitorService.shared.validateSensorData(data, deviceUUID: deviceUUID, source: .liveUserTriggered)
+
                 // Refresh current week data to show the new sensor data
                 print("🔄 DeviceDetailsViewModel: Refreshing current week data after saving new sensor data")
                 await refreshCurrentWeekSilently()

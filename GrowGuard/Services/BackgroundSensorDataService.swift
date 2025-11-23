@@ -42,6 +42,9 @@ class BackgroundSensorDataService {
     /// Track devices that failed in current session
     private var failedDevices: Set<String> = []
 
+    /// Current data source for this fetch session
+    private var currentSource: SensorDataSource = .backgroundTask
+
     /// Continuation for async/await bridge
     private var fetchContinuation: CheckedContinuation<BackgroundFetchResult, Never>?
 
@@ -64,8 +67,9 @@ class BackgroundSensorDataService {
 
     /// Fetches live sensor data from all saved devices in background
     /// This method is optimized for background execution with strict time limits
+    /// - Parameter source: The source that triggered this fetch (backgroundTask or backgroundPush)
     /// - Returns: Result containing successful/failed devices and duration
-    func fetchSensorDataInBackground() async -> BackgroundFetchResult {
+    func fetchSensorDataInBackground(source: SensorDataSource = .backgroundTask) async -> BackgroundFetchResult {
         guard !isFetching else {
             AppLogger.ble.bleWarning("Background fetch already in progress, skipping")
             return BackgroundFetchResult(
@@ -87,10 +91,11 @@ class BackgroundSensorDataService {
             )
         }
 
-        AppLogger.ble.info("Starting background sensor data fetch")
+        AppLogger.ble.info("Starting background sensor data fetch (source: \(source.rawValue))")
 
         // Reset state
         isFetching = true
+        currentSource = source
         devicesWithData.removeAll()
         failedDevices.removeAll()
         dataPointsReceived = 0
@@ -216,9 +221,9 @@ class BackgroundSensorDataService {
     /// Processes and saves received sensor data
     private func processAndSaveSensorData(_ data: SensorDataTemp, deviceUUID: String) async {
         do {
-            // Validate and save using PlantMonitorService
-            if let _ = try await PlantMonitorService.shared.validateSensorData(data, deviceUUID: deviceUUID) {
-                AppLogger.ble.info("Background: Saved sensor data for device \(deviceUUID)")
+            // Validate and save using PlantMonitorService with the current source
+            if let _ = try await PlantMonitorService.shared.validateSensorData(data, deviceUUID: deviceUUID, source: self.currentSource) {
+                AppLogger.ble.info("Background: Saved sensor data for device \(deviceUUID) (source: \(self.currentSource.rawValue))")
 
                 devicesWithData.insert(deviceUUID)
                 dataPointsReceived += 1

@@ -64,24 +64,25 @@ extension SensorData {
 }
 
 extension SensorDataTemp {
-    func toDTO() -> SensorDataDTO? {
+    func toDTO(source: SensorDataSource = .unknown) -> SensorDataDTO? {
         guard let deviceUUID = device, !deviceUUID.isEmpty else {
             print("SensorDataTemp.toDTO(): Missing or empty deviceUUID - cannot create DTO")
             return nil
         }
-        
+
         // Validate numeric ranges to prevent overflow crashes
         let safeBrightness = max(Int32.min, min(Int32.max, Int32(brightness)))
         let safeMoisture = max(Int16.min, min(Int16.max, Int16(moisture)))
         let safeConductivity = max(Int16.min, min(Int16.max, Int16(conductivity)))
-        
+
         return SensorDataDTO(
             temperature: temperature,
             brightness: safeBrightness,
             moisture: safeMoisture,
             conductivity: safeConductivity,
             date: date,
-            deviceUUID: deviceUUID
+            deviceUUID: deviceUUID,
+            source: source
         )
     }
 }

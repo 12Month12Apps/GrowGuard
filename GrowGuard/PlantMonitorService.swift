@@ -173,6 +173,8 @@ class PlantMonitorService {
             await NotificationService.shared.scheduleWateringNotifications(for: device)
         } else if currentMoisture >= minMoisture && currentMoisture <= maxMoisture {
             print("✅ PlantMonitorService: \(device.name) is within optimal range (\(minMoisture)%-\(maxMoisture)%)")
+            // Plant is within optimal range - reset notification cooldown so we can notify again if it drops
+            NotificationService.shared.resetNotificationCooldown(for: device.uuid)
             // Plant is within optimal range - no immediate watering needed, but check predictions
             do {
                 if let prediction = try await predictNextWatering(for: device) {
@@ -186,6 +188,8 @@ class PlantMonitorService {
         } else {
             // Plant is above optimal range - no watering needed
             print("💧 PlantMonitorService: \(device.name) is above optimal range (\(currentMoisture)% > \(maxMoisture)%) - no watering needed")
+            // Reset notification cooldown since plant is well-watered
+            NotificationService.shared.resetNotificationCooldown(for: device.uuid)
             // Cancel any existing notifications since plant is well-watered
             await NotificationService.shared.cancelNotifications(for: device.uuid)
         }
@@ -209,78 +213,80 @@ class PlantMonitorService {
     }
 
     // Add this method to your PlantMonitorService
-    func validateSensorData(_ data: SensorDataTemp, deviceUUID: String) async throws -> SensorDataDTO? {
+    func validateSensorData(_ data: SensorDataTemp, deviceUUID: String, source: SensorDataSource = .unknown) async throws -> SensorDataDTO? {
         var validatedData = data
-        
+
        // Define reasonable sensor ranges
        let validMoistureRange = 0...100
        let validTemperatureRange = -40...100
        let validBrightnessRange = 0...200000
        let validConductivityRange = 0...32767  // Limit to Int16 max value to prevent crash
-       
+
        // Check if values are in valid ranges
        if !validMoistureRange.contains(Int(data.moisture)) {
            validatedData.moisture = UInt8(max(validMoistureRange.lowerBound, min(Int(data.moisture), validMoistureRange.upperBound)))
        }
-       
+
        if !validTemperatureRange.contains(Int(data.temperature)) {
            validatedData.temperature = Double(max(validTemperatureRange.lowerBound, min(Int(data.temperature), validTemperatureRange.upperBound)))
        }
-       
+
        if !validBrightnessRange.contains(Int(data.brightness)) {
            validatedData.brightness = UInt32(max(validBrightnessRange.lowerBound, min(Int(data.brightness), validBrightnessRange.upperBound)))
        }
-       
+
        // Validate and clamp conductivity to Int16 range to prevent crash
        if !validConductivityRange.contains(Int(data.conductivity)) {
            validatedData.conductivity = UInt16(max(validConductivityRange.lowerBound, min(Int(data.conductivity), validConductivityRange.upperBound)))
            print("⚠️ Conductivity value \(data.conductivity) was clamped to \(validatedData.conductivity)")
        }
-        
+
         print(validatedData.moisture, validatedData.brightness, validatedData.temperature)
-        
+
         let sensorDataDTO = SensorDataDTO(
             temperature: validatedData.temperature,
             brightness: Int32(validatedData.brightness),
             moisture: Int16(validatedData.moisture),
             conductivity: Int16(validatedData.conductivity),
             date: validatedData.date,
-            deviceUUID: deviceUUID
+            deviceUUID: deviceUUID,
+            source: source
         )
-        
+
         try await repositoryManager.sensorDataRepository.saveSensorData(sensorDataDTO)
         return sensorDataDTO
     }
     
     // Add this method to your PlantMonitorService
-    func validateHistoricSensorData(_ data: HistoricalSensorData, deviceUUID: String) async throws -> SensorDataDTO? {
+    func validateHistoricSensorData(_ data: HistoricalSensorData, deviceUUID: String, source: SensorDataSource = .historyLoading) async throws -> SensorDataDTO? {
        // Define realistic sensor ranges for FlowerCare devices
        let validMoistureRange = 0...100
        let validTemperatureRange = -20.0...70.0  // More realistic temperature range
        let validBrightnessRange = 0...100000     // Allow up to 100k lux for extreme sunlight
        let validConductivityRange = 0...10000    // Extended range for various soil types
-       
+
        // Check for invalid values and REJECT the entire entry if any value is invalid
        if !validMoistureRange.contains(Int(data.moisture)) ||
           !validTemperatureRange.contains(data.temperature) ||
           !validBrightnessRange.contains(Int(data.brightness)) ||
           !validConductivityRange.contains(Int(data.conductivity)) {
-           
+
            print("🚨 REJECTING invalid historic data - temp=\(data.temperature)°C, moisture=\(data.moisture)%, conductivity=\(data.conductivity)µS/cm, brightness=\(data.brightness)lx")
            return nil // Don't save invalid data at all
        }
-        
+
         print("✅ Valid data:", data.moisture, data.brightness, data.temperature)
-        
+
         let sensorDataDTO = SensorDataDTO(
             temperature: data.temperature,
             brightness: Int32(data.brightness),
             moisture: Int16(data.moisture),
             conductivity: Int16(data.conductivity),
             date: data.date,
-            deviceUUID: deviceUUID
+            deviceUUID: deviceUUID,
+            source: source
         )
-        
+
         try await repositoryManager.sensorDataRepository.saveSensorData(sensorDataDTO)
         return sensorDataDTO
     }

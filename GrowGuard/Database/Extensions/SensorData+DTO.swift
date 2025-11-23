@@ -26,6 +26,9 @@ extension SensorData {
         // Ensure we have a valid date
         let sensorDate = self.date ?? Date()
         
+        // Parse source from stored string, defaulting to unknown for legacy data
+        let dataSource = SensorDataSource(rawValue: self.source ?? "unknown") ?? .unknown
+
         return SensorDataDTO(
             id: objectIdString,
             temperature: self.temperature,
@@ -33,7 +36,8 @@ extension SensorData {
             moisture: self.moisture,
             conductivity: self.conductivity,
             date: sensorDate,
-            deviceUUID: deviceUUID
+            deviceUUID: deviceUUID,
+            source: dataSource
         )
     }
     
@@ -43,6 +47,7 @@ extension SensorData {
         moisture = dto.moisture
         conductivity = dto.conductivity
         date = dto.date
+        source = dto.source.rawValue
         self.device = device
     }
 }

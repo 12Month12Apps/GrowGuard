@@ -40,6 +40,7 @@
         <attribute name="conductivity" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="date" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="moisture" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="source" optional="YES" attributeType="String" defaultValueString="unknown"/>
         <attribute name="temperature" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <relationship name="device" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FlowerDevice" inverseName="sensorData" inverseEntity="FlowerDevice"/>
     </entity>

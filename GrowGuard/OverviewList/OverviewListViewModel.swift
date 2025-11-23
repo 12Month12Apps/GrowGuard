@@ -37,8 +37,8 @@ import CoreData
             // Only update if sensor data is newer than current lastUpdate
             if latestSensorDate > device.lastUpdate {
                 let updatedDevice = FlowerDeviceDTO(
-                    uuid: device.uuid,
                     name: device.name,
+                    uuid: device.uuid,
                     peripheralID: device.peripheralID,
                     battery: device.battery,
                     firmware: device.firmware,

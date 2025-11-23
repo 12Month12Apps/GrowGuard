@@ -32,8 +32,9 @@ extension SensorDataDTO {
                 sensorData.moisture = moisture
                 sensorData.conductivity = conductivity
                 sensorData.date = date
+                sensorData.source = source.rawValue
                 sensorData.device = device
-                
+
                 result = sensorData
             } catch {
                 print("SensorDataDTO.toCoreDataSensorData(): Error finding device for sensor data: \(error)")

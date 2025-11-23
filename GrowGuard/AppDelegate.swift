@@ -157,9 +157,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         if isContentAvailable {
             print("🔄 AppDelegate: Processing background notification - triggering sensor data fetch")
 
-            // Trigger background sensor data fetch
+            // Trigger background sensor data fetch (source: backgroundPush)
             Task { @MainActor in
-                let fetchResult = await BackgroundSensorDataService.shared.fetchSensorDataInBackground()
+                let fetchResult = await BackgroundSensorDataService.shared.fetchSensorDataInBackground(source: .backgroundPush)
 
                 print("📊 AppDelegate: Remote push fetch completed - \(fetchResult.successfulDevices.count) devices, \(fetchResult.totalDataPoints) data points in \(String(format: "%.1f", fetchResult.duration))s")
 
@@ -220,8 +220,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
                 print("🔄 AppDelegate: Starting background sensor data fetch")
 
-                // Step 1: Fetch fresh sensor data from devices using ConnectionPool
-                let fetchResult = await BackgroundSensorDataService.shared.fetchSensorDataInBackground()
+                // Step 1: Fetch fresh sensor data from devices using ConnectionPool (source: backgroundTask)
+                let fetchResult = await BackgroundSensorDataService.shared.fetchSensorDataInBackground(source: .backgroundTask)
 
                 print("📊 AppDelegate: Background fetch completed - \(fetchResult.successfulDevices.count) devices, \(fetchResult.totalDataPoints) data points in \(String(format: "%.1f", fetchResult.duration))s")
 
@@ -298,8 +298,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                 // Processing task has more time - fetch data and sync historical if needed
                 print("📊 AppDelegate: Processing task - fetching sensor data with extended time")
 
-                // Use extended timeout for processing task (up to 5 minutes)
-                let fetchResult = await BackgroundSensorDataService.shared.fetchSensorDataInBackground()
+                // Use extended timeout for processing task (source: backgroundTask)
+                let fetchResult = await BackgroundSensorDataService.shared.fetchSensorDataInBackground(source: .backgroundTask)
 
                 print("📊 AppDelegate: Processing fetch completed - \(fetchResult.successfulDevices.count) devices in \(String(format: "%.1f", fetchResult.duration))s")
 

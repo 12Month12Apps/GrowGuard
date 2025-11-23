@@ -7,13 +7,19 @@ final class NotificationService {
 
     private let center: UNUserNotificationCenter
     private let settingsStore: SettingsStore
+    private let defaults: UserDefaults
+
+    /// Cooldown period for immediate watering notifications (24 hours)
+    private let immediateNotificationCooldown: TimeInterval = 24 * 60 * 60
 
     init(
         center: UNUserNotificationCenter = .current(),
-        settingsStore: SettingsStore = .shared
+        settingsStore: SettingsStore = .shared,
+        defaults: UserDefaults = .standard
     ) {
         self.center = center
         self.settingsStore = settingsStore
+        self.defaults = defaults
     }
 
     private enum Identifier {
@@ -21,7 +27,13 @@ final class NotificationService {
         static func wateringDaily(for uuid: String) -> String { "watering-daily-\(uuid)" }
     }
 
+    private enum DefaultsKey {
+        static func lastImmediateNotification(for uuid: String) -> String { "notification.lastImmediate.\(uuid)" }
+        static func lastMoistureAboveMin(for uuid: String) -> String { "notification.lastMoistureAboveMin.\(uuid)" }
+    }
+
     /// Schedules the immediate and recurring watering reminders for a device.
+    /// Uses a 24-hour cooldown to prevent notification spam when moisture remains below threshold.
     func scheduleWateringNotifications(for device: FlowerDeviceDTO) async {
         let pendingRequests = await center.pendingNotificationRequests()
         let deliveredNotifications = await center.deliveredNotifications()
@@ -38,9 +50,12 @@ final class NotificationService {
         }
 
         // Check both pending and delivered notifications to avoid duplicates
-        let hasImmediate = pendingRequests.contains { $0.identifier == immediateIdentifier }
+        let hasImmediateInSystem = pendingRequests.contains { $0.identifier == immediateIdentifier }
             || deliveredNotifications.contains { $0.request.identifier == immediateIdentifier }
         let hasDaily = pendingRequests.contains { $0.identifier == dailyIdentifier }
+
+        // Check cooldown: Don't send a new immediate notification if we sent one recently
+        let shouldSendImmediate = shouldSendImmediateNotification(for: device.uuid, hasImmediateInSystem: hasImmediateInSystem)
 
         let immediateContent = UNMutableNotificationContent()
         immediateContent.title = "💧 Water Your \(device.name)"
@@ -57,11 +72,14 @@ final class NotificationService {
         let immediateRequest = UNNotificationRequest(identifier: immediateIdentifier, content: immediateContent, trigger: nil)
 
         do {
-            if !hasImmediate {
+            if shouldSendImmediate {
                 try await center.add(immediateRequest)
+                recordImmediateNotificationSent(for: device.uuid)
                 print("📱 NotificationService: Scheduled immediate watering notification for \(device.name)")
+            } else if hasImmediateInSystem {
+                print("⏭️ NotificationService: Immediate watering notification already in system for \(device.name)")
             } else {
-                print("⏭️ NotificationService: Immediate watering notification already scheduled for \(device.name)")
+                print("⏭️ NotificationService: Skipping immediate notification for \(device.name) - cooldown active")
             }
 
             if !hasDaily {
@@ -88,6 +106,43 @@ final class NotificationService {
         } catch {
             print("❌ NotificationService: Failed to schedule watering reminders: \(error)")
         }
+    }
+
+    // MARK: - Cooldown Management
+
+    /// Determines if we should send a new immediate notification based on cooldown and system state.
+    private func shouldSendImmediateNotification(for deviceUUID: String, hasImmediateInSystem: Bool) -> Bool {
+        // If notification is already in the system (pending or delivered), don't send another
+        if hasImmediateInSystem {
+            return false
+        }
+
+        // Check if we've sent one recently (cooldown)
+        let lastSentKey = DefaultsKey.lastImmediateNotification(for: deviceUUID)
+        if let lastSent = defaults.object(forKey: lastSentKey) as? Date {
+            let timeSinceLastNotification = Date().timeIntervalSince(lastSent)
+            if timeSinceLastNotification < immediateNotificationCooldown {
+                let hoursRemaining = (immediateNotificationCooldown - timeSinceLastNotification) / 3600
+                print("🕐 NotificationService: Cooldown active for \(deviceUUID) - \(String(format: "%.1f", hoursRemaining))h remaining")
+                return false
+            }
+        }
+
+        return true
+    }
+
+    /// Records that we sent an immediate notification for a device.
+    private func recordImmediateNotificationSent(for deviceUUID: String) {
+        let key = DefaultsKey.lastImmediateNotification(for: deviceUUID)
+        defaults.set(Date(), forKey: key)
+    }
+
+    /// Call this when moisture recovers above the minimum threshold to reset the cooldown.
+    /// This allows a new immediate notification when moisture drops below minimum again.
+    func resetNotificationCooldown(for deviceUUID: String) {
+        let lastSentKey = DefaultsKey.lastImmediateNotification(for: deviceUUID)
+        defaults.removeObject(forKey: lastSentKey)
+        print("🔄 NotificationService: Reset notification cooldown for \(deviceUUID)")
     }
 
     /// Schedules a predictive watering notification.
