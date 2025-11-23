@@ -41,6 +41,7 @@ import ActivityKit
     var isLoadingHistory = false
     var historyLoadingProgress: (current: Int, total: Int) = (0, 0)
     private var historicalDataBatchCounter = 0
+    private var historyLoadedThisSession = false // Prevents auto-restart after completion
 
     // MARK: - Live Activity for Background History Loading
     private let liveActivityService = HistoryLoadingActivityService.shared
@@ -194,8 +195,15 @@ import ActivityKit
             return
         }
 
-        // Enable auto-start for history flow - user can see progress and cancel anytime
-        connection.setAutoStartHistoryFlowEnabled(true)
+        // Only enable auto-start if history hasn't been loaded this session
+        // This prevents the loop where history restarts after completion on reconnect
+        if !historyLoadedThisSession {
+            connection.setAutoStartHistoryFlowEnabled(true)
+            AppLogger.ble.info("📊 DeviceDetailsViewModel: Auto-start enabled (history not loaded yet)")
+        } else {
+            connection.setAutoStartHistoryFlowEnabled(false)
+            AppLogger.ble.info("📊 DeviceDetailsViewModel: Auto-start disabled (history already loaded this session)")
+        }
 
         // Sync current history progress if loading is already in progress
         if connection.isHistoryLoading {
@@ -273,6 +281,8 @@ import ActivityKit
             Task { @MainActor in
                 guard let self = self else { return }
                 self.isLoadingHistory = false
+                // Mark history as loaded to prevent auto-restart on reconnect
+                self.historyLoadedThisSession = true
                 // Reset batch counter
                 self.historicalDataBatchCounter = 0
                 // Disable auto-start now that history loading is complete
@@ -281,6 +291,7 @@ import ActivityKit
                 if self.liveActivityService.hasActivity(for: self.device.uuid) {
                     self.liveActivityService.endActivity(status: .completed)
                 }
+                AppLogger.ble.info("📊 DeviceDetailsViewModel: History loading completed, auto-restart disabled")
                 // Final refresh after all data loaded
                 await self.refreshCurrentWeekSilently()
             }
