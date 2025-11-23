@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 @Observable
 final class AppSettingsViewModel {
@@ -9,6 +10,10 @@ final class AppSettingsViewModel {
 
     var preferredReminderTime: Date
     var useConnectionPool: Bool
+
+    // Push Token Debug Info
+    var currentDeviceToken: String?
+    var isReregisteringToken: Bool = false
 
     // Background Task Debug Info - Execution
     var refreshTaskCount: Int = 0
@@ -35,6 +40,7 @@ final class AppSettingsViewModel {
         self.notificationService = notificationService
         self.preferredReminderTime = settingsStore.reminderDate(for: calendar)
         self.useConnectionPool = settingsStore.useConnectionPool
+        self.currentDeviceToken = settingsStore.deviceToken
 
         settingsObserver = NotificationCenter.default.addObserver(
             forName: .settingsDidChange,
@@ -52,6 +58,9 @@ final class AppSettingsViewModel {
                 self.useConnectionPool = self.settingsStore.useConnectionPool
             case .reminderTime:
                 self.preferredReminderTime = self.settingsStore.reminderDate(for: self.calendar)
+            case .serverURL:
+                // Server URL changes are handled elsewhere
+                break
             }
         }
 
@@ -95,6 +104,29 @@ final class AppSettingsViewModel {
         settingsStore.connectionMode = mode
     }
 
+    @MainActor
+    func reregisterPushToken() {
+        isReregisteringToken = true
+
+        // Clear the current token
+        settingsStore.deviceToken = nil
+        currentDeviceToken = nil
+
+        // Re-register for remote notifications - this will trigger didRegisterForRemoteNotificationsWithDeviceToken
+        UIApplication.shared.registerForRemoteNotifications()
+
+        // Update state after a short delay (token registration is async)
+        Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+            currentDeviceToken = settingsStore.deviceToken
+            isReregisteringToken = false
+        }
+    }
+
+    func refreshDeviceToken() {
+        currentDeviceToken = settingsStore.deviceToken
+    }
+
     deinit {
         if let observer = settingsObserver {
             NotificationCenter.default.removeObserver(observer)
@@ -133,6 +165,45 @@ struct AppSettingsView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .padding(.top, 4)
+            }
+
+            // Debug: Push Notification Token
+            Section(header: Text("Push Token (Debug)")) {
+                if let token = viewModel.currentDeviceToken {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Current Token:")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(token)
+                            .font(.system(.caption2, design: .monospaced))
+                            .lineLimit(3)
+                            .textSelection(.enabled)
+                    }
+                } else {
+                    Text("No token registered")
+                        .foregroundStyle(.secondary)
+                }
+
+                Button {
+                    viewModel.reregisterPushToken()
+                } label: {
+                    if viewModel.isReregisteringToken {
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("Registering...")
+                        }
+                    } else {
+                        Label("Re-register Push Token", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                }
+                .disabled(viewModel.isReregisteringToken)
+
+                Button {
+                    viewModel.refreshDeviceToken()
+                } label: {
+                    Label("Refresh Token Display", systemImage: "arrow.clockwise")
+                }
             }
 
             // Debug: Background Task Scheduling

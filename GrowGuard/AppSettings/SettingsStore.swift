@@ -30,7 +30,7 @@ final class SettingsStore {
     private let fallbackMinute = 0
 
     /// Default server URL - update this to your production server
-    private let defaultServerURL = "http://localhost:8080"
+    private let defaultServerURL = "https://growguardserver.veit.pro"
 
     private init(defaults: UserDefaults = .standard) {
         self.defaults = defaults

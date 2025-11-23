@@ -24,6 +24,7 @@ final class NotificationService {
     /// Schedules the immediate and recurring watering reminders for a device.
     func scheduleWateringNotifications(for device: FlowerDeviceDTO) async {
         let pendingRequests = await center.pendingNotificationRequests()
+        let deliveredNotifications = await center.deliveredNotifications()
         let immediateIdentifier = Identifier.wateringImmediate(for: device.uuid)
         let dailyIdentifier = Identifier.wateringDaily(for: device.uuid)
 
@@ -36,7 +37,9 @@ final class NotificationService {
             print("🧹 NotificationService: Removed legacy reminders for \(device.name)")
         }
 
+        // Check both pending and delivered notifications to avoid duplicates
         let hasImmediate = pendingRequests.contains { $0.identifier == immediateIdentifier }
+            || deliveredNotifications.contains { $0.request.identifier == immediateIdentifier }
         let hasDaily = pendingRequests.contains { $0.identifier == dailyIdentifier }
 
         let immediateContent = UNMutableNotificationContent()
