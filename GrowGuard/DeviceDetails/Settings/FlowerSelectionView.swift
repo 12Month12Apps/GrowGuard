@@ -121,38 +121,38 @@ struct FlowerSelectionView: View {
 }
 
 @Observable class FlowerSelectionViewModel {
-    private var flowerSearch: FlowerSearch
+//    private var flowerSearch: FlowerSearch
     
     var searchName: String = ""
     var searchResult: [VMSpecies] = []
     var isLoading: Bool = false
     
-    init(flowerSearch: FlowerSearch = FlowerSearch()) {
-        self.flowerSearch = flowerSearch
+    init(/*flowerSearch: FlowerSearch = FlowerSearch()*/) {
+//        self.flowerSearch = flowerSearch
     }
     
     func searchFlower() async {
-        guard !searchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            searchResult = []
-            return
-        }
-        
-        isLoading = true
-        do {
-            searchResult = try await flowerSearch.seach(flower: searchName).map { spec in
-                VMSpecies(
-                    name: spec.scientificNname,
-                    id: spec.id,
-                    imageUrl: spec.imageUrl,
-                    minMoisture: spec.minMoisture,
-                    maxMoisture: spec.maxMoisture,
-                    commonNames: spec.commonNames
-                )
-            }
-        } catch {
-            print("Error searching flowers: \(error)")
-            searchResult = []
-        }
-        isLoading = false
+//        guard !searchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+//            searchResult = []
+//            return
+//        }
+//        
+//        isLoading = true
+//        do {
+//            searchResult = try await flowerSearch.seach(flower: searchName).map { spec in
+//                VMSpecies(
+//                    name: spec.scientificNname,
+//                    id: spec.id,
+//                    imageUrl: spec.imageUrl,
+//                    minMoisture: spec.minMoisture,
+//                    maxMoisture: spec.maxMoisture,
+//                    commonNames: spec.commonNames
+//                )
+//            }
+//        } catch {
+//            print("Error searching flowers: \(error)")
+//            searchResult = []
+//        }
+//        isLoading = false
     }
 }

@@ -148,3 +148,28 @@ This project is part of my 12 Month 12 Apps challenge, build as MVP to see if th
 ## Join the beta:
 
 https://github.com/12Month12Apps/GrowGuardTest
+
+## Migrating `flower.db` to Supabase
+
+The bundled flower search data lives in `GrowGuard/flower.db` (SQLite). Use `Scripts/migrate_flower_db_to_supabase.py` to copy every table plus all rows into your Supabase Postgres instance.
+
+1. Install the only extra dependency (once per machine):
+   ```bash
+   pip install psycopg2-binary
+   ```
+2. Export your Supabase connection string (Database settings → Connection string → URI):
+   ```bash
+   export SUPABASE_DB_URL="postgres://postgres.<hash>:<password>@db.<project>.supabase.co:6543/postgres"
+   ```
+3. (Optional) pick a custom schema by setting `SUPABASE_SCHEMA`, otherwise `public` is used.
+4. Run the migration. `--recreate` drops and rebuilds all tables; use `--truncate` instead if you just want to wipe table contents before importing again.
+   ```bash
+   python Scripts/migrate_flower_db_to_supabase.py --sqlite-path GrowGuard/flower.db --recreate
+   ```
+5. Verify that counts match between SQLite and Supabase for peace of mind:
+   ```bash
+   sqlite3 GrowGuard/flower.db "SELECT COUNT(*) FROM flowers;"
+   psql "$SUPABASE_DB_URL" -c 'SELECT COUNT(*) FROM public.flowers;'
+   ```
+
+The script introspects the SQLite schema, creates any missing tables (including foreign keys), orders inserts so FK dependencies pass, and batches rows so the entire dataset lands in Supabase without manual tinkering.

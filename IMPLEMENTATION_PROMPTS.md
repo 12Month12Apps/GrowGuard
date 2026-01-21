@@ -444,7 +444,7 @@ git commit -m "Implement live sensor data in DeviceConnection"
 ### Prompt 3.3: DeviceConnection - Historical Data (Optional)
 
 ```
-Implementiere Historical-Daten in DeviceConnection (falls benötigt):
+Implementiere Historical-Daten in DeviceConnection:
 
 1. Erstelle Properties:
    - totalEntries: Int
