@@ -45,7 +45,6 @@ struct AddDeviceView: View {
                     .padding()
                     .background(Color(.secondarySystemGroupedBackground))
                     .cornerRadius(16)
-                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
                     .onTapGesture {
                         NavigationService.shared.navigateToAddDeviceWithoutSensor()
                     }
@@ -191,7 +190,6 @@ struct SensorDeviceCard: View {
             .padding()
             .background(Color(.secondarySystemGroupedBackground))
             .cornerRadius(16)
-            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(isAlreadyAdded ? Color.green.opacity(0.3) : Color.clear, lineWidth: 1)
