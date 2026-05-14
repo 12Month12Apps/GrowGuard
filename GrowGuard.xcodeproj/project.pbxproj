@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3CBE36A62FB50D5300BD5F7E /* ImpossiBLE in Frameworks */ = {isa = PBXBuildFile; productRef = 3CBE36A52FB50D5300BD5F7E /* ImpossiBLE */; };
 		3F13B333BDA24182B72236B6 /* HistoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F13B333BDA24182B72236B7 /* HistoryListView.swift */; };
 		560E9C352ED118AB00A595E1 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 560E9C342ED118AB00A595E1 /* WidgetKit.framework */; };
 		560E9C372ED118AB00A595E1 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 560E9C362ED118AB00A595E1 /* SwiftUI.framework */; };
@@ -271,7 +270,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				56DC564D2DD9256800041DBA /* GRDB in Frameworks */,
-				3CBE36A62FB50D5300BD5F7E /* ImpossiBLE in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -757,7 +755,6 @@
 			mainGroup = 56AF110C2BDED05900887073;
 			packageReferences = (
 				56DC564B2DD9256800041DBA /* XCRemoteSwiftPackageReference "GRDB.swift" */,
-				3CBE36A72FB50D8C00BD5F7E /* XCLocalSwiftPackageReference "../ImpossiBLE" */,
 			);
 			productRefGroup = 56AF11162BDED05900887073 /* Products */;
 			projectDirPath = "";
@@ -1188,6 +1185,7 @@
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -1236,6 +1234,7 @@
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -1378,22 +1377,7 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		3CBE36A72FB50D8C00BD5F7E /* XCLocalSwiftPackageReference "../ImpossiBLE" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../ImpossiBLE;
-		};
-/* End XCLocalSwiftPackageReference section */
-
 /* Begin XCRemoteSwiftPackageReference section */
-		3CBE36A42FB50D5300BD5F7E /* XCRemoteSwiftPackageReference "ImpossiBLE" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/mickeyl/ImpossiBLE";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.2.0;
-			};
-		};
 		56DC564B2DD9256800041DBA /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/groue/GRDB.swift.git";
@@ -1405,11 +1389,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		3CBE36A52FB50D5300BD5F7E /* ImpossiBLE */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 3CBE36A42FB50D5300BD5F7E /* XCRemoteSwiftPackageReference "ImpossiBLE" */;
-			productName = ImpossiBLE;
-		};
 		56DC564C2DD9256800041DBA /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 56DC564B2DD9256800041DBA /* XCRemoteSwiftPackageReference "GRDB.swift" */;
