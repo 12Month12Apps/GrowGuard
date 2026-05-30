@@ -57,8 +57,10 @@ struct MainNavigationView: View {
             ContentView()
                 .navigationDestination(for: NavigationDestination.self) { destination in
                     switch destination {
-                    case .deviceDetails(let device):
-                        let viewModel = AddDeviceDetailsViewModel(device: device)
+                    case .deviceDetails(let device, suggestedName: let name):
+                        // Use suggested sequential name if available, fallback to BLE name
+                        let displayName = name ?? device.name ?? L10n.Device.unknownDevice
+                        let viewModel = AddDeviceDetailsViewModel(device: device, suggestedName: displayName)
                         AddDeviceDetails(viewModel: viewModel)
                     case .deviceList:
                         OverviewList()

@@ -97,11 +97,20 @@ struct AddDeviceView: View {
                         .padding(.horizontal)
                     } else if viewModel.bluetoothState == .poweredOn {
                         ForEach(viewModel.devices, id: \.identifier.uuidString) { device in
+                            let isAdded = viewModel.allSavedDevices.contains(where: { $0.uuid == device.identifier.uuidString })
                             SensorDeviceCard(
                                 device: device,
-                                isAlreadyAdded: viewModel.allSavedDevices.contains(where: { $0.uuid == device.identifier.uuidString })
+                                isAlreadyAdded: isAdded,
+                                suggestedName: viewModel.nextPlantName
                             ) {
-                                NavigationService.shared.navigateToDeviceDetails(device: device)
+                                if isAdded {
+                                    // Already added — navigate with BLE name
+                                    NavigationService.shared.navigateToDeviceDetails(device: device)
+                                } else {
+                                    // New device — use suggested sequential name
+                                    let name = viewModel.nextPlantName ?? (device.name ?? L10n.Device.unknownDevice)
+                                    NavigationService.shared.navigateToDeviceDetails(device: device, suggestedName: name)
+                                }
                             }
                             .padding(.horizontal)
                         }
@@ -117,6 +126,7 @@ struct AddDeviceView: View {
             viewModel.startScanningIfNeeded()
             Task {
                 await viewModel.fetchSavedDevices()
+                await viewModel.calculateNextPlantName()
             }
         }
         .onDisappear {
@@ -130,6 +140,7 @@ struct AddDeviceView: View {
 struct SensorDeviceCard: View {
     let device: CBPeripheral
     let isAlreadyAdded: Bool
+    var suggestedName: String?
     let action: () -> Void
 
     var body: some View {
@@ -170,6 +181,16 @@ struct SensorDeviceCard: View {
                                     .font(.caption)
                             }
                             .foregroundColor(.green)
+                        } else if let suggested = suggestedName {
+                            HStack(spacing: 4) {
+                                Image(systemName: "leaf.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.green.opacity(0.7))
+                                Text("Default: \(suggested)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .italic()
+                            }
                         }
                     }
                 }

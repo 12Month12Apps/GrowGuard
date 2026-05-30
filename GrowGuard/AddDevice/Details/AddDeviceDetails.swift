@@ -15,12 +15,12 @@ import CoreData
 
 // Defines all possible navigation destinations in the app
 enum NavigationDestination: Hashable {
-    case deviceDetails(CBPeripheral)
+    case deviceDetails(CBPeripheral, suggestedName: String?)
     case deviceDetailsSpecies(VMSpecies)
     case deviceList
     case addDeviceWithoutSensor
     case home
-    case deviceView(FlowerDeviceDTO) // Add this new case
+    case deviceView(FlowerDeviceDTO)
 }
 
 @Observable class NavigationService {
@@ -33,7 +33,18 @@ enum NavigationDestination: Hashable {
     
     // Navigation destination methods
     func navigateToDeviceDetails(device: CBPeripheral) {
-        path.append(NavigationDestination.deviceDetails(device))
+        path.append(NavigationDestination.deviceDetails(device, suggestedName: nil))
+    }
+    
+    func navigateToDeviceDetailsWithSuggestedName(
+        device: CBPeripheral,
+        suggestedName: String
+    ) {
+        path.append(NavigationDestination.deviceDetails(device, suggestedName: suggestedName))
+    }
+    
+    func navigateToDeviceDetails(device: CBPeripheral, suggestedName: String) {
+        path.append(NavigationDestination.deviceDetails(device, suggestedName: suggestedName))
     }
     
     func navigateToDeviceDetails(flower: VMSpecies) {
@@ -114,6 +125,22 @@ enum NavigationDestination: Hashable {
         }
     }
     
+    init(device: CBPeripheral, suggestedName: String) {
+        self.device = device
+        self.flower = FlowerDeviceDTO(
+            name: suggestedName,
+            uuid: device.identifier.uuidString,
+            peripheralID: device.identifier,
+            isSensor: true,
+            added: Date(),
+            lastUpdate: Date()
+        )
+
+        Task {
+            await fetchSavedDevices()
+        }
+    }
+    
     init(flower: VMSpecies) {
         let optimalRange = OptimalRangeDTO(
             minMoisture: Int16(flower.minMoisture ?? 0),
@@ -134,6 +161,7 @@ enum NavigationDestination: Hashable {
     
     @MainActor
     func save() async {
+        // Check if device UUID already exists (avoid duplicates)
         let isSaved = allSavedDevices.contains(where: { device in
             device.uuid == self.device?.identifier.uuidString
         })
@@ -142,7 +170,9 @@ enum NavigationDestination: Hashable {
                                    message: Text(L10n.Device.Error.alreadyAdded))
             self.showAlert = true
         } else {
-            if allSavedDevices.contains(where: { device in
+            // Check for name collision among existing devices (not including the one being saved)
+            let existingDevicesExcludingSelf = allSavedDevices.filter { $0.uuid != self.device?.identifier.uuidString }
+            if existingDevicesExcludingSelf.contains(where: { device in
                 device.name == self.flower.name
             }) {
                 self.alertView = Alert(title: Text(L10n.Alert.info),
