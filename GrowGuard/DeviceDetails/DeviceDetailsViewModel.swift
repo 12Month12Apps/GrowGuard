@@ -253,8 +253,10 @@ import ActivityKit
                 guard let self = self else { return }
                 print("📊 DeviceDetailsViewModel (Pool): History progress: \(current)/\(total)")
 
-                // Detect auto-start: if we receive progress but weren't loading, history auto-started
-                if total > 0 && !self.isLoadingHistory {
+                // Detect auto-start: if we receive progress but weren't loading, history auto-started.
+                // Only trigger when current < total — receiving the final (N, N) update after
+                // completion should not restart the loading state.
+                if total > 0 && current < total && !self.isLoadingHistory {
                     AppLogger.ble.info("📊 DeviceDetailsViewModel: History loading auto-started, making it visible to user")
                     self.isLoadingHistory = true
 
@@ -272,6 +274,18 @@ import ActivityKit
                 }
 
                 self.historyLoadingProgress = (current, total)
+
+                // Direct completion signal: all entries received. This catches the race where the
+                // HistoricalDataLoadingCompleted notification handler hasn't run yet but progress
+                // already shows 100%.
+                if total > 0 && current >= total && self.isLoadingHistory {
+                    AppLogger.ble.info("📊 DeviceDetailsViewModel: Progress reached 100%, marking loading as complete")
+                    self.isLoadingHistory = false
+                    if self.liveActivityService.hasActivity(for: self.device.uuid) {
+                        self.liveActivityService.endActivity(status: .completed)
+                    }
+                    return
+                }
 
                 // Update Live Activity with progress
                 if self.isLiveActivityEnabled && self.liveActivityService.hasActivity(for: self.device.uuid) {
@@ -323,11 +337,22 @@ import ActivityKit
                         self.liveActivityService.updateConnectionStatus(.connected)
                     case .authenticated:
                         self.liveActivityService.updateConnectionStatus(.loading)
-                    case .disconnected:
-                        // If still loading, show reconnecting status
-                        self.liveActivityService.updateConnectionStatus(.reconnecting, isPaused: true)
-                    case .error:
-                        self.liveActivityService.updateConnectionStatus(.reconnecting, isPaused: true)
+                    case .disconnected, .error:
+                        // cleanupHistoryFlow() resets isHistoryLoading synchronously before posting
+                        // the completion notification. If the connection is no longer loading AND
+                        // progress reached 100%, the flow finished normally — complete rather than pause.
+                        // Requiring progress.total > 0 && current >= total prevents false completion
+                        // during the initial connecting phase where the flow hasn't started yet.
+                        let progress = self.historyLoadingProgress
+                        let finishedBeforeDisconnect = self.deviceConnection?.isHistoryLoading == false
+                            && progress.total > 0
+                            && progress.current >= progress.total
+                        if finishedBeforeDisconnect {
+                            self.isLoadingHistory = false
+                            self.liveActivityService.endActivity(status: .completed)
+                        } else {
+                            self.liveActivityService.updateConnectionStatus(.reconnecting, isPaused: true)
+                        }
                     }
                 }
 

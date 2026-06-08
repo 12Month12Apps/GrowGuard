@@ -184,7 +184,7 @@ final class HistoryLoadingActivityService: ObservableObject {
         Task {
             await activity.end(
                 ActivityContent(state: finalState, staleDate: nil),
-                dismissalPolicy: .default
+                dismissalPolicy: .immediate
             )
         }
 

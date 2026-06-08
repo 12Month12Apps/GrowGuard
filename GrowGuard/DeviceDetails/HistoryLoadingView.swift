@@ -471,15 +471,16 @@ struct HistoryLoadingView: View {
             self.totalCount = total
             self.progress = total > 0 ? Double(current) / Double(total) : 0
 
-            // Update loading state based on isLoadingHistory
-            if viewModel.isLoadingHistory {
+            // Update loading state. Check completion first — if all entries are in,
+            // complete regardless of any isLoadingHistory race condition.
+            if total > 0 && current >= total && !viewModel.isLoadingHistory {
+                self.loadingState = .completed
+            } else if viewModel.isLoadingHistory {
                 if total > 0 {
                     self.loadingState = .loading
                 } else {
                     self.loadingState = .idle
                 }
-            } else if total > 0 && current >= total {
-                self.loadingState = .completed
             }
 
             // Set connection quality to good for ConnectionPool (BLE is inherently good if connected)
