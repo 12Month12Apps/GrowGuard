@@ -359,7 +359,7 @@ struct DeviceDetailsView: View {
                                         .background(Color(.tertiarySystemGroupedBackground))
                                         .cornerRadius(8)
                                 }
-                                .disabled(viewModel.isLoadingSensorData)
+                                .disabled(viewModel.isLoadingSensorData || viewModel.isNextWeekInFuture)
 
                                 Button {
                                     Task { await viewModel.refreshCurrentWeek() }

@@ -56,6 +56,14 @@ import ActivityKit
     var isLoadingSensorData = false
     
     @MainActor
+    var isNextWeekInFuture: Bool {
+        let calendar = Calendar.current
+        let currentViewedWeekStart = calendar.dateInterval(of: .weekOfYear, for: sensorDataManager.currentWeek)?.start ?? sensorDataManager.currentWeek
+        let thisWeekStart = calendar.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
+        return currentViewedWeekStart >= thisWeekStart
+    }
+
+    @MainActor
     var currentWeekDisplayText: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d"
