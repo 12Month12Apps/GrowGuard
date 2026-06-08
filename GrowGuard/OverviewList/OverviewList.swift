@@ -317,17 +317,40 @@ struct DeviceCard: View {
     let device: FlowerDeviceDTO
     let action: () -> Void
 
-    // Check if history loading is in progress for this device
     @ObservedObject private var activityService = HistoryLoadingActivityService.shared
+    @State private var connectionState: DeviceConnection.ConnectionState = .disconnected
 
     private var isLoadingHistory: Bool {
         activityService.hasActivity(for: device.uuid)
     }
 
+    private var latestSensorData: SensorDataDTO? {
+        device.sensorData.max(by: { $0.date < $1.date })
+    }
+
+    private var connectionColor: Color {
+        switch connectionState {
+        case .disconnected: return .secondary
+        case .connecting: return .orange
+        case .connected: return .blue
+        case .authenticated: return .green
+        case .error: return .red
+        }
+    }
+
+    private var connectionLabel: String {
+        switch connectionState {
+        case .disconnected: return "Disconnected"
+        case .connecting: return "Connecting..."
+        case .connected: return "Connected"
+        case .authenticated: return "Active"
+        case .error: return "Error"
+        }
+    }
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 16) {
-                // Plant icon or loading spinner
                 ZStack {
                     Circle()
                         .fill(isLoadingHistory ? Color.orange.opacity(0.15) : Color.green.opacity(0.15))
@@ -344,7 +367,6 @@ struct DeviceCard: View {
                     }
                 }
 
-                // Device info
                 VStack(alignment: .leading, spacing: 6) {
                     Text(device.name ?? "Unknown Plant")
                         .font(.headline)
@@ -376,23 +398,30 @@ struct DeviceCard: View {
                                         .font(.caption)
                                         .foregroundColor(.orange)
                                 }
-                            } else if !device.uuid.isEmpty {
+                            } else {
                                 HStack(spacing: 4) {
                                     Circle()
-                                        .fill(Color.green)
+                                        .fill(connectionColor)
                                         .frame(width: 6, height: 6)
-                                    Text("Connected")
+                                    Text(connectionLabel)
                                         .font(.caption)
+                                        .foregroundColor(connectionColor)
                                 }
                             }
                         }
-                        .foregroundColor(.secondary)
+
+                        if let data = latestSensorData {
+                            HStack(spacing: 10) {
+                                SensorPill(icon: "thermometer", value: String(format: "%.1f°", data.temperature))
+                                SensorPill(icon: "drop.fill", value: "\(data.moisture)%")
+                                SensorPill(icon: "sun.max.fill", value: "\(data.brightness) lx")
+                            }
+                        }
                     }
                 }
 
                 Spacer()
 
-                // Chevron
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -402,6 +431,28 @@ struct DeviceCard: View {
             .cornerRadius(16)
         }
         .buttonStyle(PlainButtonStyle())
+        .task {
+            let connection = ConnectionPoolManager.shared.getConnection(for: device.uuid)
+            connectionState = connection.connectionState
+            for await state in connection.connectionStatePublisher.values {
+                connectionState = state
+            }
+        }
+    }
+}
+
+private struct SensorPill: View {
+    let icon: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.caption2)
+            Text(value)
+                .font(.caption)
+        }
+        .foregroundColor(.secondary)
     }
 }
 
