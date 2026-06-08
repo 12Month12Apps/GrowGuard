@@ -285,7 +285,10 @@ import ActivityKit
         }
 
         // Listen for historical data loading completion
-        NotificationCenter.default.addObserver(forName: NSNotification.Name("HistoricalDataLoadingCompleted"), object: device.uuid, queue: .main) { [weak self] _ in
+        // NOTE: object: nil is intentional — NotificationCenter uses object identity not equality,
+        // so filtering by device.uuid (a Swift String) would never match the posted String instance.
+        NotificationCenter.default.addObserver(forName: NSNotification.Name("HistoricalDataLoadingCompleted"), object: nil, queue: .main) { [weak self] notification in
+            guard let deviceUUID = notification.object as? String, deviceUUID == self?.device.uuid else { return }
             Task { @MainActor in
                 guard let self = self else { return }
                 self.isLoadingHistory = false
