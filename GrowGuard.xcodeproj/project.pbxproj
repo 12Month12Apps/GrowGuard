@@ -41,6 +41,7 @@
 		5654B2AC2CB44DA500EED3D3 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2AB2CB44DA000EED3D3 /* Extensions.swift */; };
 		5654B2B92CB4575E00EED3D3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2B82CB4575C00EED3D3 /* SettingsView.swift */; };
 		5654B2BB2CB45C6E00EED3D3 /* SensorDataDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */; };
+		56FA2DEC0DE4F1B500000002 /* FlowerCareFrameFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000001 /* FlowerCareFrameFixtures.swift */; };
 		5654B2BD2CB46EE600EED3D3 /* OverviewListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2BC2CB46EDB00EED3D3 /* OverviewListViewModelTests.swift */; };
 		5654B2C12CB4739C00EED3D3 /* AddDeviceViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2C02CB4739400EED3D3 /* AddDeviceViewModelTests.swift */; };
 		565DEC402C159B93002D784A /* DeviceDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */; };
@@ -177,6 +178,7 @@
 		5654B2AB2CB44DA000EED3D3 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		5654B2B82CB4575C00EED3D3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataDecoderTests.swift; sourceTree = "<group>"; };
+		56FA2DEC0DE4F1B500000001 /* FlowerCareFrameFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerCareFrameFixtures.swift; sourceTree = "<group>"; };
 		5654B2BC2CB46EDB00EED3D3 /* OverviewListViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewListViewModelTests.swift; sourceTree = "<group>"; };
 		5654B2C02CB4739400EED3D3 /* AddDeviceViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceViewModelTests.swift; sourceTree = "<group>"; };
 		565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsView.swift; sourceTree = "<group>"; };
@@ -397,6 +399,7 @@
 			isa = PBXGroup;
 			children = (
 				56FD6C8A2E36960300905984 /* FlowerManagerHistoryTests.swift */,
+				56FA2DEC0DE4F1B500000001 /* FlowerCareFrameFixtures.swift */,
 				5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */,
 			);
 			path = BLE;
@@ -918,6 +921,7 @@
 			files = (
 				5654B2C12CB4739C00EED3D3 /* AddDeviceViewModelTests.swift in Sources */,
 				5654B2BB2CB45C6E00EED3D3 /* SensorDataDecoderTests.swift in Sources */,
+				56FA2DEC0DE4F1B500000002 /* FlowerCareFrameFixtures.swift in Sources */,
 				56FD6C8D2E36960300905984 /* FlowerManagerHistoryTests.swift in Sources */,
 				5654B2BD2CB46EE600EED3D3 /* OverviewListViewModelTests.swift in Sources */,
 				56AF112D2BDED05B00887073 /* GrowGuardTests.swift in Sources */,

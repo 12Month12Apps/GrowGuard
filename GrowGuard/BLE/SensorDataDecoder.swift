@@ -28,10 +28,9 @@ class SensorDataDecoder {
         print("Raw data (hex): \(hexString)")
         print("Raw temperature bytes: [0]=\(data[0]) (hex: \(String(format: "%02X", data[0]))), [1]=\(data[1]) (hex: \(String(format: "%02X", data[1])))")
         
-        // Verschiedene Interpretationen probieren
-        let tempLowByte = UInt16(data[0])
-        let tempHighByte = UInt16(data[1])
-        let temperatureRaw = tempLowByte + (tempHighByte << 8)
+        // Temperature is a signed 16-bit value (little endian) so sub-zero
+        // readings decode correctly, e.g. 0xFFF1 -> -1.5 °C
+        let temperatureRaw = Int16(bitPattern: UInt16(data[0]) | (UInt16(data[1]) << 8))
         let temperatureCelsius = Double(temperatureRaw) / 10.0
 
         let brightness = data.subdata(in: 3..<7).withUnsafeBytes { $0.load(as: UInt32.self) }.littleEndian
@@ -78,8 +77,8 @@ class SensorDataDecoder {
         let secondsAgo = secondsSinceBoot - timestamp
         let dateTime = now.addingTimeInterval(-Double(secondsAgo))
 
-        // Extract temperature (2 bytes) and convert to Celsius
-        let temperatureRaw = data.subdata(in: 4..<6).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian
+        // Extract temperature (2 bytes, signed little endian) and convert to Celsius
+        let temperatureRaw = Int16(bitPattern: data.subdata(in: 4..<6).withUnsafeBytes { $0.load(as: UInt16.self) }.littleEndian)
         let temperature = Double(temperatureRaw) / 10.0
 
         // Extract brightness (4 bytes)
