@@ -5,6 +5,11 @@
 //  Created by ConnectionPool Implementation
 //  Verantwortlich für GENAU EINE BLE-Verbindung zu einem Sensor
 //
+//  Phase 3 (BLE-Testing-Strategy.md): spricht mit dem BLEPeripheralLink-Seam
+//  statt direkt mit CBPeripheral und nutzt einen injizierbaren BLEScheduler
+//  statt Timer/DispatchQueue — Produktion verhält sich identisch
+//  (Default-Argumente), Tests können Zeit und Gerät deterministisch steuern.
+//
 
 import Foundation
 import CoreBluetooth
@@ -14,7 +19,7 @@ import OSLog
 /// Verwaltet die BLE-Verbindung zu einem einzelnen Flower Care Sensor
 /// Diese Klasse kapselt alle BLE-Operationen für ein spezifisches Gerät
 /// und stellt isolierte Publisher für Sensor-Daten bereit
-class DeviceConnection: NSObject, CBPeripheralDelegate {
+class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
 
     // MARK: - Connection State
 
@@ -50,9 +55,12 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
     // MARK: - Private Properties
 
-    /// Das CoreBluetooth Peripheral Objekt
+    /// Das Peripheral hinter dem Transport-Seam
     /// Wird gesetzt sobald das Gerät gefunden wurde
-    private(set) var peripheral: CBPeripheral?
+    private(set) var peripheral: BLEPeripheralLink?
+
+    /// Scheduler für alle zeitgesteuerten Abläufe (Timer-Ersatz)
+    private let scheduler: BLEScheduler
 
     /// Aktueller Authentifizierungs-Status
     /// true = Gerät ist authentifiziert und bereit für Datenübertragung
@@ -64,25 +72,30 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
     /// Erwartete Response für Authentication Validation
     private var expectedResponse: Data?
 
-    /// Dictionary aller entdeckten BLE Characteristics
-    /// Key: Characteristic UUID als String
-    /// Value: CBCharacteristic Objekt
-    private var characteristics: [String: CBCharacteristic] = [:]
+    /// Alle bisher entdeckten Characteristic-UUIDs
+    private var discoveredCharacteristics: Set<CBUUID> = []
 
     /// Decoder für Sensor-Daten
     /// Wandelt rohe BLE-Bytes in strukturierte Sensor-Daten um
     private let decoder = SensorDataDecoder()
 
-    // MARK: - Cached Characteristics (für schnellen Zugriff)
+    // MARK: - Discovered Characteristics (für schnellen Zugriff)
 
-    /// Cached History Control Characteristic
-    private var historyControlCharacteristic: CBCharacteristic?
+    private var hasHistoryControlCharacteristic: Bool {
+        discoveredCharacteristics.contains(historyControlCharacteristicUUID)
+    }
 
-    /// Cached History Data Characteristic
-    private var historyDataCharacteristic: CBCharacteristic?
+    private var hasHistoryDataCharacteristic: Bool {
+        discoveredCharacteristics.contains(historicalSensorValuesCharacteristicUUID)
+    }
 
-    /// Cached Device Time Characteristic
-    private var deviceTimeCharacteristic: CBCharacteristic?
+    private var hasDeviceTimeCharacteristic: Bool {
+        discoveredCharacteristics.contains(deviceTimeCharacteristicUUID)
+    }
+
+    private var hasAuthenticationCharacteristic: Bool {
+        discoveredCharacteristics.contains(authenticationCharacteristicUUID)
+    }
 
     // MARK: - Historical Data Properties
 
@@ -98,11 +111,14 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
     /// Device Boot Time für Timestamp-Berechnungen
     private var deviceBootTime: Date?
 
-    /// Timers für Historical Data Flow Management
-    private var historyFlowTimers: [Timer] = []
+    /// Laufende zeitgesteuerte Schritte des Historical Data Flows
+    private var historyFlowTasks: [BLEScheduledTask] = []
 
-    /// Connection Quality Monitoring Timer
-    private var connectionMonitorTimer: Timer?
+    /// Connection Quality Monitoring
+    private var connectionMonitorTask: BLEScheduledTask?
+
+    /// RSSI Monitoring
+    private var rssiMonitorTask: BLEScheduledTask?
 
     /// Flag ob wir auf Characteristics Discovery warten für History Resume
     private var waitingForCharacteristicsForHistoryResume: Bool = false
@@ -180,9 +196,12 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
     // MARK: - Initialization
 
     /// Initialisiert eine neue DeviceConnection für ein spezifisches Gerät
-    /// - Parameter deviceUUID: Die eindeutige UUID des BLE-Geräts
-    init(deviceUUID: String) {
+    /// - Parameters:
+    ///   - deviceUUID: Die eindeutige UUID des BLE-Geräts
+    ///   - scheduler: Zeitsteuerung; Produktion nutzt den Default (Timer auf Main RunLoop)
+    init(deviceUUID: String, scheduler: BLEScheduler = MainRunLoopScheduler()) {
         self.deviceUUID = deviceUUID
+        self.scheduler = scheduler
         super.init()
 
         AppLogger.ble.bleConnection("DeviceConnection initialized for device: \(deviceUUID)")
@@ -200,11 +219,11 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
     // MARK: - Public Methods
 
     /// Setzt das Peripheral für diese Connection und registriert sich als Delegate
-    /// - Parameter peripheral: Das CBPeripheral Objekt vom CBCentralManager
+    /// - Parameter peripheral: Das Peripheral-Link Objekt vom BLECentral
     /// - Note: Muss aufgerufen werden nachdem das Peripheral gefunden wurde
-    func setPeripheral(_ peripheral: CBPeripheral) {
+    func setPeripheral(_ peripheral: BLEPeripheralLink) {
         self.peripheral = peripheral
-        peripheral.delegate = self
+        peripheral.linkDelegate = self
 
         AppLogger.ble.bleConnection("Peripheral set for device \(deviceUUID): \(peripheral.name ?? "Unknown")")
     }
@@ -216,11 +235,13 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         }
 
         // Read RSSI periodically (every 5 seconds)
-        Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] timer in
+        rssiMonitorTask?.cancel()
+        rssiMonitorTask = scheduler.scheduleRepeating(every: 5.0) { [weak self] in
             guard let self = self,
                   let peripheral = self.peripheral,
                   peripheral.state == .connected else {
-                timer.invalidate()
+                self?.rssiMonitorTask?.cancel()
+                self?.rssiMonitorTask = nil
                 return
             }
 
@@ -241,7 +262,7 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
         // CRITICAL FIX: Discover ALL services, not just specific ones!
         // FlowerCare sensors may have different service UUIDs or additional services
-        peripheral?.discoverServices(nil)
+        peripheral?.discoverServices()
         AppLogger.ble.bleConnection("⚠️ Discovering ALL services (like FlowerManager)")
     }
 
@@ -249,7 +270,6 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
     /// - Parameter error: Optional - Fehler falls die Disconnection ungeplant war
     func handleDisconnected(error: Error?) {
         // Reset Authentication Status
-        let wasAuthenticated = isAuthenticated
         isAuthenticated = false
 
         // Handle Historical Data Flow Disconnect
@@ -257,11 +277,11 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
             AppLogger.ble.bleWarning("Device \(deviceUUID) disconnected during history flow at entry \(currentEntryIndex)/\(totalEntries)")
 
             // Don't cleanup yet - we'll try to resume
-            // Only cleanup timers to prevent memory leaks
-            for timer in historyFlowTimers {
-                timer.invalidate()
+            // Only cleanup scheduled steps to prevent stale work firing
+            for task in historyFlowTasks {
+                task.cancel()
             }
-            historyFlowTimers.removeAll()
+            historyFlowTasks.removeAll()
 
             AppLogger.ble.info("🔄 Will attempt to resume history flow after reconnect")
         }
@@ -298,8 +318,7 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
     /// Startet den Authentication-Prozess mit dem FlowerCare Sensor
     /// Verwendet den 2-Schritt Authentication Flow
     private func startAuthentication() {
-        // Hole Authentication Characteristic aus Dictionary
-        guard let authCharacteristic = characteristics[authenticationCharacteristicUUID.uuidString.uppercased()] else {
+        guard hasAuthenticationCharacteristic else {
             AppLogger.ble.info("🔐 No authentication characteristic found for device \(self.deviceUUID), proceeding without auth")
             // Ohne Authentication direkt als authenticated markieren
             isAuthenticated = true
@@ -312,15 +331,15 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
                 return
             }
 
-            if historyControlCharacteristic != nil &&
-               historyDataCharacteristic != nil &&
-               deviceTimeCharacteristic != nil {
+            if hasHistoryControlCharacteristic &&
+               hasHistoryDataCharacteristic &&
+               hasDeviceTimeCharacteristic {
                 if isHistoryFlowActive && totalEntries > 0 && currentEntryIndex < totalEntries {
                     AppLogger.ble.info("🔄 Resuming history flow (no auth) at entry \(self.currentEntryIndex)/\(self.totalEntries)")
                 } else {
                     AppLogger.ble.info("🆕 Starting fresh history flow (no auth required)")
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                scheduler.schedule(after: 0.5) { [weak self] in
                     guard let self = self else { return }
                     self.startHistoryDataFlow()
                 }
@@ -338,13 +357,14 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         // Step 1: Send authentication challenge
         let challengeData = Data([0x90, 0xCA, 0x85, 0xDE])
         AppLogger.ble.bleData("🔐 Sending auth challenge: \(challengeData.map { String(format: "%02x", $0) }.joined())")
-        peripheral?.writeValue(challengeData, for: authCharacteristic, type: .withResponse)
+        peripheral?.writeValue(challengeData, forCharacteristic: authenticationCharacteristicUUID, type: .withResponse)
 
         // Set expected response for validation
         expectedResponse = Data([0x23, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00])
 
         // Set a timeout for authentication
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+        scheduler.schedule(after: 4.0) { [weak self] in
+            guard let self = self else { return }
             if self.authenticationStep > 0 && !self.isAuthenticated {
                 AppLogger.ble.bleError("🔐 Authentication timeout for device \(self.deviceUUID), proceeding without auth")
                 self.authenticationStep = 0
@@ -355,11 +375,11 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
                 if self.autoStartHistoryFlowEnabled,
                    self.isHistoryFlowActive && self.totalEntries > 0 && self.currentEntryIndex < self.totalEntries {
                     // Check if required characteristics are available
-                    if self.historyControlCharacteristic != nil &&
-                       self.historyDataCharacteristic != nil &&
-                       self.deviceTimeCharacteristic != nil {
+                    if self.hasHistoryControlCharacteristic &&
+                       self.hasHistoryDataCharacteristic &&
+                       self.hasDeviceTimeCharacteristic {
                         AppLogger.ble.info("🔄 Resuming history flow after reconnect at entry \(self.currentEntryIndex)/\(self.totalEntries)")
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                        self.scheduler.schedule(after: 0.5) { [weak self] in
                             guard let self = self else { return }
                             self.startHistoryDataFlow()
                         }
@@ -385,13 +405,13 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
                 authenticationStep = 2
 
                 // Step 2: Send final authentication key
-                guard let authCharacteristic = characteristics[authenticationCharacteristicUUID.uuidString.uppercased()] else {
+                guard hasAuthenticationCharacteristic else {
                     AppLogger.ble.bleError("❌ Authentication characteristic disappeared for device \(deviceUUID)")
                     return
                 }
 
                 let finalKey = Data([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08])
-                peripheral?.writeValue(finalKey, for: authCharacteristic, type: .withResponse)
+                peripheral?.writeValue(finalKey, forCharacteristic: authenticationCharacteristicUUID, type: .withResponse)
             } else {
                 AppLogger.ble.bleError("❌ Authentication challenge failed for device \(deviceUUID)")
                 // Try authentication one more time
@@ -412,16 +432,16 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
                 return
             }
 
-            if historyControlCharacteristic != nil &&
-               historyDataCharacteristic != nil &&
-               deviceTimeCharacteristic != nil {
+            if hasHistoryControlCharacteristic &&
+               hasHistoryDataCharacteristic &&
+               hasDeviceTimeCharacteristic {
                 if isHistoryFlowActive && totalEntries > 0 && currentEntryIndex < totalEntries {
                     AppLogger.ble.info("🔄 Resuming history flow after authentication at entry \(self.currentEntryIndex)/\(self.totalEntries)")
                 } else {
                     AppLogger.ble.info("🆕 Starting fresh history flow after authentication")
                 }
                 // Small delay to let connection stabilize
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                scheduler.schedule(after: 0.5) { [weak self] in
                     guard let self = self else { return }
                     self.startHistoryDataFlow()
                 }
@@ -460,8 +480,8 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
             return
         }
 
-        // Hole Mode Change Characteristic aus Dictionary
-        guard let modeCharacteristic = characteristics[deviceModeChangeCharacteristicUUID.uuidString.uppercased()] else {
+        // Prüfe ob Mode Change Characteristic entdeckt wurde
+        guard discoveredCharacteristics.contains(deviceModeChangeCharacteristicUUID) else {
             AppLogger.ble.bleWarning("Cannot request live data - mode characteristic not found for device \(deviceUUID)")
             return
         }
@@ -470,7 +490,7 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
         // Sende Mode Change Command
         let command: [UInt8] = [0xA0, 0x1F]
-        peripheral.writeValue(Data(command), for: modeCharacteristic, type: .withResponse)
+        peripheral.writeValue(Data(command), forCharacteristic: deviceModeChangeCharacteristicUUID, type: .withResponse)
     }
 
     /// Stoppt Live-Daten-Updates
@@ -517,12 +537,12 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         startConnectionQualityMonitoring()
 
         // Add overall timeout for history flow (10 minutes max)
-        let historyTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 600.0, repeats: false) { [weak self] timer in
+        let historyTimeoutTask = scheduler.schedule(after: 600.0) { [weak self] in
             guard let self = self, self.isHistoryFlowActive else { return }
             AppLogger.ble.bleError("⏰ History flow timeout for device \(self.deviceUUID) - taking too long, aborting")
             self.cleanupHistoryFlow()
         }
-        self.historyFlowTimers.append(historyTimeoutTimer)
+        self.historyFlowTasks.append(historyTimeoutTask)
 
         // If resuming, we need to refresh device time before continuing
         if isResumingHistory {
@@ -532,7 +552,7 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         }
 
         // Step 1: Send 0xa00000 to switch to history mode (required even when resuming after reconnect)
-        guard let historyControl = historyControlCharacteristic else {
+        guard hasHistoryControlCharacteristic else {
             AppLogger.ble.bleError("Cannot start history flow: history control characteristic not found for device \(deviceUUID)")
             isHistoryFlowActive = false
             return
@@ -541,10 +561,10 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         AppLogger.ble.bleData("Step 1: Setting history mode (0xa00000) for device \(deviceUUID)")
         let modeCommand: [UInt8] = [0xa0, 0x00, 0x00]
         let modeData = Data(modeCommand)
-        peripheral.writeValue(modeData, for: historyControl, type: .withResponse)
+        peripheral.writeValue(modeData, forCharacteristic: historyControlCharacteristicUUID, type: .withResponse)
 
         // Step 2: Read device time
-        let step2Timer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak self] timer in
+        let step2Task = scheduler.schedule(after: 0.15) { [weak self] in
             guard let self = self,
                   let peripheral = self.peripheral,
                   peripheral.state == .connected else {
@@ -554,14 +574,14 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
             }
 
             AppLogger.ble.bleData("Step 2: Reading device time for device \(self.deviceUUID)")
-            if let deviceTime = self.deviceTimeCharacteristic {
-                peripheral.readValue(for: deviceTime)
+            if self.hasDeviceTimeCharacteristic {
+                peripheral.readValue(forCharacteristic: deviceTimeCharacteristicUUID)
             }
 
             // If resuming, skip to fetching the current entry
             if isResumingHistory {
                 // Longer delay for more stable resume (like FlowerManager: 0.2s)
-                let resumeTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { [weak self] _ in
+                let resumeTask = self.scheduler.schedule(after: 0.2) { [weak self] in
                     guard let self = self,
                           let peripheral = self.peripheral,
                           peripheral.state == .connected else {
@@ -569,15 +589,16 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
                         self?.cleanupHistoryFlow()
                         return
                     }
+                    _ = peripheral
                     AppLogger.ble.info("📍 Device time refreshed, resuming at entry \(self.currentEntryIndex)/\(self.totalEntries)")
                     self.fetchHistoricalDataEntry(index: self.currentEntryIndex)
                 }
-                self.historyFlowTimers.append(resumeTimer)
+                self.historyFlowTasks.append(resumeTask)
                 return
             }
 
             // Step 3: Get entry count (only for new flow)
-            let step3Timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] timer in
+            let step3Task = self.scheduler.schedule(after: 0.1) { [weak self] in
                 guard let self = self,
                       let peripheral = self.peripheral,
                       peripheral.state == .connected else {
@@ -588,10 +609,10 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
                 AppLogger.ble.bleData("Step 3: Getting entry count (0x3c command) for device \(self.deviceUUID)")
                 let entryCountCommand: [UInt8] = [0x3c]  // Command to get entry count
-                peripheral.writeValue(Data(entryCountCommand), for: historyControl, type: .withResponse)
+                peripheral.writeValue(Data(entryCountCommand), forCharacteristic: historyControlCharacteristicUUID, type: .withResponse)
 
                 // After sending the command, read the history data characteristic
-                let step4Timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] timer in
+                let step4Task = self.scheduler.schedule(after: 0.1) { [weak self] in
                     guard let self = self,
                           let peripheral = self.peripheral,
                           peripheral.state == .connected else {
@@ -601,23 +622,23 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
                     }
 
                     AppLogger.ble.bleData("Step 4: Reading history data characteristic for device \(self.deviceUUID)")
-                    if let historyData = self.historyDataCharacteristic {
-                        peripheral.readValue(for: historyData)
+                    if self.hasHistoryDataCharacteristic {
+                        peripheral.readValue(forCharacteristic: historicalSensorValuesCharacteristicUUID)
 
                         // Add timeout for metadata response
-                        let metadataTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
+                        let metadataTimeoutTask = self.scheduler.schedule(after: 10.0) { [weak self] in
                             guard let self = self, self.totalEntries == 0 && self.isHistoryFlowActive else { return }
                             AppLogger.ble.bleError("⏰ Metadata timeout for device \(self.deviceUUID) - no response after 10 seconds")
                             self.cleanupHistoryFlow()
                         }
-                        self.historyFlowTimers.append(metadataTimeoutTimer)
+                        self.historyFlowTasks.append(metadataTimeoutTask)
                     }
                 }
-                self.historyFlowTimers.append(step4Timer)
+                self.historyFlowTasks.append(step4Task)
             }
-            self.historyFlowTimers.append(step3Timer)
+            self.historyFlowTasks.append(step3Task)
         }
-        historyFlowTimers.append(step2Timer)
+        historyFlowTasks.append(step2Task)
     }
 
     /// Holt einen einzelnen Historical Data Entry vom Gerät
@@ -636,8 +657,8 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
             return
         }
 
-        guard let historyControl = historyControlCharacteristic,
-              let historyData = historyDataCharacteristic else {
+        guard hasHistoryControlCharacteristic,
+              hasHistoryDataCharacteristic else {
             AppLogger.ble.bleError("Cannot fetch history entry: characteristics unavailable for device \(deviceUUID)")
             cleanupHistoryFlow()
             return
@@ -649,23 +670,23 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         let entryAddress = Data([0xa1, UInt8(index & 0xff), UInt8((index >> 8) & 0xff)])
 
         // Write address to history control characteristic
-        peripheral.writeValue(entryAddress, for: historyControl, type: .withResponse)
+        peripheral.writeValue(entryAddress, forCharacteristic: historyControlCharacteristicUUID, type: .withResponse)
 
         // Minimal delay to give the device time to respond
-        let readTimer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: false) { [weak self] timer in
+        let readTask = scheduler.schedule(after: 0.02) { [weak self] in
             guard let self = self,
                   let peripheral = self.peripheral,
                   peripheral.state == .connected,
                   self.isHistoryFlowActive,
-                  let historyData = self.historyDataCharacteristic else {
+                  self.hasHistoryDataCharacteristic else {
                 AppLogger.ble.bleError("Device \(self?.deviceUUID ?? "unknown") disconnected or flow cancelled before reading data")
                 self?.cleanupHistoryFlow()
                 return
             }
 
-            peripheral.readValue(for: historyData)
+            peripheral.readValue(forCharacteristic: historicalSensorValuesCharacteristicUUID)
         }
-        historyFlowTimers.append(readTimer)
+        historyFlowTasks.append(readTask)
     }
 
     /// Räumt den Historical Data Flow auf und beendet ihn
@@ -674,11 +695,11 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         AppLogger.ble.info("🧹 Cleaning up history flow for device \(self.deviceUUID)")
         isHistoryFlowActive = false
 
-        // Cancel all pending timers
-        for timer in historyFlowTimers {
-            timer.invalidate()
+        // Cancel all pending scheduled steps
+        for task in historyFlowTasks {
+            task.cancel()
         }
-        historyFlowTimers.removeAll()
+        historyFlowTasks.removeAll()
 
         // Stop connection monitoring
         stopConnectionQualityMonitoring()
@@ -698,7 +719,7 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
     private func startConnectionQualityMonitoring() {
         stopConnectionQualityMonitoring()
 
-        connectionMonitorTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+        connectionMonitorTask = scheduler.scheduleRepeating(every: 5.0) { [weak self] in
             guard let self = self,
                   self.totalEntries > 0,
                   self.currentEntryIndex < self.totalEntries,
@@ -715,31 +736,14 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
 
     /// Stoppt das Connection Quality Monitoring
     private func stopConnectionQualityMonitoring() {
-        connectionMonitorTimer?.invalidate()
-        connectionMonitorTimer = nil
+        connectionMonitorTask?.cancel()
+        connectionMonitorTask = nil
     }
 
-    /// Startet die Service Discovery für das Peripheral
-    /// Sucht nach den benötigten BLE Services des Flower Care Sensors
-    func discoverServices() {
-        guard let peripheral = peripheral else {
-            AppLogger.ble.bleConnection("Cannot discover services - peripheral is nil for device \(deviceUUID)")
-            return
-        }
-
-        AppLogger.ble.bleConnection("Starting service discovery for device \(deviceUUID)")
-
-        // TODO: Implementierung kommt in Phase 2
-        // peripheral.discoverServices([flowerCareServiceUUID, dataServiceUUID, historyServiceUUID])
-    }
-
-    // MARK: - CBPeripheralDelegate Methods
+    // MARK: - BLEPeripheralLinkDelegate
 
     /// Callback wenn Services entdeckt wurden
-    /// - Parameters:
-    ///   - peripheral: Das Peripheral
-    ///   - error: Optional error
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+    func peripheralLink(_ link: BLEPeripheralLink, didDiscoverServices serviceUUIDs: [CBUUID], error: Error?) {
         // Error Handling
         if let error = error {
             AppLogger.ble.bleError("Service discovery error for device \(deviceUUID): \(error.localizedDescription)")
@@ -748,28 +752,24 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         }
 
         // Prüfe ob Services gefunden wurden
-        guard let services = peripheral.services, !services.isEmpty else {
+        guard !serviceUUIDs.isEmpty else {
             AppLogger.ble.bleWarning("No services found for device \(deviceUUID)")
             return
         }
 
-        AppLogger.ble.bleConnection("Discovered \(services.count) service(s) for device \(deviceUUID)")
+        AppLogger.ble.bleConnection("Discovered \(serviceUUIDs.count) service(s) for device \(deviceUUID)")
 
         // Iteriere über alle gefundenen Services
-        for service in services {
-            AppLogger.ble.bleConnection("Found service: \(service.uuid.uuidString)")
+        for serviceUUID in serviceUUIDs {
+            AppLogger.ble.bleConnection("Found service: \(serviceUUID.uuidString)")
 
             // Starte Characteristic Discovery für jeden Service
-            peripheral.discoverCharacteristics(nil, for: service)
+            link.discoverCharacteristics(forService: serviceUUID)
         }
     }
 
     /// Callback wenn Characteristics für einen Service entdeckt wurden
-    /// - Parameters:
-    ///   - peripheral: Das Peripheral
-    ///   - service: Der Service für den Characteristics gefunden wurden
-    ///   - error: Optional error
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
+    func peripheralLink(_ link: BLEPeripheralLink, didDiscoverCharacteristics characteristicUUIDs: [CBUUID], forService serviceUUID: CBUUID, error: Error?) {
         // Error Handling
         if let error = error {
             AppLogger.ble.bleError("Characteristic discovery error for device \(deviceUUID): \(error.localizedDescription)")
@@ -778,46 +778,24 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         }
 
         // Prüfe ob Characteristics gefunden wurden
-        guard let discoveredCharacteristics = service.characteristics, !discoveredCharacteristics.isEmpty else {
-            AppLogger.ble.bleWarning("No characteristics found for service \(service.uuid.uuidString) on device \(deviceUUID)")
+        guard !characteristicUUIDs.isEmpty else {
+            AppLogger.ble.bleWarning("No characteristics found for service \(serviceUUID.uuidString) on device \(deviceUUID)")
             return
         }
 
-        AppLogger.ble.bleConnection("Discovered \(discoveredCharacteristics.count) characteristic(s) for service \(service.uuid.uuidString) on device \(deviceUUID)")
+        AppLogger.ble.bleConnection("Discovered \(characteristicUUIDs.count) characteristic(s) for service \(serviceUUID.uuidString) on device \(deviceUUID)")
 
-        // Iteriere über alle gefundenen Characteristics
-        for characteristic in discoveredCharacteristics {
-            let uuidString = characteristic.uuid.uuidString.uppercased()
-
-            // Speichere Characteristic im Dictionary
-            characteristics[uuidString] = characteristic
-
-            // Cache wichtige Characteristics für schnellen Zugriff
-            switch characteristic.uuid {
-            case historyControlCharacteristicUUID:
-                historyControlCharacteristic = characteristic
-                AppLogger.ble.bleConnection("Cached history control characteristic for device \(deviceUUID)")
-
-            case historicalSensorValuesCharacteristicUUID:
-                historyDataCharacteristic = characteristic
-                AppLogger.ble.bleConnection("Cached history data characteristic for device \(deviceUUID)")
-
-            case deviceTimeCharacteristicUUID:
-                deviceTimeCharacteristic = characteristic
-                AppLogger.ble.bleConnection("Cached device time characteristic for device \(deviceUUID)")
-
-            default:
-                break
-            }
-
-            AppLogger.ble.bleConnection("Found characteristic: \(uuidString)")
+        // Speichere alle gefundenen Characteristics
+        for characteristicUUID in characteristicUUIDs {
+            discoveredCharacteristics.insert(characteristicUUID)
+            AppLogger.ble.bleConnection("Found characteristic: \(characteristicUUID.uuidString)")
         }
 
         // Prüfe ob wir auf Characteristics für History Resume warten
         if waitingForCharacteristicsForHistoryResume &&
-           historyControlCharacteristic != nil &&
-           historyDataCharacteristic != nil &&
-           deviceTimeCharacteristic != nil {
+           hasHistoryControlCharacteristic &&
+           hasHistoryDataCharacteristic &&
+           hasDeviceTimeCharacteristic {
             AppLogger.ble.info("✅ History characteristics discovered, ready to resume")
             waitingForCharacteristicsForHistoryResume = false
 
@@ -825,7 +803,7 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
             if autoStartHistoryFlowEnabled,
                isHistoryFlowActive && totalEntries > 0 && currentEntryIndex < totalEntries && isAuthenticated {
                 AppLogger.ble.info("🔄 Resuming history flow now at entry \(self.currentEntryIndex)/\(self.totalEntries)")
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                scheduler.schedule(after: 0.5) { [weak self] in
                     guard let self = self else { return }
                     self.startHistoryDataFlow()
                 }
@@ -837,22 +815,18 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         // CRITICAL FIX: Only start authentication when ALL required characteristics are found
         // This matches FlowerManager's behavior
         if !isAuthenticated && authenticationStep == 0 &&
-           historyControlCharacteristic != nil &&
-           historyDataCharacteristic != nil &&
-           deviceTimeCharacteristic != nil {
+           hasHistoryControlCharacteristic &&
+           hasHistoryDataCharacteristic &&
+           hasDeviceTimeCharacteristic {
             AppLogger.ble.bleConnection("✅ All required characteristics discovered for device \(deviceUUID), starting authentication")
             startAuthentication()
         } else if !isAuthenticated && authenticationStep == 0 {
-            AppLogger.ble.bleWarning("⚠️ Not all characteristics found yet, waiting... (history control: \(historyControlCharacteristic != nil), history data: \(historyDataCharacteristic != nil), device time: \(deviceTimeCharacteristic != nil))")
+            AppLogger.ble.bleWarning("⚠️ Not all characteristics found yet, waiting... (history control: \(hasHistoryControlCharacteristic), history data: \(hasHistoryDataCharacteristic), device time: \(hasDeviceTimeCharacteristic))")
         }
     }
 
     /// Callback wenn eine Characteristic updated wurde (neue Daten empfangen)
-    /// - Parameters:
-    ///   - peripheral: Das Peripheral
-    ///   - characteristic: Die Characteristic die updated wurde
-    ///   - error: Optional error
-    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+    func peripheralLink(_ link: BLEPeripheralLink, didUpdateValueFor characteristicUUID: CBUUID, value: Data?, error: Error?) {
         // Error Handling
         if let error = error {
             AppLogger.ble.bleError("Update value error for device \(deviceUUID): \(error.localizedDescription)")
@@ -860,13 +834,13 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         }
 
         // Prüfe ob wir Daten haben
-        guard let value = characteristic.value else {
-            AppLogger.ble.bleWarning("No value in characteristic \(characteristic.uuid.uuidString) for device \(deviceUUID)")
+        guard let value = value else {
+            AppLogger.ble.bleWarning("No value in characteristic \(characteristicUUID.uuidString) for device \(deviceUUID)")
             return
         }
 
         // Handle Authentication Response wenn noch nicht authenticated
-        if !isAuthenticated && characteristic.uuid == authenticationCharacteristicUUID {
+        if !isAuthenticated && characteristicUUID == authenticationCharacteristicUUID {
             handleAuthenticationResponse(value)
             return
         }
@@ -878,7 +852,7 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         }
 
         // Verarbeite basierend auf Characteristic UUID
-        switch characteristic.uuid {
+        switch characteristicUUID {
         case realTimeSensorValuesCharacteristicUUID:
             AppLogger.ble.bleData("📊 Received real-time sensor data for device \(deviceUUID)")
             processRealTimeSensorData(value)
@@ -900,7 +874,40 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
             processHistoryData(value)
 
         default:
-            AppLogger.ble.bleConnection("Received data for characteristic \(characteristic.uuid.uuidString) on device \(deviceUUID)")
+            AppLogger.ble.bleConnection("Received data for characteristic \(characteristicUUID.uuidString) on device \(deviceUUID)")
+        }
+    }
+
+    /// Callback wenn Daten an eine Characteristic geschrieben wurden
+    func peripheralLink(_ link: BLEPeripheralLink, didWriteValueFor characteristicUUID: CBUUID, error: Error?) {
+        AppLogger.ble.bleConnection("didWriteValueFor called for device \(deviceUUID)")
+
+        if let error = error {
+            AppLogger.ble.bleConnection("Write value error for device \(deviceUUID): \(error.localizedDescription)")
+            return
+        }
+
+        // Write erfolgreich
+        // Implementierung kommt später
+    }
+
+    /// Callback wenn RSSI gelesen wurde
+    func peripheralLink(_ link: BLEPeripheralLink, didReadRSSI rssi: Int, error: Error?) {
+        if let error = error {
+            AppLogger.ble.bleWarning("RSSI read error for device \(deviceUUID): \(error.localizedDescription)")
+            return
+        }
+
+        AppLogger.ble.bleConnection("📶 RSSI for device \(deviceUUID): \(rssi) dBm")
+
+        // Signal Quality Classification:
+        // > -50 dBm: Excellent
+        // -50 to -60 dBm: Good
+        // -60 to -70 dBm: Fair
+        // < -70 dBm: Poor
+
+        if rssi < -70 {
+            AppLogger.ble.bleWarning("⚠️ Weak signal for device \(deviceUUID): \(rssi) dBm")
         }
     }
 
@@ -968,6 +975,13 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
     /// Verarbeitet Historical Sensor Data
     /// - Parameter data: Die rohen Historical Data vom Gerät
     private func processHistoryData(_ data: Data) {
+        // Drop in-flight responses that arrive after the flow was cancelled
+        // or completed (mirrors the isCancelled check in FlowerCareManager)
+        guard isHistoryFlowActive else {
+            AppLogger.ble.info("❌ Ignoring history data after flow ended for device \(self.deviceUUID)")
+            return
+        }
+
         AppLogger.ble.bleData("📦 Received history data: \(data.count) bytes for device \(deviceUUID)")
 
         // Check if this is metadata or an actual history entry
@@ -1014,16 +1028,16 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
                     if nextIndex % batchSize == 0 {
                         AppLogger.ble.bleData("Completed batch of \(batchSize) for device \(deviceUUID). Brief pause...")
                         // Very short pause to avoid overwhelming the device
-                        let batchTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: false) { [weak self] timer in
+                        let batchTask = scheduler.schedule(after: 0.05) { [weak self] in
                             self?.fetchHistoricalDataEntry(index: nextIndex)
                         }
-                        self.historyFlowTimers.append(batchTimer)
+                        self.historyFlowTasks.append(batchTask)
                     } else {
                         // Minimal delay between individual entries
-                        let nextEntryTimer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: false) { [weak self] timer in
+                        let nextEntryTask = scheduler.schedule(after: 0.02) { [weak self] in
                             self?.fetchHistoricalDataEntry(index: nextIndex)
                         }
-                        self.historyFlowTimers.append(nextEntryTimer)
+                        self.historyFlowTasks.append(nextEntryTask)
                     }
                 } else {
                     AppLogger.ble.info("✅ All historical data fetched successfully for device \(self.deviceUUID) - \(self.totalEntries) entries loaded")
@@ -1042,75 +1056,14 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
                     AppLogger.ble.info("⏭️ Skipping corrupted entry \(self.currentEntryIndex), continuing with next for device \(self.deviceUUID)")
                     currentEntryIndex = nextIndex
 
-                    let skipTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] timer in
+                    let skipTask = scheduler.schedule(after: 0.1) { [weak self] in
                         self?.fetchHistoricalDataEntry(index: nextIndex)
                     }
-                    self.historyFlowTimers.append(skipTimer)
+                    self.historyFlowTasks.append(skipTask)
                 } else {
                     cleanupHistoryFlow()
                 }
             }
-        }
-    }
-
-    /// Callback wenn Daten an eine Characteristic geschrieben wurden
-    /// - Parameters:
-    ///   - peripheral: Das Peripheral
-    ///   - characteristic: Die Characteristic
-    ///   - error: Optional error
-    func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
-        // TODO: Write Response Handling - kommt in Phase 3
-        AppLogger.ble.bleConnection("didWriteValueFor called for device \(deviceUUID)")
-
-        if let error = error {
-            AppLogger.ble.bleConnection("Write value error for device \(deviceUUID): \(error.localizedDescription)")
-            return
-        }
-
-        // Write erfolgreich
-        // Implementierung kommt später
-    }
-
-    /// Callback wenn Notification State für eine Characteristic geändert wurde
-    /// - Parameters:
-    ///   - peripheral: Das Peripheral
-    ///   - characteristic: Die Characteristic
-    ///   - error: Optional error
-    func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
-        // TODO: Notification State Handling - kommt in Phase 3
-        AppLogger.ble.bleConnection("didUpdateNotificationStateFor called for device \(deviceUUID)")
-
-        if let error = error {
-            AppLogger.ble.bleConnection("Notification state error for device \(deviceUUID): \(error.localizedDescription)")
-            return
-        }
-
-        // Notification aktiviert/deaktiviert
-        // Implementierung kommt später
-    }
-
-    /// Callback wenn RSSI gelesen wurde
-    /// - Parameters:
-    ///   - peripheral: Das Peripheral
-    ///   - RSSI: Der RSSI-Wert in dBm
-    ///   - error: Optional error
-    func peripheral(_ peripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
-        if let error = error {
-            AppLogger.ble.bleWarning("RSSI read error for device \(deviceUUID): \(error.localizedDescription)")
-            return
-        }
-
-        let rssiValue = RSSI.intValue
-        AppLogger.ble.bleConnection("📶 RSSI for device \(deviceUUID): \(rssiValue) dBm")
-
-        // Signal Quality Classification:
-        // > -50 dBm: Excellent
-        // -50 to -60 dBm: Good
-        // -60 to -70 dBm: Fair
-        // < -70 dBm: Poor
-
-        if rssiValue < -70 {
-            AppLogger.ble.bleWarning("⚠️ Weak signal for device \(deviceUUID): \(rssiValue) dBm")
         }
     }
 
@@ -1122,7 +1075,10 @@ class DeviceConnection: NSObject, CBPeripheralDelegate {
         // Cleanup Historical Data Flow
         cleanupHistoryFlow()
 
+        // Stop RSSI Monitoring
+        rssiMonitorTask?.cancel()
+
         // Reset Peripheral Delegate
-        peripheral?.delegate = nil
+        peripheral?.linkDelegate = nil
     }
 }

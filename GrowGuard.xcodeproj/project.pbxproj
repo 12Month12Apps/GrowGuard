@@ -42,11 +42,16 @@
 		5654B2B92CB4575E00EED3D3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2B82CB4575C00EED3D3 /* SettingsView.swift */; };
 		5654B2BB2CB45C6E00EED3D3 /* SensorDataDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */; };
 		56FA2DEC0DE4F1B500000002 /* FlowerCareFrameFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000001 /* FlowerCareFrameFixtures.swift */; };
+		56FA2DEC0DE4F1B500000008 /* FakeBLETransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */; };
+		56FA2DEC0DE4F1B50000000A /* DeviceConnectionScenarioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */; };
+		56FA2DEC0DE4F1B50000000C /* ConnectionPoolManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */; };
 		5654B2BD2CB46EE600EED3D3 /* OverviewListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2BC2CB46EDB00EED3D3 /* OverviewListViewModelTests.swift */; };
 		5654B2C12CB4739C00EED3D3 /* AddDeviceViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2C02CB4739400EED3D3 /* AddDeviceViewModelTests.swift */; };
 		565DEC402C159B93002D784A /* DeviceDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */; };
 		565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */; };
 		5663FEB52EB684620038209F /* ConnectionPoolManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB42EB684620038209F /* ConnectionPoolManager.swift */; };
+		56FA2DEC0DE4F1B500000004 /* BLETransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000003 /* BLETransport.swift */; };
+		56FA2DEC0DE4F1B500000006 /* CoreBluetoothTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000005 /* CoreBluetoothTransport.swift */; };
 		5663FEB72EB684800038209F /* DeviceConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB62EB684800038209F /* DeviceConnection.swift */; };
 		5663FEB92EB690AB0038209F /* InitialSensorDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */; };
 		5663FEBB2EB6A1310038209F /* MultiDeviceTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEBA2EB6A1310038209F /* MultiDeviceTestView.swift */; };
@@ -179,11 +184,16 @@
 		5654B2B82CB4575C00EED3D3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataDecoderTests.swift; sourceTree = "<group>"; };
 		56FA2DEC0DE4F1B500000001 /* FlowerCareFrameFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerCareFrameFixtures.swift; sourceTree = "<group>"; };
+		56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakeBLETransport.swift; sourceTree = "<group>"; };
+		56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnectionScenarioTests.swift; sourceTree = "<group>"; };
+		56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionPoolManagerTests.swift; sourceTree = "<group>"; };
 		5654B2BC2CB46EDB00EED3D3 /* OverviewListViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewListViewModelTests.swift; sourceTree = "<group>"; };
 		5654B2C02CB4739400EED3D3 /* AddDeviceViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceViewModelTests.swift; sourceTree = "<group>"; };
 		565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsView.swift; sourceTree = "<group>"; };
 		565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsViewModel.swift; sourceTree = "<group>"; };
 		5663FEB42EB684620038209F /* ConnectionPoolManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionPoolManager.swift; sourceTree = "<group>"; };
+		56FA2DEC0DE4F1B500000003 /* BLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLETransport.swift; sourceTree = "<group>"; };
+		56FA2DEC0DE4F1B500000005 /* CoreBluetoothTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreBluetoothTransport.swift; sourceTree = "<group>"; };
 		5663FEB62EB684800038209F /* DeviceConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnection.swift; sourceTree = "<group>"; };
 		5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitialSensorDataService.swift; sourceTree = "<group>"; };
 		5663FEBA2EB6A1310038209F /* MultiDeviceTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiDeviceTestView.swift; sourceTree = "<group>"; };
@@ -400,6 +410,9 @@
 			children = (
 				56FD6C8A2E36960300905984 /* FlowerManagerHistoryTests.swift */,
 				56FA2DEC0DE4F1B500000001 /* FlowerCareFrameFixtures.swift */,
+				56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */,
+				56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */,
+				56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */,
 				5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */,
 			);
 			path = BLE;
@@ -617,6 +630,8 @@
 			children = (
 				5663FEBE2EC3CD0F0038209F /* BLEBenchmark.swift */,
 				5663FEB42EB684620038209F /* ConnectionPoolManager.swift */,
+				56FA2DEC0DE4F1B500000003 /* BLETransport.swift */,
+				56FA2DEC0DE4F1B500000005 /* CoreBluetoothTransport.swift */,
 				5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */,
 				5663FEB62EB684800038209F /* DeviceConnection.swift */,
 				56B44CBE2D6E7B3F00A6A75A /* FlowerManager.swift */,
@@ -838,6 +853,8 @@
 			files = (
 				565058CB2E3F64F900CC6E2B /* LogExportView.swift in Sources */,
 				5663FEB52EB684620038209F /* ConnectionPoolManager.swift in Sources */,
+				56FA2DEC0DE4F1B500000004 /* BLETransport.swift in Sources */,
+				56FA2DEC0DE4F1B500000006 /* CoreBluetoothTransport.swift in Sources */,
 				565058CC2E3F64F900CC6E2B /* Logger.swift in Sources */,
 				5684E2DB2C0F81C0005CD8B6 /* AddDeviceView.swift in Sources */,
 				5622B0CA2E3176F5002C7E74 /* PotSizeDTO.swift in Sources */,
@@ -922,6 +939,9 @@
 				5654B2C12CB4739C00EED3D3 /* AddDeviceViewModelTests.swift in Sources */,
 				5654B2BB2CB45C6E00EED3D3 /* SensorDataDecoderTests.swift in Sources */,
 				56FA2DEC0DE4F1B500000002 /* FlowerCareFrameFixtures.swift in Sources */,
+				56FA2DEC0DE4F1B500000008 /* FakeBLETransport.swift in Sources */,
+				56FA2DEC0DE4F1B50000000A /* DeviceConnectionScenarioTests.swift in Sources */,
+				56FA2DEC0DE4F1B50000000C /* ConnectionPoolManagerTests.swift in Sources */,
 				56FD6C8D2E36960300905984 /* FlowerManagerHistoryTests.swift in Sources */,
 				5654B2BD2CB46EE600EED3D3 /* OverviewListViewModelTests.swift in Sources */,
 				56AF112D2BDED05B00887073 /* GrowGuardTests.swift in Sources */,
