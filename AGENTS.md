@@ -67,16 +67,18 @@ Any new feature or refactor should respect the existing architecture (MVVM + Rep
 ## Common Commands
 
 - **Build (CI/agent):** `xcodebuild -project GrowGuard.xcodeproj -scheme GrowGuard -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' build`
+- **Unit tests (CI/agent):** `xcodebuild test -project GrowGuard.xcodeproj -scheme GrowGuard -testPlan GrowGuard -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' -test-timeouts-enabled YES -default-test-execution-time-allowance 60` — runs the unit suite; hardware-dependent BLE tests are excluded. Keep the timeout flags: some legacy tests can hang indefinitely on publisher waits without them.
+- **Hardware BLE tests:** `xcodebuild test -project GrowGuard.xcodeproj -scheme GrowGuard -testPlan HardwareTests -destination 'platform=iOS,name=<your iPhone>' TEST_FLOWERCARE_UUID=<peripheral-uuid>` — requires a real FlowerCare sensor in range; tests skip themselves if the env var is missing.
 - **Quick build (quiet):** add `-quiet` flag — only errors/warnings shown
 - **Clean build:** add `clean` before `build`
 - **Regenerate strings:** `swiftgen` (runs `swiftgen.yml` config)
 - **Migrate flower DB to Supabase:** `python Scripts/migrate_flower_db_to_supabase.py --sqlite-path GrowGuard/flower.db --recreate`
 
 ### Build Notes
-- **No `.xcscheme` file** in the project — schemes are user-level. Always use `-scheme GrowGuard`.
+- **Shared scheme** at `GrowGuard.xcodeproj/xcshareddata/xcschemes/GrowGuard.xcscheme` references the test plans (`GrowGuard.xctestplan` = unit tests, `HardwareTests.xctestplan` = real-sensor tests). Always use `-scheme GrowGuard`.
 - **No iPhone 16 simulator.** Available simulators on this machine (as of 2026-05-15): iPhone 17, iPhone 17 Pro, iPhone 17 Pro Max, iPhone 17e, iPhone Air, iPad Air 11-inch (M4), iPad Air 13-inch (M4), iPad Pro 11-inch (M5), iPad Pro 13-inch (M5), iPad mini (A17 Pro), iPad (A16). Use iPhone 17 as default.
 - Run `xcrun simctl list devices available 2>/dev/null` if simulator lineup changes.
-- **Known non-blocking warnings:** (1) Widget `CFBundleVersion` mismatch, (2) `InitialSensorDataService.swift` duplicate in Compile Sources, (3) "Update Build Number" script runs every build. Do not treat these as build failures.
+- **Known non-blocking warnings:** (1) Widget `CFBundleVersion` mismatch, (2) "Update Build Number" script runs every build. Do not treat these as build failures.
 - **Tool:** Use `xcodebuild` directly. No MCP xcode tool is available.
 
 ## 🛠 Subagent Usage Patterns

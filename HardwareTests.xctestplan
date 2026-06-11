@@ -1,8 +1,8 @@
 {
   "configurations" : [
     {
-      "id" : "F2142190-E32D-4F30-B755-A03D95752C72",
-      "name" : "Test Scheme Action",
+      "id" : "8B5D1C44-1F4A-4E2B-9C3D-6E7F8A9B0C1D",
+      "name" : "Hardware Test Configuration",
       "options" : {
 
       }
@@ -10,6 +10,12 @@
   ],
   "defaultOptions" : {
     "codeCoverage" : false,
+    "environmentVariableEntries" : [
+      {
+        "key" : "TEST_FLOWERCARE_UUID",
+        "value" : "$(TEST_FLOWERCARE_UUID)"
+      }
+    ],
     "targetForVariableExpansion" : {
       "containerPath" : "container:GrowGuard.xcodeproj",
       "identifier" : "56AF11142BDED05900887073",
@@ -18,7 +24,7 @@
   },
   "testTargets" : [
     {
-      "skippedTests" : [
+      "selectedTests" : [
         "DeviceConnectionHistoryTests"
       ],
       "target" : {

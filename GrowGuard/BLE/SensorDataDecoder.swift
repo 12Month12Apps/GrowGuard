@@ -161,22 +161,27 @@ class SensorDataDecoder {
         }
     }
 
-    func decodeDeviceName(data: Data) {
+    @discardableResult
+    func decodeDeviceName(data: Data) -> String? {
         if let deviceName = String(data: data, encoding: .ascii) {
             print("Device Name: \(deviceName)")
+            return deviceName
         } else {
             print("Failed to decode device name.")
+            return nil
         }
     }
 
-    func decodeDeviceTime(data: Data) {
+    @discardableResult
+    func decodeDeviceTime(data: Data) -> UInt32? {
         guard data.count == 4 else {
             print("Unexpected data length: \(data.count)")
-            return
+            return nil
         }
 
         let deviceTime = data.withUnsafeBytes { $0.load(as: UInt32.self) }.littleEndian
         print("Device Time: \(deviceTime) seconds since device epoch")
+        return deviceTime
     }
 
     func decodeEntryCount(data: Data) -> Int? {

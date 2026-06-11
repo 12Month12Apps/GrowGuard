@@ -47,7 +47,6 @@
 		565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */; };
 		5663FEB52EB684620038209F /* ConnectionPoolManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB42EB684620038209F /* ConnectionPoolManager.swift */; };
 		5663FEB72EB684800038209F /* DeviceConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB62EB684800038209F /* DeviceConnection.swift */; };
-		5663FEB92EB684900038209F /* InitialSensorDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB82EB684900038209F /* InitialSensorDataService.swift */; };
 		5663FEB92EB690AB0038209F /* InitialSensorDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */; };
 		5663FEBB2EB6A1310038209F /* MultiDeviceTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEBA2EB6A1310038209F /* MultiDeviceTestView.swift */; };
 		5663FEBD2EC3CD000038209F /* BenchmarkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEBC2EC3CD000038209F /* BenchmarkView.swift */; };
@@ -184,7 +183,6 @@
 		565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsViewModel.swift; sourceTree = "<group>"; };
 		5663FEB42EB684620038209F /* ConnectionPoolManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionPoolManager.swift; sourceTree = "<group>"; };
 		5663FEB62EB684800038209F /* DeviceConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnection.swift; sourceTree = "<group>"; };
-		5663FEB82EB684900038209F /* InitialSensorDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitialSensorDataService.swift; sourceTree = "<group>"; };
 		5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitialSensorDataService.swift; sourceTree = "<group>"; };
 		5663FEBA2EB6A1310038209F /* MultiDeviceTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiDeviceTestView.swift; sourceTree = "<group>"; };
 		5663FEBC2EC3CD000038209F /* BenchmarkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchmarkView.swift; sourceTree = "<group>"; };
@@ -618,7 +616,6 @@
 				5663FEB42EB684620038209F /* ConnectionPoolManager.swift */,
 				5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */,
 				5663FEB62EB684800038209F /* DeviceConnection.swift */,
-				5663FEB82EB684900038209F /* InitialSensorDataService.swift */,
 				56B44CBE2D6E7B3F00A6A75A /* FlowerManager.swift */,
 				56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */,
 				56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */,
@@ -859,7 +856,6 @@
 				56A8C6EA2D8ECF37004021C0 /* AddDeviceDetails.swift in Sources */,
 				565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */,
 				5663FEB72EB684800038209F /* DeviceConnection.swift in Sources */,
-				5663FEB92EB684900038209F /* InitialSensorDataService.swift in Sources */,
 				5684E2DF2C0F820D005CD8B6 /* AddDeviceBLE.swift in Sources */,
 				56241CDE2DFD1E720012B18E /* CircularProgress.swift in Sources */,
 				56AF111B2BDED05900887073 /* ContentView.swift in Sources */,

@@ -6,125 +6,234 @@
 //
 
 import Testing
+import Foundation
 @testable import GrowGuard
-import CoreBluetooth
 
-class SensorDataDecoderTests {
+struct SensorDataDecoderTests {
 
     let decoder = SensorDataDecoder()
 
-    @Test("Test decodeRealTimeSensorValues with received debug data")
-    func testDecodeRealTimeSensorValuesWithDebugData() {
-        let data: Data = Data([
-            239, 0,                 // Temperature raw value (to be decoded)
-            3, 185, 0, 0,           // Brightness raw value (to be decoded)
-            0,                      // Moisture raw value (to be decoded)
-            51, 251,                // Conductivity raw value (to be decoded)
-            3, 2,                   // Additional bytes
-            60, 0, 251, 52, 155     // Padding or unused data
+    // MARK: - Real-Time Sensor Values
+
+    @Test("Decode real-time sensor values from recorded device frame")
+    func decodeRealTimeSensorValuesWithDebugData() {
+        let data = Data([
+            239, 0,                 // Temperature: 239 -> 23.9 °C
+            3,                      // (skipped byte)
+            185, 0, 0, 0,           // Brightness: 185 lux
+            51,                     // Moisture: 51 %
+            251, 3,                 // Conductivity: 0x03FB -> 1019 µS/cm
+            2, 60, 0, 251, 52, 155  // Trailing bytes (unused)
         ])
 
-        if let sensorData = decoder.decodeRealTimeSensorValues(data: data, deviceUUID: "1") {
-            #expect(sensorData.temperature == 23.9)
-            #expect(sensorData.brightness == 185)
-            #expect(sensorData.moisture == 51)
-            #expect(sensorData.conductivity == 1019)
-        } else {
-            #expect(false)
+        let sensorData = decoder.decodeRealTimeSensorValues(data: data, deviceUUID: "1")
+        #expect(sensorData != nil)
+        #expect(sensorData?.temperature == 23.9)
+        #expect(sensorData?.brightness == 185)
+        #expect(sensorData?.moisture == 51)
+        #expect(sensorData?.conductivity == 1019)
+        #expect(sensorData?.device == "1")
+    }
+
+    @Test("Real-time decode rejects wrong lengths", arguments: [0, 1, 15, 17, 64])
+    func decodeRealTimeSensorValuesInvalidLength(length: Int) {
+        let data = Data(repeating: 0xAB, count: length)
+        #expect(decoder.decodeRealTimeSensorValues(data: data, deviceUUID: "1") == nil)
+    }
+
+    // MARK: - Historical Sensor Data
+
+    /// Builds a 14-byte history entry in the device's wire format:
+    /// timestamp (4, LE) | temp x10 (2, LE) | skip (1) | brightness (4, LE) | moisture (1) | conductivity (2, LE)
+    private func makeHistoryEntry(timestamp: UInt32,
+                                  temperatureX10: UInt16,
+                                  brightness: UInt32,
+                                  moisture: UInt8,
+                                  conductivity: UInt16) -> Data {
+        var data = Data()
+        withUnsafeBytes(of: timestamp.littleEndian) { data.append(contentsOf: $0) }
+        withUnsafeBytes(of: temperatureX10.littleEndian) { data.append(contentsOf: $0) }
+        data.append(0x00) // skipped byte between temperature and brightness
+        withUnsafeBytes(of: brightness.littleEndian) { data.append(contentsOf: $0) }
+        data.append(moisture)
+        withUnsafeBytes(of: conductivity.littleEndian) { data.append(contentsOf: $0) }
+        return data
+    }
+
+    @Test("Decode historical entry with known device time")
+    func decodeHistoricalSensorData() {
+        let secondsSinceBoot: UInt32 = 1000
+        decoder.setDeviceBootTime(bootTime: Date().addingTimeInterval(-Double(secondsSinceBoot)),
+                                  secondsSinceBoot: secondsSinceBoot)
+
+        let data = makeHistoryEntry(timestamp: 91,
+                                    temperatureX10: 284,   // 28.4 °C
+                                    brightness: 1200,
+                                    moisture: 78,
+                                    conductivity: 350)
+
+        let entry = decoder.decodeHistoricalSensorData(data: data, deviceUUID: "1")
+        #expect(entry != nil)
+        #expect(entry?.timestamp == 91)
+        #expect(entry?.temperature == 28.4)
+        #expect(entry?.brightness == 1200)
+        #expect(entry?.moisture == 78)
+        #expect(entry?.conductivity == 350)
+        #expect(entry?.deviceUUID == "1")
+
+        // Entry was recorded (1000 - 91) seconds ago
+        let expectedDate = Date().addingTimeInterval(-909)
+        if let date = entry?.date {
+            #expect(abs(date.timeIntervalSince(expectedDate)) < 5)
         }
     }
 
-    @Test("Test decodeRealTimeSensorValues with invalid data length")
-    func testDecodeRealTimeSensorValuesInvalidLength() {
-        // Invalid data length (only 1 byte, expected 16)
-        let data: Data = Data([0x1A])
-        let sensorData = decoder.decodeRealTimeSensorValues(data: data, deviceUUID: "1")
-        #expect(sensorData == nil)
+    @Test("Historical decode fails without prior device time")
+    func decodeHistoricalSensorDataWithoutBootTime() {
+        let data = makeHistoryEntry(timestamp: 91,
+                                    temperatureX10: 284,
+                                    brightness: 1200,
+                                    moisture: 78,
+                                    conductivity: 350)
+
+        // No setDeviceBootTime call -> decoder cannot compute the entry date
+        #expect(decoder.decodeHistoricalSensorData(data: data, deviceUUID: "1") == nil)
     }
 
-    //TODO: History Data still WIP
-//    @Test("Test decodeHistoricalSensorData with valid data")
-//    func testDecodeHistoricalSensorData() {
-//        // Historical Sensor Data (16 Bytes total)
-//        // Timestamp (4 Bytes), 0x0000005B -> 91 seconds
-//        // Temperature (2 Bytes), 0x1A2C -> 28.4 °C
-//        // Brightness (4 Bytes), 0x00000000 -> 0 lux
-//        // Moisture (1 Byte), 0x4E -> 78 %
-//        // Conductivity (2 Bytes), 0x000A -> 10 µS/cm
-//        let data: Data = Data([
-//            0x00, 0x00, 0x00, 0x5B, // Timestamp (0x0000005B -> 91 seconds)
-//            0x1A, 0x2C,             // Temperature (0x1A2C -> 28.4 °C)
-//            0x00, 0x00, 0x00, 0x00, // Brightness (0x00000000 -> 0 lux)
-//            0x4E,                   // Moisture (0x4E -> 78%)
-//            0x00, 0x0A              // Conductivity (0x000A -> 10 µS/cm)
-//        ])
-//        if let historicalData = decoder.decodeHistoricalSensorData(data: data) {
-//            #expect(historicalData.timestamp == 91)
-//            #expect(historicalData.temperature == 28.4)
-//            #expect(historicalData.brightness == 0)
-//            #expect(historicalData.moisture == 78)
-//            #expect(historicalData.conductivity == 10)
-//        } else {
-//            #expect(false) // Test fails if decoding fails
-//        }
-//    }
+    @Test("Historical decode rejects timestamp newer than device uptime")
+    func decodeHistoricalSensorDataFutureTimestamp() {
+        decoder.setDeviceBootTime(bootTime: Date().addingTimeInterval(-100), secondsSinceBoot: 100)
 
-//    @Test("Test decodeHistoricalSensorData with invalid data length")
-//    func testDecodeHistoricalSensorDataInvalidLength() {
-//        // Invalid data length (only 1 byte, expected 16)
-//        let data: Data = Data([0x1A])
-//        let historicalData = decoder.decodeHistoricalSensorData(data: data)
-//        #expect(historicalData == nil) // Expect nil for invalid length
-//    }
+        let data = makeHistoryEntry(timestamp: 500, // > 100 seconds uptime -> invalid
+                                    temperatureX10: 284,
+                                    brightness: 1200,
+                                    moisture: 78,
+                                    conductivity: 350)
 
-    @Test("Test decodeFirmwareAndBattery with valid data")
-    func testDecodeFirmwareAndBattery() {
-        // Firmware and Battery Data (7 Bytes total)
-        // Battery (1 Byte), 0x50 -> 80%
-        // Firmware Version (6 Bytes), "fromwa"
-        let data: Data = Data([
-            0x50,                   // Battery (0x50 -> 80%)
-            0x66, 0x72, 0x6F, 0x6D, 0x77, 0x61 // Firmware Version "fromwa"
-        ])
-        decoder.decodeFirmwareAndBattery(data: data)
-        #expect(true)
+        #expect(decoder.decodeHistoricalSensorData(data: data, deviceUUID: "1") == nil)
     }
 
-    @Test("Test decodeDeviceName with valid data")
-    func testDecodeDeviceName() {
-        // Device Name (ASCII string)
-        let data: Data = "TestDevice".data(using: .ascii)!
-        decoder.decodeDeviceName(data: data)
-        #expect(true)
+    @Test("Historical decode rejects short data", arguments: [0, 1, 13])
+    func decodeHistoricalSensorDataInvalidLength(length: Int) {
+        decoder.setDeviceBootTime(bootTime: Date(), secondsSinceBoot: 1000)
+        let data = Data(repeating: 0x00, count: length)
+        #expect(decoder.decodeHistoricalSensorData(data: data, deviceUUID: "1") == nil)
     }
 
-    @Test("Test decodeDeviceTime with valid data")
-    func testDecodeDeviceTime() {
-        // Device Time (4 Bytes total)
-        // Time (4 Bytes), 0x00000001 -> 1 second since epoch
-        let data: Data = Data([
-            0x00, 0x00, 0x00, 0x01 // Time (0x00000001 -> 1 second)
-        ])
-        decoder.decodeDeviceTime(data: data)
-        #expect(true)
+    // MARK: - History Metadata
+
+    @Test("Decode history metadata entry count")
+    func decodeHistoryMetadata() {
+        var data = Data([0xC8, 0x00]) // 200 entries, little endian
+        data.append(Data(repeating: 0x00, count: 14))
+
+        let result = decoder.decodeHistoryMetadata(data: data)
+        #expect(result?.entryCount == 200)
     }
 
-    @Test("Test decodeEntryCount with valid data")
-    func testDecodeEntryCount() {
-        // Entry Count (2 Bytes total)
-        // Entries (2 Bytes), 0x0005 -> 1280 entries
-        let data: Data = Data([
-            0x00, 0x0005 // Entries (0x0005 -> 1280 entries)
-        ])
-        let entryCount = decoder.decodeEntryCount(data: data)
-        #expect(entryCount == 1280)
+    @Test("History metadata rejects implausible entry count")
+    func decodeHistoryMetadataCorruptCount() {
+        var data = Data([0x11, 0x27]) // 10001 entries -> above plausibility limit
+        data.append(Data(repeating: 0x00, count: 14))
+
+        #expect(decoder.decodeHistoryMetadata(data: data) == nil)
     }
 
-    @Test("Test decodeEntryCount with invalid data length")
-    func testDecodeEntryCountInvalidLength() {
-        // Invalid data length (only 1 byte, expected 2)
-        let data: Data = Data([0x00])
-        let entryCount = decoder.decodeEntryCount(data: data)
-        #expect(entryCount == nil)
+    @Test("History metadata rejects short data")
+    func decodeHistoryMetadataInvalidLength() {
+        #expect(decoder.decodeHistoryMetadata(data: Data(repeating: 0x00, count: 15)) == nil)
+    }
+
+    // MARK: - Firmware and Battery
+
+    @Test("Decode firmware version and battery level")
+    func decodeFirmwareAndBattery() {
+        // battery (1) | skipped (1) | firmware version ascii (5)
+        let data = Data([0x50, 0x2A]) + "3.2.9".data(using: .ascii)!
+
+        let result = decoder.decodeFirmwareAndBattery(data: data)
+        #expect(result?.batteryLevel == 80)
+        #expect(result?.firmwareVersion == "3.2.9")
+    }
+
+    @Test("Firmware decode rejects wrong lengths", arguments: [0, 6, 8])
+    func decodeFirmwareAndBatteryInvalidLength(length: Int) {
+        let data = Data(repeating: 0x33, count: length)
+        #expect(decoder.decodeFirmwareAndBattery(data: data) == nil)
+    }
+
+    // MARK: - Device Name
+
+    @Test("Decode ASCII device name")
+    func decodeDeviceName() {
+        let data = "Flower care".data(using: .ascii)!
+        #expect(decoder.decodeDeviceName(data: data) == "Flower care")
+    }
+
+    @Test("Device name decode fails for non-ASCII bytes")
+    func decodeDeviceNameInvalid() {
+        let data = Data([0xFF, 0xFE, 0xFD])
+        #expect(decoder.decodeDeviceName(data: data) == nil)
+    }
+
+    // MARK: - Device Time
+
+    @Test("Decode device time as seconds since boot")
+    func decodeDeviceTime() {
+        let data = Data([0x10, 0x27, 0x00, 0x00]) // 10000 seconds, little endian
+        #expect(decoder.decodeDeviceTime(data: data) == 10000)
+    }
+
+    @Test("Device time decode rejects wrong lengths", arguments: [0, 3, 5])
+    func decodeDeviceTimeInvalidLength(length: Int) {
+        let data = Data(repeating: 0x01, count: length)
+        #expect(decoder.decodeDeviceTime(data: data) == nil)
+    }
+
+    // MARK: - Entry Count
+
+    @Test("Decode entry count little endian")
+    func decodeEntryCount() {
+        #expect(decoder.decodeEntryCount(data: Data([0x00, 0x05])) == 1280)
+        #expect(decoder.decodeEntryCount(data: Data([150, 0])) == 150)
+    }
+
+    @Test("Entry count decode rejects wrong lengths", arguments: [0, 1, 3])
+    func decodeEntryCountInvalidLength(length: Int) {
+        let data = Data(repeating: 0x00, count: length)
+        #expect(decoder.decodeEntryCount(data: data) == nil)
+    }
+
+    // MARK: - Robustness
+
+    @Test("No decode function crashes on garbage input")
+    func decodersSurviveGarbageInput() {
+        decoder.setDeviceBootTime(bootTime: Date(), secondsSinceBoot: 1000)
+
+        var garbage: [Data] = [
+            Data(),
+            Data([0x00]),
+            Data(repeating: 0xFF, count: 16),
+            Data(repeating: 0xFF, count: 64)
+        ]
+        var generator = SystemRandomNumberGenerator()
+        for length in [2, 7, 14, 16, 32] {
+            garbage.append(Data((0..<length).map { _ in UInt8.random(in: .min ... .max, using: &generator) }))
+        }
+
+        for data in garbage {
+            _ = decoder.decodeRealTimeSensorValues(data: data, deviceUUID: "1")
+            _ = decoder.decodeHistoricalSensorData(data: data, deviceUUID: "1")
+            _ = decoder.decodeHistoryMetadata(data: data)
+            _ = decoder.decodeFirmwareAndBattery(data: data)
+            _ = decoder.decodeDeviceName(data: data)
+            _ = decoder.decodeDeviceTime(data: data)
+            _ = decoder.decodeEntryCount(data: data)
+            _ = decoder.decodeMiBeaconAdvertisement(data: data, deviceUUID: "1")
+            _ = decoder.decodeServiceAdvertisement(data: data, deviceUUID: "1")
+        }
+
+        // Reaching this point means no decoder crashed on malformed input
+        #expect(Bool(true))
     }
 }
