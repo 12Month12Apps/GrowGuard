@@ -109,31 +109,24 @@ struct FlowerManagerHistoryTests {
     // MARK: - Progress Tracking Tests
     
     @Test("Progress should update correctly during loading")
-    func testProgressUpdates() async {
+    func testProgressUpdates() {
         let flowerManager = MockFlowerCareManager()
-        
-        // Arrange
+
+        // Arrange: a synchronous sink is subscribed before any send, so no
+        // update can be missed (the previous for-await Task version raced
+        // the sends against the subscription and hung forever when it lost)
         var receivedProgress: [(Int, Int)] = []
-        let progressTask = Task {
-            var count = 0
-            for await progress in flowerManager.loadingProgressPublisher.values {
-                receivedProgress.append((progress.current, progress.total))
-                count += 1
-                if count >= 4 { // Initial + 3 updates
-                    break
-                }
-            }
-        }
-        
+        let cancellable = flowerManager.loadingProgressPublisher
+            .sink { receivedProgress.append(($0.current, $0.total)) }
+
         // Act: Set total entries and send progress updates
         flowerManager.testTotalEntries = 100
         flowerManager.testLoadingProgressSubject.send((0, 100))
         flowerManager.testLoadingProgressSubject.send((1, 100))
         flowerManager.testLoadingProgressSubject.send((2, 100))
-        
-        // Wait for progress updates
-        await progressTask.value
-        
+
+        cancellable.cancel()
+
         // Assert
         #expect(receivedProgress.count >= 3)
         #expect(receivedProgress.contains { $0.0 == 1 && $0.1 == 100 })
@@ -202,19 +195,19 @@ struct FlowerManagerHistoryTests {
             date: Date()
         )
         
-        // Set up task to receive data
-        let dataTask: Task<HistoricalSensorData?, Never> = Task {
-            for await data in flowerManager.historicalDataPublisher.values {
-                return data
-            }
-            return nil
-        }
-        
+        // Subscribe synchronously before sending so the value cannot be
+        // missed (PassthroughSubject drops values without subscribers; the
+        // previous for-await Task version raced the send and hung forever)
+        var receivedData: HistoricalSensorData?
+        let cancellable = flowerManager.historicalDataPublisher
+            .sink { receivedData = $0 }
+
         // Act
         flowerManager.testHistoricalDataSubject.send(mockHistoricalData)
-        
+
+        cancellable.cancel()
+
         // Assert
-        let receivedData = await dataTask.value
         #expect(receivedData != nil)
         #expect(receivedData?.temperature == 23.5)
         #expect(receivedData?.moisture == 65)
