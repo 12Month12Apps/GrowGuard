@@ -91,7 +91,8 @@ struct DeviceConnectionScenarioTests {
         defer { cancellable.cancel() }
 
         connection.requestLiveData()
-        scheduler.advance(by: 0.1)
+        // write confirm (0.01) + read delay (0.25) + read response (0.01)
+        scheduler.advance(by: 0.4)
 
         #expect(received.count == 1)
         #expect(received.first?.temperature == 23.9)

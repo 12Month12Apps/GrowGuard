@@ -159,7 +159,8 @@ struct ConnectionPoolManagerTests {
 
         connectionA.requestLiveData()
         connectionB.requestLiveData()
-        scheduler.advance(by: 0.1)
+        // write confirm + 0.25s read delay + read response
+        scheduler.advance(by: 0.4)
 
         #expect(tempsA == [23.9])
         #expect(tempsB == [-1.5])

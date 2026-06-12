@@ -112,6 +112,10 @@ final class FakeFlowerCarePeripheral: BLEPeripheralLink {
     }
     private var pendingHistoryRead: PendingHistoryRead = .none
 
+    /// true after a 0xA01F mode change; the realtime characteristic only
+    /// returns a fresh frame in live mode
+    private(set) var liveModeActive = false
+
     init(identifier: UUID = UUID(), scheduler: TestScheduler) {
         self.identifier = identifier
         self.scheduler = scheduler
@@ -172,8 +176,10 @@ final class FakeFlowerCarePeripheral: BLEPeripheralLink {
 
         case deviceModeChangeCharacteristicUUID:
             if data == Data([0xA0, 0x1F]) {
-                // Real sensors notify fresh live data after the mode change
-                respond(characteristic: realTimeSensorValuesCharacteristicUUID, value: liveDataFrame)
+                // Real sensors switch to live mode; the fresh value must be
+                // READ from the realtime characteristic afterwards (miflora
+                // protocol) — handled in readValue below
+                liveModeActive = true
             }
 
         case authenticationCharacteristicUUID:
@@ -230,6 +236,7 @@ final class FakeFlowerCarePeripheral: BLEPeripheralLink {
             }
 
         case realTimeSensorValuesCharacteristicUUID:
+            guard liveModeActive else { return }
             respond(characteristic: realTimeSensorValuesCharacteristicUUID, value: liveDataFrame)
 
         case firmwareVersionCharacteristicUUID:

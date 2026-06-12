@@ -124,6 +124,10 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
     private var waitingForCharacteristicsForHistoryResume: Bool = false
     private var autoStartHistoryFlowEnabled: Bool = true
 
+    /// Live-Daten-Request wartet auf die Write-Bestätigung des Mode-Change
+    /// Commands, danach wird der Realtime-Wert gelesen (FlowerCare-Protokoll)
+    private var liveDataReadPending: Bool = false
+
     // MARK: - Combine Publishers
 
     /// Subject für Connection State Updates
@@ -488,7 +492,10 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
 
         AppLogger.ble.bleData("📤 Requesting live sensor data from device \(deviceUUID) - sending mode change command (0xA01F)")
 
-        // Sende Mode Change Command
+        // Sende Mode Change Command; der Read folgt nach der Write-Bestätigung
+        // (FlowerCare liefert Live-Daten per Read, nicht per Notification —
+        // gleicher Ablauf wie im FlowerCareManager)
+        liveDataReadPending = true
         let command: [UInt8] = [0xA0, 0x1F]
         peripheral.writeValue(Data(command), forCharacteristic: deviceModeChangeCharacteristicUUID, type: .withResponse)
     }
@@ -884,11 +891,28 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
 
         if let error = error {
             AppLogger.ble.bleConnection("Write value error for device \(deviceUUID): \(error.localizedDescription)")
+            liveDataReadPending = false
             return
         }
 
-        // Write erfolgreich
-        // Implementierung kommt später
+        // Nach bestätigtem Mode Change (0xA01F) den Realtime-Wert lesen —
+        // FlowerCare liefert Live-Daten nur per Read (wie FlowerCareManager:
+        // kurze Pause, damit der Sensor die Messung aktualisiert)
+        if characteristicUUID == deviceModeChangeCharacteristicUUID && liveDataReadPending {
+            liveDataReadPending = false
+            scheduler.schedule(after: 0.25) { [weak self] in
+                guard let self = self,
+                      let peripheral = self.peripheral,
+                      peripheral.state == .connected,
+                      self.discoveredCharacteristics.contains(realTimeSensorValuesCharacteristicUUID) else {
+                    AppLogger.ble.bleError("❌ Cannot read live sensor data: device disconnected or characteristic missing")
+                    return
+                }
+
+                AppLogger.ble.bleData("📊 Reading fresh sensor data for device \(self.deviceUUID)")
+                peripheral.readValue(forCharacteristic: realTimeSensorValuesCharacteristicUUID)
+            }
+        }
     }
 
     /// Callback wenn RSSI gelesen wurde

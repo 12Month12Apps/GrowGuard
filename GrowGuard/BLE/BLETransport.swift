@@ -44,13 +44,17 @@ final class MainRunLoopScheduler: BLEScheduler {
 
     @discardableResult
     func schedule(after seconds: TimeInterval, _ work: @escaping () -> Void) -> BLEScheduledTask {
-        let timer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { _ in work() }
+        let timer = Timer(timeInterval: seconds, repeats: false) { _ in work() }
+        // .common mode so BLE timers keep firing while the user scrolls
+        // (plain scheduledTimer pauses in UITrackingRunLoopMode)
+        RunLoop.main.add(timer, forMode: .common)
         return TimerTask(timer)
     }
 
     @discardableResult
     func scheduleRepeating(every seconds: TimeInterval, _ work: @escaping () -> Void) -> BLEScheduledTask {
-        let timer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: true) { _ in work() }
+        let timer = Timer(timeInterval: seconds, repeats: true) { _ in work() }
+        RunLoop.main.add(timer, forMode: .common)
         return TimerTask(timer)
     }
 }

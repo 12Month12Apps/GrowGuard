@@ -103,7 +103,20 @@ final class CoreBluetoothPeripheral: NSObject, BLEPeripheralLink, CBPeripheralDe
 final class CoreBluetoothCentral: NSObject, BLECentral, CBCentralManagerDelegate {
 
     private var centralManager: CBCentralManager!
-    weak var centralDelegate: BLECentralDelegate?
+
+    /// State restoration can fire during CBCentralManager init, before the
+    /// pool assigns itself as delegate — buffer and replay in that case.
+    private var pendingRestoredPeripherals: [BLEPeripheralLink] = []
+
+    weak var centralDelegate: BLECentralDelegate? {
+        didSet {
+            if let delegate = centralDelegate, !pendingRestoredPeripherals.isEmpty {
+                let restored = pendingRestoredPeripherals
+                pendingRestoredPeripherals.removeAll()
+                delegate.central(self, willRestoreState: restored)
+            }
+        }
+    }
 
     /// One stable wrapper per CBPeripheral so DeviceConnection always sees
     /// the same BLEPeripheralLink identity across callbacks.
@@ -118,6 +131,9 @@ final class CoreBluetoothCentral: NSObject, BLECentral, CBCentralManagerDelegate
 
     private func wrapper(for peripheral: CBPeripheral) -> CoreBluetoothPeripheral {
         if let existing = wrappers[peripheral.identifier] {
+            // Re-assert the delegate in case another component (e.g. the
+            // legacy FlowerCareManager) claimed this CBPeripheral meanwhile
+            peripheral.delegate = existing
             return existing
         }
         let wrapper = CoreBluetoothPeripheral(peripheral: peripheral)
@@ -179,6 +195,11 @@ final class CoreBluetoothCentral: NSObject, BLECentral, CBCentralManagerDelegate
 
     func centralManager(_ central: CBCentralManager, willRestoreState dict: [String: Any]) {
         let restored = (dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral]) ?? []
-        centralDelegate?.central(self, willRestoreState: restored.map { wrapper(for: $0) })
+        let links = restored.map { wrapper(for: $0) }
+        if let delegate = centralDelegate {
+            delegate.central(self, willRestoreState: links)
+        } else {
+            pendingRestoredPeripherals.append(contentsOf: links)
+        }
     }
 }
