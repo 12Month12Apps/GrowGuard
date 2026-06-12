@@ -44,7 +44,7 @@
 - Create: `GrowGuardTests/BLE/BackgroundArmTests.swift`
 - Modify: `GrowGuard.xcodeproj/project.pbxproj` (register test file)
 
-- [ ] **Step 1.1: Add `simulateConnectCompletion` to `FakeCentral`** (test infrastructure, needed by the failing tests)
+- [x] **Step 1.1: Add `simulateConnectCompletion` to `FakeCentral`** (test infrastructure, needed by the failing tests)
 
 In `GrowGuardTests/BLE/FakeBLETransport.swift`, inside `FakeCentral`'s `// MARK: Test triggers` section add:
 
@@ -58,7 +58,7 @@ func simulateConnectCompletion(of identifier: UUID) {
 }
 ```
 
-- [ ] **Step 1.2: Write the failing tests**
+- [x] **Step 1.2: Write the failing tests**
 
 Create `GrowGuardTests/BLE/BackgroundArmTests.swift`:
 
@@ -177,7 +177,7 @@ struct BackgroundArmTests {
 }
 ```
 
-- [ ] **Step 1.3: Register the test file in pbxproj**
+- [x] **Step 1.3: Register the test file in pbxproj**
 
 In `GrowGuard.xcodeproj/project.pbxproj` add four lines, each next to the corresponding `ConnectionPoolManagerTests.swift` line (find with `grep -n "ConnectionPoolManagerTests" GrowGuard.xcodeproj/project.pbxproj`):
 
@@ -186,12 +186,12 @@ In `GrowGuard.xcodeproj/project.pbxproj` add four lines, each next to the corres
 3. Tests group children (where `ConnectionPoolManagerTests.swift` is listed): `56BARM002EC7000000000001 /* BackgroundArmTests.swift */,`
 4. GrowGuardTests Sources phase: `56BARM012EC7000000000001 /* BackgroundArmTests.swift in Sources */,`
 
-- [ ] **Step 1.4: Run the tests, verify they FAIL to compile** (missing `defaults:` init param, `armBackgroundConnect`, etc.)
+- [x] **Step 1.4: Run the tests, verify they FAIL to compile** (missing `defaults:` init param, `armBackgroundConnect`, etc.)
 
 Run: `xcodebuild test -project GrowGuard.xcodeproj -scheme GrowGuard -testPlan GrowGuard -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' -test-timeouts-enabled YES -default-test-execution-time-allowance 60 -only-testing:GrowGuardTests/BackgroundArmTests`
 Expected: build failure mentioning `armBackgroundConnect` / `defaults`.
 
-- [ ] **Step 1.5: Implement the arm API in `ConnectionPoolManager`**
+- [x] **Step 1.5: Implement the arm API in `ConnectionPoolManager`**
 
 a) Extend the stored properties (below the existing `connectOptions`):
 
@@ -306,11 +306,11 @@ if backgroundArmedDevices.contains(peripheralUUID) {
 }
 ```
 
-- [ ] **Step 1.6: Run the tests, verify all 4 PASS** (same command as 1.4)
+- [x] **Step 1.6: Run the tests, verify all 4 PASS** (same command as 1.4)
 
-- [ ] **Step 1.7: Run the full unit suite** (no `-only-testing`) to confirm no regression (the init signature change uses a default, existing call sites must still compile).
+- [x] **Step 1.7: Run the full unit suite** (no `-only-testing`) to confirm no regression (the init signature change uses a default, existing call sites must still compile).
 
-- [ ] **Step 1.8: Commit**
+- [x] **Step 1.8: Commit**
 
 ```bash
 git add GrowGuard/BLE/ConnectionPoolManager.swift GrowGuardTests/BLE/FakeBLETransport.swift GrowGuardTests/BLE/BackgroundArmTests.swift GrowGuard.xcodeproj/project.pbxproj
@@ -325,7 +325,7 @@ git commit -m "Add background-arm pending connects to ConnectionPoolManager"
 - Modify: `GrowGuard/BLE/ConnectionPoolManager.swift`
 - Modify: `GrowGuardTests/BLE/BackgroundArmTests.swift`
 
-- [ ] **Step 2.1: Write the failing tests** (append to `BackgroundArmTests`)
+- [x] **Step 2.1: Write the failing tests** (append to `BackgroundArmTests`)
 
 ```swift
 @Test("didFailToConnect for an armed device burns no retries and stays armed")
@@ -386,12 +386,12 @@ func restoreEmitsForConnectedArmedDevice() async {
 }
 ```
 
-- [ ] **Step 2.2: Run, verify the 3 new tests FAIL**
+- [x] **Step 2.2: Run, verify the 3 new tests FAIL**
 
 Run: same `-only-testing:GrowGuardTests/BackgroundArmTests` command.
 Expected: `armedFailToConnectStaysArmed` may already pass or fail depending on retry handling (the failure handler currently burns retries and errors after 3 attempts — it must fail or error), `poweredOnRearmsPersistedDevices` FAILS (no re-arm), `restoreEmitsForConnectedArmedDevice` FAILS (no emit).
 
-- [ ] **Step 2.3: Implement the three behaviors**
+- [x] **Step 2.3: Implement the three behaviors**
 
 a) In `central(_:didFailToConnect:error:)`, inside the `Task { @MainActor in ... }` after `cancelConnectionTimeout`, add before `handleAttemptFailure`:
 
@@ -423,9 +423,9 @@ if backgroundArmedDevices.contains(peripheralUUID) {
 }
 ```
 
-- [ ] **Step 2.4: Run the suite, verify all `BackgroundArmTests` PASS**
+- [x] **Step 2.4: Run the suite, verify all `BackgroundArmTests` PASS**
 
-- [ ] **Step 2.5: Commit**
+- [x] **Step 2.5: Commit**
 
 ```bash
 git add GrowGuard/BLE/ConnectionPoolManager.swift GrowGuardTests/BLE/BackgroundArmTests.swift
@@ -441,7 +441,7 @@ git commit -m "Armed connects: no retry burn, poweredOn re-arm, restore wake emi
 - Create: `GrowGuardTests/BLE/BackgroundWakeServiceTests.swift`
 - Modify: `GrowGuard.xcodeproj/project.pbxproj` (register both)
 
-- [ ] **Step 3.1: Write the failing tests**
+- [x] **Step 3.1: Write the failing tests**
 
 Create `GrowGuardTests/BLE/BackgroundWakeServiceTests.swift`:
 
@@ -568,17 +568,17 @@ struct BackgroundWakeServiceTests {
 }
 ```
 
-- [ ] **Step 3.2: Register both new files in pbxproj**
+- [x] **Step 3.2: Register both new files in pbxproj**
 
 Same four-entry pattern as Step 1.3. IDs:
 - `BackgroundBLEWakeService.swift` (app target, next to the `BackgroundTaskTracker.swift` entries): fileRef `56BWKS002EC7000000000001`, buildFile `56BWKS012EC7000000000001`, group children where `BackgroundSensorDataService.swift` is listed, Sources phase of the app target.
 - `BackgroundWakeServiceTests.swift` (test target): fileRef `56BWKT002EC7000000000001`, buildFile `56BWKT012EC7000000000001`.
 
-- [ ] **Step 3.3: Run, verify FAIL to compile** (`BackgroundBLEWakeService` missing)
+- [x] **Step 3.3: Run, verify FAIL to compile** (`BackgroundBLEWakeService` missing)
 
 Run: `-only-testing:GrowGuardTests/BackgroundWakeServiceTests`
 
-- [ ] **Step 3.4: Implement the service**
+- [x] **Step 3.4: Implement the service**
 
 Create `GrowGuard/Services/BackgroundBLEWakeService.swift`:
 
@@ -788,9 +788,9 @@ final class BackgroundBLEWakeService {
 }
 ```
 
-- [ ] **Step 3.5: Run, verify both tests PASS**
+- [x] **Step 3.5: Run, verify both tests PASS**
 
-- [ ] **Step 3.6: Commit**
+- [x] **Step 3.6: Commit**
 
 ```bash
 git add GrowGuard/Services/BackgroundBLEWakeService.swift GrowGuardTests/BLE/BackgroundWakeServiceTests.swift GrowGuard.xcodeproj/project.pbxproj
@@ -806,7 +806,7 @@ git commit -m "Add BackgroundBLEWakeService: wake-driven live reads with notific
 - Create: `GrowGuardTests/BLE/BackgroundHistorySyncTests.swift`
 - Modify: `GrowGuard.xcodeproj/project.pbxproj`
 
-- [ ] **Step 4.1: Write the failing tests**
+- [x] **Step 4.1: Write the failing tests**
 
 Create `GrowGuardTests/BLE/BackgroundHistorySyncTests.swift`:
 
@@ -928,15 +928,15 @@ struct BackgroundHistorySyncTests {
 }
 ```
 
-- [ ] **Step 4.2: Register both files in pbxproj** (same four-entry pattern as Step 1.3):
+- [x] **Step 4.2: Register both files in pbxproj** (same four-entry pattern as Step 1.3):
   - `BackgroundHistorySyncService.swift` (app target): fileRef `56BHSY002EC7000000000001`, buildFile `56BHSY012EC7000000000001`
   - `BackgroundHistorySyncTests.swift` (test target): fileRef `56BHST002EC7000000000001`, buildFile `56BHST012EC7000000000001`
 
-- [ ] **Step 4.3: Run, verify FAIL to compile**
+- [x] **Step 4.3: Run, verify FAIL to compile**
 
 Run: `-only-testing:GrowGuardTests/BackgroundHistorySyncTests`
 
-- [ ] **Step 4.4: Implement the service**
+- [x] **Step 4.4: Implement the service**
 
 Create `GrowGuard/Services/BackgroundHistorySyncService.swift`:
 
@@ -1091,9 +1091,9 @@ final class BackgroundHistorySyncService {
 }
 ```
 
-- [ ] **Step 4.5: Run, verify both tests PASS**
+- [x] **Step 4.5: Run, verify both tests PASS**
 
-- [ ] **Step 4.6: Commit**
+- [x] **Step 4.6: Commit**
 
 ```bash
 git add GrowGuard/Services/BackgroundHistorySyncService.swift GrowGuardTests/BLE/BackgroundHistorySyncTests.swift GrowGuard.xcodeproj/project.pbxproj
@@ -1110,7 +1110,7 @@ No new unit tests (UIKit lifecycle glue); verified by build + full suite + manua
 - Modify: `GrowGuard/AppDelegate.swift`
 - Modify: `GrowGuard/Info.plist`
 
-- [ ] **Step 5.1: Early BLE-stack init in `didFinishLaunchingWithOptions`**
+- [x] **Step 5.1: Early BLE-stack init in `didFinishLaunchingWithOptions`**
 
 At the very top of `application(_:didFinishLaunchingWithOptions:)` (before the badge reset) add:
 
@@ -1124,7 +1124,7 @@ BackgroundBLEWakeService.shared.start()
 
 (`UIApplicationDelegate` callbacks are MainActor in the current SDK, so the direct access compiles; if the compiler disagrees, wrap both lines in `MainActor.assumeIsolated { ... }`.)
 
-- [ ] **Step 5.2: Arm on entering background**
+- [x] **Step 5.2: Arm on entering background**
 
 Replace `applicationDidEnterBackground` with:
 
@@ -1141,7 +1141,7 @@ func applicationDidEnterBackground(_ application: UIApplication) {
 }
 ```
 
-- [ ] **Step 5.3: Refresh task arms instead of fetching**
+- [x] **Step 5.3: Refresh task arms instead of fetching**
 
 Replace the whole body of `handlePlantMonitoringTask(task:)` with:
 
@@ -1163,7 +1163,7 @@ private func handlePlantMonitoringTask(task: BGAppRefreshTask) {
 }
 ```
 
-- [ ] **Step 5.4: Silent push arms instead of fetching**
+- [x] **Step 5.4: Silent push arms instead of fetching**
 
 Replace the `if isContentAvailable { ... }` block in `application(_:didReceiveRemoteNotification:fetchCompletionHandler:)` with:
 
@@ -1180,7 +1180,7 @@ if isContentAvailable {
 }
 ```
 
-- [ ] **Step 5.5: Processing task runs history sync**
+- [x] **Step 5.5: Processing task runs history sync**
 
 Replace the whole body of `handleProcessingTask(task:)` with:
 
@@ -1206,16 +1206,16 @@ private func handleProcessingTask(task: BGProcessingTask) {
 }
 ```
 
-- [ ] **Step 5.6: Remove the legacy `fetch` background mode**
+- [x] **Step 5.6: Remove the legacy `fetch` background mode**
 
 In `GrowGuard/Info.plist` delete the line `<string>fetch</string>` from `UIBackgroundModes` (the app never calls `setMinimumBackgroundFetchInterval`; `processing`, `bluetooth-central`, `remote-notification` stay).
 
-- [ ] **Step 5.7: Build**
+- [x] **Step 5.7: Build**
 
 Run: `xcodebuild -project GrowGuard.xcodeproj -scheme GrowGuard -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' build -quiet`
 Expected: success. (`BackgroundSensorDataService` is now unreferenced from AppDelegate but still compiles — deleted in Task 6.)
 
-- [ ] **Step 5.8: Commit**
+- [x] **Step 5.8: Commit**
 
 ```bash
 git add GrowGuard/AppDelegate.swift GrowGuard/Info.plist
@@ -1232,7 +1232,7 @@ git commit -m "Rewire background triggers to arm-don't-fetch, processing task sy
 - Modify: `GrowGuard.xcodeproj/project.pbxproj` (remove 4 entries)
 - Modify: `BLE-Reliability.md`, `AGENTS.md`
 
-- [ ] **Step 6.1: Move `BackgroundFetchResult` into `BackgroundTaskTracker.swift`**
+- [x] **Step 6.1: Move `BackgroundFetchResult` into `BackgroundTaskTracker.swift`**
 
 Add at the top of `BackgroundTaskTracker.swift` (after the imports):
 
@@ -1246,7 +1246,7 @@ struct BackgroundFetchResult {
 }
 ```
 
-- [ ] **Step 6.2: Delete the old service**
+- [x] **Step 6.2: Delete the old service**
 
 ```bash
 git rm GrowGuard/Services/BackgroundSensorDataService.swift
@@ -1256,16 +1256,16 @@ Remove its 4 pbxproj entries (lines containing `BackgroundSensorDataService.swif
 
 Verify no dangling references: `grep -rn "BackgroundSensorDataService" GrowGuard GrowGuardTests GrowGuard.xcodeproj/project.pbxproj` → expected: no matches.
 
-- [ ] **Step 6.3: Update docs**
+- [x] **Step 6.3: Update docs**
 
 - `AGENTS.md`: replace the `BackgroundSensorDataService` mentions (services list and the "~25s time limits" line) with: `BackgroundBLEWakeService` (arm-don't-fetch live reads on BLE wakes) and `BackgroundHistorySyncService` (history sync in BGProcessingTask windows); background triggers only arm pending connects.
 - `BLE-Reliability.md`: in the "Session contract" caller list, replace `BackgroundSensorDataService (background fetch)` with `BackgroundHistorySyncService (background history sync)`, and add a short section "Background arming (arm-don't-fetch)" documenting: `armBackgroundConnect` has no watchdog/retry budget by design, armed set persisted in UserDefaults key `ble_background_armed_devices`, wake handling never re-arms (wake-loop prevention), spec reference.
 
-- [ ] **Step 6.4: Full build + full unit suite**
+- [x] **Step 6.4: Full build + full unit suite**
 
 Run both commands from the header. Expected: build succeeds, all tests pass.
 
-- [ ] **Step 6.5: Commit**
+- [x] **Step 6.5: Commit**
 
 ```bash
 git add -A
@@ -1276,9 +1276,9 @@ git commit -m "Delete BackgroundSensorDataService, document arm-don't-fetch arch
 
 ### Task 7: Final verification
 
-- [ ] **Step 7.1: Full unit suite** (command from header) — all green, paste summary line.
-- [ ] **Step 7.2: Release-ish build check** — plain `build` succeeds with no new warnings about unused symbols.
-- [ ] **Step 7.3: Manual on-device checklist (user-run, document in PR):**
+- [x] **Step 7.1: Full unit suite** (command from header) — all green, paste summary line.
+- [x] **Step 7.2: Release-ish build check** — plain `build` succeeds with no new warnings about unused symbols.
+- [x] **Step 7.3: Manual on-device checklist (user-run, document in PR):**
   1. Launch app with sensor in range, send app to background → within ~1 min a new sample with source `background_task` appears (check debug stats / log export).
   2. Force a BGTask via Xcode: `e -l objc -- (void)[[BGTaskScheduler sharedScheduler] _simulateLaunchForTaskWithIdentifier:@"pro.veit.GrowGuard.plantMonitor"]` → handler returns instantly, sample arrives on the following BLE wake.
   3. Same for `com.growguard.processing` → history entries appear (source `history_loading`).
