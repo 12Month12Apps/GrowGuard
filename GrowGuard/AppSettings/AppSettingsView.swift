@@ -29,6 +29,10 @@ final class AppSettingsViewModel {
     var lastProcessingScheduledDate: Date?
     var schedulingHistory: [SchedulingEvent] = []
 
+    // Background Task Debug Info - Silent Push (phase 2)
+    var pushReceivedCount: Int = 0
+    var lastPushReceivedDate: Date?
+
     init(
         settingsStore: SettingsStore = .shared,
         calendar: Calendar = .current,
@@ -80,6 +84,10 @@ final class AppSettingsViewModel {
         lastRefreshScheduledDate = tracker.lastRefreshScheduledDate
         lastProcessingScheduledDate = tracker.lastProcessingScheduledDate
         schedulingHistory = tracker.schedulingHistory
+
+        // Silent push stats
+        pushReceivedCount = tracker.pushReceivedCount
+        lastPushReceivedDate = tracker.lastPushReceivedDate
     }
 
     func resetBackgroundTaskStats() {
@@ -208,6 +216,22 @@ struct AppSettingsView: View {
                         Spacer()
                         Text("\(viewModel.scheduleFailureCount)")
                             .foregroundStyle(.red)
+                    }
+                }
+
+                HStack {
+                    Label("Silent Pushes Received", systemImage: "envelope.badge")
+                    Spacer()
+                    Text("\(viewModel.pushReceivedCount)x")
+                        .foregroundStyle(.secondary)
+                }
+
+                if let lastPush = viewModel.lastPushReceivedDate {
+                    HStack {
+                        Label("Last Push", systemImage: "envelope.open")
+                        Spacer()
+                        Text(lastPush, style: .relative)
+                            .foregroundStyle(.secondary)
                     }
                 }
 

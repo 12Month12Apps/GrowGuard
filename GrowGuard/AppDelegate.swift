@@ -73,16 +73,23 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             self.handleProcessingTask(task: task as! BGProcessingTask)
         }
         
+        // Silent pushes (phase 2: hourly server push arms pending connects)
+        // need NO user permission — register unconditionally so the device
+        // token reaches the server even if notification permission is denied
+        print("📲 AppDelegate: Registering for remote notifications...")
+        application.registerForRemoteNotifications()
+
+        // BGTask scheduling must not depend on the notification permission
+        // either — schedule at launch unconditionally
+        schedulePlantMonitoringTask(source: .appLaunch)
+        scheduleProcessingTask(source: .appLaunch)
+
         // Anfrage für die Berechtigung, Benachrichtigungen zu senden (inkl. Time-Sensitive)
         print("🔐 AppDelegate: Requesting notification permissions including Time-Sensitive...")
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge, .timeSensitive]) { granted, error in
             DispatchQueue.main.async {
                 if granted {
                     print("✅ AppDelegate: Notification permissions granted (including Time-Sensitive)")
-
-                    // Register for remote notifications
-                    print("📲 AppDelegate: Registering for remote notifications...")
-                    application.registerForRemoteNotifications()
 
                     // Check if time-sensitive notifications are actually enabled
                     UNUserNotificationCenter.current().getNotificationSettings { settings in
@@ -107,10 +114,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                         // Schedule weekly sensor update reminder
                         await WeeklySensorUpdateService.shared.scheduleWeeklyReminder()
                     }
-
-                    // Schedule background tasks on app launch (more aggressive scheduling)
-                    self.schedulePlantMonitoringTask(source: .appLaunch)
-                    self.scheduleProcessingTask(source: .appLaunch)
                 } else if let error = error {
                     print("❌ AppDelegate: Failed to request authorization for notifications: \(error.localizedDescription)")
                 } else {
@@ -166,6 +169,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
         if isContentAvailable {
             print("🔄 AppDelegate: Silent push — arming background connects")
+            BackgroundTaskTracker.shared.recordPushReceived()
             Task { @MainActor in
                 await BackgroundBLEWakeService.shared.armAll(source: .backgroundPush)
                 completionHandler(.newData)

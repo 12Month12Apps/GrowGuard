@@ -77,6 +77,13 @@ connect+read against the ~30 s window:
   sequential per device, suspends via `suspendHistoryFlow()` on task
   expiration so a later window can resume (tests:
   `BackgroundHistorySyncTests`).
+- **Silent push (phase 2, hourly server cadence):** the push handler arms
+  connects with source `background_push`. `registerForRemoteNotifications`
+  runs unconditionally at launch — silent pushes need no notification
+  permission, so token registration must not be gated on the permission
+  prompt. Push receipts are tracked (`BackgroundTaskTracker.
+  recordPushReceived`, visible in Settings → Task Scheduling debug) to
+  verify the server cadence reaches the device.
 
 ## Per-entry retry/skip (DeviceConnection)
 
