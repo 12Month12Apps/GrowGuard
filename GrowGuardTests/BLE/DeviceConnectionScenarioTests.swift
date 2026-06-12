@@ -78,6 +78,25 @@ struct DeviceConnectionScenarioTests {
         #expect(connection.connectionState == .authenticated)
     }
 
+    @Test("Auto-start launches a fresh history flow after auth timeout")
+    func authTimeoutStartsFreshHistoryFlow() {
+        // Sensors with a silent auth characteristic hit the timeout branch on
+        // EVERY connect — history auto-start must still work for them
+        let (sensor, connection) = makeSensor(entries: 3, hasAuth: true)
+        sensor.respondsToAuth = false
+
+        var entries: [HistoricalSensorData] = []
+        let cancellable = connection.historicalDataPublisher.sink { entries.append($0) }
+        defer { cancellable.cancel() }
+
+        connect(sensor, connection)
+        scheduler.advance(by: 10.0) // auth timeout (4s) + start delay + flow
+
+        #expect(connection.connectionState == .authenticated)
+        #expect(entries.count == 3)
+        #expect(!connection.isHistoryLoading)
+    }
+
     // MARK: - Live Data
 
     @Test("Live data request publishes decoded sensor values")

@@ -590,19 +590,20 @@ import ActivityKit
             // ✅ Neue Implementierung: Nutze ConnectionPool
             AppLogger.ble.bleConnection("DeviceDetailsViewModel: Using ConnectionPool for historical data")
 
-            guard let connection = deviceConnection else {
-                AppLogger.ble.bleError("DeviceDetailsViewModel: No connection available, connecting first...")
-                // Verbinde zuerst, dann starte History Flow
+            // Eine Connection ist nur nutzbar, wenn sie authenticated ist.
+            // FlowerCare-Sensoren trennen die Verbindung selbst nach wenigen
+            // Sekunden Inaktivität — ein vorhandenes, aber totes Connection-
+            // Objekt muss daher wie "nicht verbunden" behandelt werden
+            // (startHistoryDataFlow auf einer toten Connection ist ein No-Op).
+            guard let connection = deviceConnection, connection.connectionState == .authenticated else {
+                AppLogger.ble.bleConnection("DeviceDetailsViewModel: No usable connection (state: \(String(describing: deviceConnection?.connectionState))), reconnecting first...")
+                isLoadingHistory = true
+                connectionPool.resetRetryCounter(for: device.uuid)
                 connectViaPool()
-
-                // Warte kurz und starte dann History Flow
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-                    guard let self = self, let connection = self.deviceConnection else { return }
-                    // Enable auto-start for reconnection during history loading
-                    connection.setAutoStartHistoryFlowEnabled(true)
-                    self.isLoadingHistory = true
-                    connection.startHistoryDataFlow()
-                }
+                // Explizite Nutzer-Aktion erzwingt Auto-Start, unabhängig von
+                // historyLoadedThisSession (connectViaPool setzt das Flag sonst
+                // konservativ) — der Flow startet nach der Authentifizierung
+                deviceConnection?.setAutoStartHistoryFlowEnabled(true)
                 return
             }
 

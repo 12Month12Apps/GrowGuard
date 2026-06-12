@@ -375,22 +375,27 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
                 self.isAuthenticated = true
                 self.stateSubject.send(.authenticated)
 
-                // Resume History Flow if it was active before disconnect
-                if self.autoStartHistoryFlowEnabled,
-                   self.isHistoryFlowActive && self.totalEntries > 0 && self.currentEntryIndex < self.totalEntries {
-                    // Check if required characteristics are available
-                    if self.hasHistoryControlCharacteristic &&
-                       self.hasHistoryDataCharacteristic &&
-                       self.hasDeviceTimeCharacteristic {
-                        AppLogger.ble.info("🔄 Resuming history flow after reconnect at entry \(self.currentEntryIndex)/\(self.totalEntries)")
-                        self.scheduler.schedule(after: 0.5) { [weak self] in
-                            guard let self = self else { return }
-                            self.startHistoryDataFlow()
-                        }
+                // Start or resume the history flow, like the other two auth
+                // outcomes do. Sensors with a silent auth characteristic land
+                // here on EVERY connect, so without the fresh-start case
+                // auto-start would never work for them.
+                guard self.autoStartHistoryFlowEnabled else { return }
+
+                if self.hasHistoryControlCharacteristic &&
+                   self.hasHistoryDataCharacteristic &&
+                   self.hasDeviceTimeCharacteristic {
+                    if self.isHistoryFlowActive && self.totalEntries > 0 && self.currentEntryIndex < self.totalEntries {
+                        AppLogger.ble.info("🔄 Resuming history flow after auth timeout at entry \(self.currentEntryIndex)/\(self.totalEntries)")
                     } else {
-                        AppLogger.ble.info("⏳ History flow needs to resume but characteristics not ready yet, waiting for discovery")
-                        self.waitingForCharacteristicsForHistoryResume = true
+                        AppLogger.ble.info("🆕 Starting fresh history flow after auth timeout")
                     }
+                    self.scheduler.schedule(after: 0.5) { [weak self] in
+                        guard let self = self else { return }
+                        self.startHistoryDataFlow()
+                    }
+                } else {
+                    AppLogger.ble.info("⏳ History flow needs to start but characteristics not ready yet, waiting for discovery")
+                    self.waitingForCharacteristicsForHistoryResume = true
                 }
             }
         }
