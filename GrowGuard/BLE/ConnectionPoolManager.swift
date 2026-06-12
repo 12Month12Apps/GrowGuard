@@ -221,12 +221,16 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
         connectionRetryCount[deviceUUID] = attempt
         cumulativeRetryCount[deviceUUID, default: 0] += 1
 
+        // Retry/Queue dürfen die Session-Konfiguration nicht überschreiben —
+        // eine Live-only-Session (Dashboard/Background) bleibt Live-only
+        let historyFlag = connections[deviceUUID]?.autoStartHistoryFlowEnabled ?? true
+
         switch reconnectPolicy.decision(attempt: attempt, reason: reason) {
         case .retry(let delay):
             AppLogger.ble.bleConnection("🔄 Retrying connection in \(delay)s (attempt \(attempt + 1)/\(maxRetries), reason: \(reason))")
             scheduler.schedule(after: delay) { [weak self] in
                 Task { @MainActor in
-                    self?.connect(to: deviceUUID)
+                    self?.connect(to: deviceUUID, autoStartHistoryFlow: historyFlag)
                 }
             }
         case .giveUp:
@@ -236,7 +240,7 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
             }
         case .waitForBluetooth:
             AppLogger.ble.bleWarning("📴 Bluetooth unavailable, queuing connection for \(deviceUUID)")
-            pendingConnections[deviceUUID] = true
+            pendingConnections[deviceUUID] = historyFlag
         }
     }
 

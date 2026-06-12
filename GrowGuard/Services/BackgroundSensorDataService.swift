@@ -155,6 +155,10 @@ class BackgroundSensorDataService {
         // Setup per-device timeout
         startDeviceTimeout(for: deviceUUID)
 
+        // New fetch session: fresh retry budget, otherwise an exhausted counter
+        // from an earlier session fails this device instantly (pool contract)
+        ConnectionPoolManager.shared.resetRetryCounter(for: deviceUUID)
+
         // Connect with autoStartHistoryFlow disabled (we only want live data)
         ConnectionPoolManager.shared.connect(to: deviceUUID, autoStartHistoryFlow: false)
     }
