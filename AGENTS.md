@@ -28,7 +28,7 @@ Repositories (interface-based, backed by Core Data or SQLite)
   ↓
 DTOs (plain structs: FlowerDeviceDTO, SensorDataDTO, OptimalRangeDTO, PotSizeDTO)
   ↓
-Hardware (BLE via FlowerCareManager / ConnectionPoolManager)
+Hardware (BLE via ConnectionPoolManager + DeviceConnection)
 ```
 
 - **RepositoryManager** (`Database/RepositoryManager.swift`) is the singleton DI hub — all ViewModels get repos through it.
@@ -39,7 +39,7 @@ Hardware (BLE via FlowerCareManager / ConnectionPoolManager)
 
 | Folder | Purpose |
 |--------|---------|
-| `GrowGuard/BLE/` | BLE logic — `FlowerCareManager` (legacy singleton), `ConnectionPoolManager` (multi-device), `DeviceConnection` (per-device), `SensorDataDecoder` |
+| `GrowGuard/BLE/` | BLE logic — `ConnectionPoolManager` (multi-device orchestration), `DeviceConnection` (per-device session), `BLETransport`/`CoreBluetoothTransport` (protocol seam), `ReconnectPolicy`/`DisconnectLoopGuard` (reliability), `BLESessionRecorder`/`RecordingBLETransport` (opt-in traffic recording), `SensorDataDecoder` |
 | `GrowGuard/Database/` | Core Data models, repository interfaces + implementations, DTOs, SQLite flower search, SwiftData service |
 | `GrowGuard/Services/` | Background fetch, weekly updates, history loading, API client |
 | `GrowGuard/OverviewList/` | Main device list view + ViewModel |
@@ -58,6 +58,14 @@ Hardware (BLE via FlowerCareManager / ConnectionPoolManager)
 - **Singletons:** Services use `static let shared`. ViewModels are created per-view (not singletons).
 - **Combine:** BLE services emit via `PassthroughSubject` → `AnyPublisher`. ViewModels subscribe and store in `cancellables: Set<AnyCancellable>`.
 - **Background tasks:** `BackgroundSensorDataService` handles periodic sensor reads within iOS time limits (~25s).
+
+## BLE Testing & Record/Replay
+
+- **One BLE stack:** `ConnectionPoolManager` + `DeviceConnection` on the `BLETransport` protocol seam. The legacy `FlowerCareManager` was deleted (2026-06); there is no feature flag anymore.
+- **Deterministic tests:** `GrowGuardTests/BLE/` has `FakeBLETransport` (TestScheduler with virtual time + scriptable `FakeFlowerCarePeripheral`). No real waits in unit tests.
+- **Record/replay:** Beta testers enable "Record BLE Sessions" in the debug menu (`LogExportView`); traffic is captured at the transport seam and exported as `*.ble-session.json` via share sheet. To turn a recording into a regression test: drop the file into `GrowGuardTests/BLE/Recordings/` (bundled automatically — folder reference) and add one entry to `ReplayFixtures.all` in `ReplaySessionTests.swift` with the expected outcome. The generic runner matches the app's outbound traffic against the recording; divergence fails the test.
+- **Reliability invariants** (see `BLE-Reliability.md`): reason-aware reconnect backoff (`ReconnectPolicy`), disconnect-loop guard (5 no-progress drops / 120s → abort), per-entry response timeout 2s with ≤2 retries then skip (budget `max(20, total/20)`), history sync resumes at the exact entry index after reconnects.
+- **Performance budgets:** `BLEPerformanceTests` asserts traffic counts and virtual-time budgets derived from the protocol constants (0.02s inter-entry delay, 0.05s batch pause per 150 entries). If you change those constants, update the budgets deliberately.
 
 ## Goals — Ship to Production
 
@@ -134,7 +142,7 @@ Use `chain` when tasks have **sequential dependencies** where later steps need o
     },
     {
       "agent": "planner",
-      "task": "Create implementation plan for migration from FlowerCareManager based on {previous}. Output to Handoff/connection-pool-plan.md"
+      "task": "Create implementation plan for the BLE change based on {previous}. Output to Handoff/connection-pool-plan.md"
     },
     {
       "agent": "worker",

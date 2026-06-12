@@ -1,8 +1,8 @@
 # BLE Hardware Release Checklist
 
-Phase 4 of [BLE-Testing-Strategy.md](BLE-Testing-Strategy.md). Run this against a
-**real FlowerCare sensor** before every release candidate. The automated suites
-prove the logic; only this proves radio + iOS/macOS reality.
+Run this against a **real FlowerCare sensor** before every release candidate.
+The automated suites prove the logic (see [BLE-Reliability.md](BLE-Reliability.md));
+only this proves radio + iOS/macOS reality.
 
 ## 0. Automated hardware suite (run first)
 
@@ -37,8 +37,10 @@ first — two BLE clients fight over the sensor.
 |---|---|---|
 | 2.1 | Walk out of range mid-sync, return after ~30 s | Sync resumes at same entry, completes, no duplicates |
 | 2.2 | Sensor at 8–10 m / through a wall | Connects (slower OK), sync completes |
-| 2.3 | Repeated instant disconnects (hold sensor in metal box) | App gives up after max retries with error state — NO endless reconnect loop |
+| 2.3 | Repeated instant disconnects (hold sensor in metal box) | Loop guard trips after ≤5 no-progress drops with "Disconnect loop detected" in log — NO endless reconnect loop |
 | 2.4 | Two sensors syncing in parallel | Both complete; data lands on the right plants |
+| 2.5 | Out-of-range + return mid-sync | Resumes at the exact entry index ("Resuming history flow at entry" in log), no restart from 0 |
+| 2.6 | Sensor powered off mid-sync (pull battery) | Bounded failure after retry budget; no reconnect storm in logs |
 
 ## 3. OS lifecycle (each release)
 
@@ -57,6 +59,15 @@ first — two BLE clients fight over the sensor.
 2. Record one full history sync.
 3. Archive the trace next to the release tag — it's the baseline for diffing
    when beta users report BLE issues (compare against their LogExportView export).
+
+## 5. Record & replay (once per release)
+
+| # | Check | Pass criteria |
+|---|---|---|
+| 5.1 | Enable "Record BLE Sessions" in the debug menu, run a full sync | Recording file appears in the list with plausible size |
+| 5.2 | Share the recording via the share sheet | Valid `*.ble-session.json` arrives (AirDrop/Mail) |
+| 5.3 | Drop the file into `GrowGuardTests/BLE/Recordings/` + register in `ReplayFixtures.all` | Replay test passes against the recording |
+| 5.4 | Disable the toggle | No new files are created on subsequent syncs |
 
 ## Verified runs
 
