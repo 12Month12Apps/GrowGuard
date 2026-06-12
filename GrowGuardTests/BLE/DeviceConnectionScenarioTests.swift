@@ -270,11 +270,8 @@ struct DeviceConnectionScenarioTests {
         #expect(!connection.isHistoryLoading)
     }
 
-    @Test("Entry that never gets a response stalls the flow until the 10-minute global timeout")
-    func stalledEntryStallsUntilGlobalTimeout() {
-        // Characterization of current behavior: there is no per-entry response
-        // timeout, so a silent sensor freezes the flow until the 600s global
-        // timeout aborts everything. P4 replaces this with retry/skip logic.
+    @Test("Entry that never gets a response is retried twice, then skipped")
+    func stalledEntryRetriedThenSkipped() {
         let (sensor, connection) = makeSensor(entries: 5)
         sensor.silentEntryIndices = [2]
 
@@ -283,16 +280,33 @@ struct DeviceConnectionScenarioTests {
         defer { cancellable.cancel() }
 
         connect(sensor, connection)
-        scheduler.advance(by: 5.0)
+        // Entry 2: initial fetch + 2 retries à 2s response timeout, then skip
+        scheduler.advance(by: 12.0)
 
-        // Flow is stuck on entry 2: no retry, no skip, no progress
-        #expect(entries.count == 2)
-        #expect(connection.isHistoryLoading)
-        #expect(sensor.servedEntryIndices == [0, 1, 2])
+        #expect(entries.count == 4)
+        #expect(entries.map(\.timestamp) == [100, 160, 280, 340])
+        #expect(sensor.servedEntryIndices == [0, 1, 2, 2, 2, 3, 4],
+                "Entry 2 fetched three times (initial + 2 retries), then skipped")
+        #expect(connection.skippedEntryCount == 0, "Counter resets after the flow completes")
+        #expect(!connection.isHistoryLoading)
+        #expect(!connection.shouldAutoReconnect)
+    }
 
-        scheduler.advance(by: 600.0)
+    @Test("Sync aborts with an error once the skip budget is exhausted")
+    func skipBudgetAbortsSync() {
+        // 25 entries, all garbage: budget is max(20, total/20) = 20 skips
+        let (sensor, connection) = makeSensor(entries: 25)
+        sensor.corruptEntryIndices = Set(0..<25)
 
-        #expect(entries.count == 2)
+        var entries: [HistoricalSensorData] = []
+        let cancellable = connection.historicalDataPublisher.sink { entries.append($0) }
+        defer { cancellable.cancel() }
+
+        connect(sensor, connection)
+        scheduler.advance(by: 60.0)
+
+        #expect(entries.isEmpty)
+        #expect(connection.connectionState == .error(ConnectionError.tooManyCorruptEntries))
         #expect(!connection.isHistoryLoading)
         #expect(!connection.shouldAutoReconnect)
     }

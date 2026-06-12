@@ -19,6 +19,8 @@ enum ConnectionError: Error {
     case timeout
     case bluetoothUnavailable
     case peripheralNotFound
+    case disconnectLoopDetected
+    case tooManyCorruptEntries
 
     var localizedDescription: String {
         switch self {
@@ -30,6 +32,10 @@ enum ConnectionError: Error {
             return "Bluetooth is not available"
         case .peripheralNotFound:
             return "Device not found"
+        case .disconnectLoopDetected:
+            return "Connection keeps dropping without progress"
+        case .tooManyCorruptEntries:
+            return "Too many unreadable history entries"
         }
     }
 }
@@ -54,14 +60,29 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
     // Connection retry management
     private var connectionRetryCount: [String: Int] = [:]
     private var connectionTimeouts: [String: BLEScheduledTask] = [:]
-    private let maxRetries = 3
+    private let reconnectPolicy = ReconnectPolicy()
+    private var loopGuards: [String: DisconnectLoopGuard] = [:]
+    /// Monotone Uhr für den DisconnectLoopGuard (Tests injizieren die
+    /// virtuelle Zeit des TestSchedulers)
+    private let now: () -> TimeInterval
+    private var maxRetries: Int { reconnectPolicy.maxAttempts }
     private let connectionTimeout: TimeInterval = 10.0 // 10 seconds - schnellerer Timeout
+
+    /// iOS Connection Options für stabilere Verbindung
+    private static let connectOptions: [String: Any] = [
+        CBConnectPeripheralOptionNotifyOnConnectionKey: true,
+        CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
+        CBConnectPeripheralOptionNotifyOnNotificationKey: true,
+        CBConnectPeripheralOptionStartDelayKey: 0 // Sofort verbinden
+    ]
 
     // MARK: - Initialization
 
     /// Produktion nutzt `shared` (CoreBluetooth-Transport mit State Restoration).
     /// Tests injizieren ein Fake-Central und einen TestScheduler.
-    init(central: BLECentral? = nil, scheduler: BLEScheduler = MainRunLoopScheduler()) {
+    init(central: BLECentral? = nil,
+         scheduler: BLEScheduler = MainRunLoopScheduler(),
+         now: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) {
         if let central = central {
             self.central = central
         } else {
@@ -76,6 +97,7 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
             self.central = RecordingBLECentral(wrapping: CoreBluetoothCentral(options: options))
         }
         self.scheduler = scheduler
+        self.now = now
 
         super.init()
 
@@ -145,16 +167,7 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
             // Peripheral gefunden - direkt verbinden
             AppLogger.ble.bleConnection("Found known peripheral for device: \(deviceUUID)")
             connection.setPeripheral(peripheral)
-
-            // iOS Connection Options für stabilere Verbindung
-            let options: [String: Any] = [
-                CBConnectPeripheralOptionNotifyOnConnectionKey: true,
-                CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
-                CBConnectPeripheralOptionNotifyOnNotificationKey: true,
-                CBConnectPeripheralOptionStartDelayKey: 0 // Sofort verbinden
-            ]
-
-            central.connect(peripheral, options: options)
+            central.connect(peripheral, options: Self.connectOptions)
         } else {
             // Peripheral nicht gefunden - Scan starten
             AppLogger.ble.bleConnection("Known device not found, starting scan for: \(deviceUUID)")
@@ -195,25 +208,31 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
             central.cancelConnection(peripheral)
         }
 
-        // Increment retry counter
-        let retryCount = (connectionRetryCount[deviceUUID] ?? 0) + 1
-        connectionRetryCount[deviceUUID] = retryCount
+        handleAttemptFailure(for: deviceUUID, reason: .appTimeout, underlyingError: nil)
+    }
 
-        if retryCount < maxRetries {
-            // Calculate shorter exponential backoff delay
-            let delay = min(Double(retryCount), 3.0) // 1s, 2s, 3s
-            AppLogger.ble.bleConnection("🔄 Retrying connection in \(delay)s (attempt \(retryCount + 1)/\(maxRetries))")
+    /// Gemeinsame Backoff-Behandlung für fehlgeschlagene Verbindungsversuche
+    /// (Watchdog-Timeout und didFailToConnect)
+    private func handleAttemptFailure(for deviceUUID: String, reason: DisconnectReason, underlyingError: Error?) {
+        let attempt = (connectionRetryCount[deviceUUID] ?? 0) + 1
+        connectionRetryCount[deviceUUID] = attempt
 
+        switch reconnectPolicy.decision(attempt: attempt, reason: reason) {
+        case .retry(let delay):
+            AppLogger.ble.bleConnection("🔄 Retrying connection in \(delay)s (attempt \(attempt + 1)/\(maxRetries), reason: \(reason))")
             scheduler.schedule(after: delay) { [weak self] in
                 Task { @MainActor in
                     self?.connect(to: deviceUUID)
                 }
             }
-        } else {
+        case .giveUp:
             AppLogger.ble.bleError("⛔️ Max retries reached for device \(deviceUUID)")
             if let connection = connections[deviceUUID] {
-                connection.handleConnectionFailed(error: ConnectionError.maxRetriesExceeded)
+                connection.handleConnectionFailed(error: underlyingError ?? ConnectionError.maxRetriesExceeded)
             }
+        case .waitForBluetooth:
+            AppLogger.ble.bleWarning("📴 Bluetooth unavailable, queuing connection for \(deviceUUID)")
+            pendingConnections[deviceUUID] = true
         }
     }
 
@@ -240,63 +259,40 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
         AppLogger.ble.bleConnection("Cancelled connection for device: \(deviceUUID)")
     }
 
-    /// Option A: Fast reconnect by trying retrievePeripherals multiple times before scanning
-    /// This is much faster than scanning (instant vs 3-10 seconds)
-    private func attemptFastReconnect(for deviceUUID: String, connection: DeviceConnection) async {
+    /// Fast reconnect: retrievePeripherals mehrfach probieren bevor gescannt
+    /// wird (Cache-Treffer ist sofort, Scan dauert 3-10 Sekunden).
+    /// Läuft komplett über den Scheduler — in Tests deterministisch.
+    private func attemptFastReconnect(for deviceUUID: String, connection: DeviceConnection, attempt: Int = 1) {
         guard let uuid = UUID(uuidString: deviceUUID) else {
             AppLogger.ble.bleError("Invalid device UUID: \(deviceUUID)")
             return
         }
 
-        AppLogger.ble.info("🚀 Attempting fast reconnect with multiple retrieve attempts for device: \(deviceUUID)")
+        AppLogger.ble.bleConnection("🔍 Fast-reconnect retrieve attempt \(attempt)/3 for device: \(deviceUUID)")
 
-        var foundPeripheral: BLEPeripheralLink?
-
-        // Try retrievePeripherals 3 times with 300ms delay between attempts
-        for attempt in 1...3 {
-            AppLogger.ble.bleConnection("🔍 Retrieve attempt \(attempt)/3 for device: \(deviceUUID)")
-
-            let peripherals = central.retrievePeripherals(withIdentifiers: [uuid])
-
-            if let peripheral = peripherals.first {
-                AppLogger.ble.info("✅ Fast reconnect SUCCESS on attempt \(attempt)! Found peripheral in cache for device: \(deviceUUID)")
-                foundPeripheral = peripheral
-                break
-            } else {
-                AppLogger.ble.bleConnection("❌ Retrieve attempt \(attempt) failed - peripheral not in cache")
-            }
-
-            // Wait 300ms before next attempt (unless it's the last attempt)
-            if attempt < 3 {
-                try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
-            }
-        }
-
-        if let peripheral = foundPeripheral {
-            // Success - connect immediately
+        if let peripheral = central.retrievePeripherals(withIdentifiers: [uuid]).first {
+            AppLogger.ble.info("✅ Fast reconnect found peripheral in cache for device: \(deviceUUID)")
             connection.setPeripheral(peripheral)
-
-            let options: [String: Any] = [
-                CBConnectPeripheralOptionNotifyOnConnectionKey: true,
-                CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
-                CBConnectPeripheralOptionNotifyOnNotificationKey: true,
-                CBConnectPeripheralOptionStartDelayKey: 0
-            ]
-
             startConnectionTimeout(for: deviceUUID)
-            central.connect(peripheral, options: options)
+            central.connect(peripheral, options: Self.connectOptions)
+        } else if attempt < 3 {
+            scheduler.schedule(after: 0.3) { [weak self] in
+                Task { @MainActor in
+                    self?.attemptFastReconnect(for: deviceUUID, connection: connection, attempt: attempt + 1)
+                }
+            }
         } else {
-            // All retrieve attempts failed - fall back to scanning
             AppLogger.ble.info("📡 All fast reconnect attempts failed, falling back to scanning for device: \(deviceUUID)")
             devicesToScan.insert(deviceUUID)
             startScanning()
         }
     }
 
-    /// Setzt den Retry Counter für ein Gerät zurück
-    /// Nützlich wenn User manuell eine neue Verbindung startet
+    /// Setzt den Retry Counter und den Disconnect-Loop-Guard für ein Gerät
+    /// zurück. Nützlich wenn User manuell eine neue Verbindung startet.
     func resetRetryCounter(for deviceUUID: String) {
         connectionRetryCount[deviceUUID] = 0
+        loopGuards[deviceUUID]?.reset()
         AppLogger.ble.bleConnection("Reset retry counter for device: \(deviceUUID)")
     }
 
@@ -421,16 +417,8 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
             // Setze Peripheral
             connection.setPeripheral(peripheral)
 
-            // iOS Connection Options für stabilere Verbindung
-            let options: [String: Any] = [
-                CBConnectPeripheralOptionNotifyOnConnectionKey: true,
-                CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
-                CBConnectPeripheralOptionNotifyOnNotificationKey: true,
-                CBConnectPeripheralOptionStartDelayKey: 0 // Sofort verbinden
-            ]
-
             // Verbinde
-            self.central.connect(peripheral, options: options)
+            self.central.connect(peripheral, options: Self.connectOptions)
             AppLogger.ble.bleConnection("Connecting to peripheral: \(peripheralUUID)")
 
             // Entferne aus Scan-Liste
@@ -488,24 +476,39 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
                 return
             }
 
+            // Fortschritt VOR handleDisconnected festhalten — der Loop-Guard
+            // braucht den Index zum Zeitpunkt des Disconnects
+            let historyIndex = connection.currentHistoryProgress.current
+
             // Informiere Connection über Disconnection
             connection.handleDisconnected(error: error)
 
             // Prüfe ob automatischer Reconnect gewünscht ist (z.B. während History Flow)
             if connection.shouldAutoReconnect {
-                AppLogger.ble.info("🔄 Auto-reconnect requested for device \(peripheralUUID) - reconnecting in 1.0 seconds...")
+                // Loop-Guard: viele Disconnects ohne Sync-Fortschritt sind
+                // eine Schleife — abbrechen statt endlos reconnecten
+                let timestamp = self.now()
+                var loopGuard = loopGuards[peripheralUUID] ?? DisconnectLoopGuard()
+                loopGuard.recordDisconnect(at: timestamp, historyIndex: historyIndex)
+                loopGuards[peripheralUUID] = loopGuard
 
-                // Längere Verzögerung für stabileren Reconnect (wie FlowerManager)
-                Task { [weak self] in
-                    guard let self = self else { return }
-                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1.0s
+                if loopGuard.isLooping(at: timestamp) {
+                    AppLogger.ble.bleError("🔁 Disconnect loop detected for device \(peripheralUUID) - stopping reconnect attempts")
+                    connection.cleanupHistoryFlow()
+                    connection.handleConnectionFailed(error: ConnectionError.disconnectLoopDetected)
+                    return
+                }
 
-                    await MainActor.run {
+                let reason = DisconnectReason(error: error)
+                let delay = reconnectPolicy.reconnectDelay(reason: reason)
+                AppLogger.ble.info("🔄 Auto-reconnect for device \(peripheralUUID) in \(delay)s (reason: \(String(describing: reason)))")
+
+                scheduler.schedule(after: delay) { [weak self] in
+                    Task { @MainActor in
+                        guard let self = self else { return }
                         AppLogger.ble.info("🔄 Starting auto-reconnect for device \(peripheralUUID)")
+                        self.attemptFastReconnect(for: peripheralUUID, connection: connection)
                     }
-
-                    // Option A: Try fast reconnect with multiple retrievePeripherals attempts
-                    await self.attemptFastReconnect(for: peripheralUUID, connection: connection)
                 }
             }
         }
@@ -520,26 +523,7 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
             // Cancel timeout
             self.cancelConnectionTimeout(for: peripheralUUID)
 
-            // Increment retry counter
-            let retryCount = (self.connectionRetryCount[peripheralUUID] ?? 0) + 1
-            self.connectionRetryCount[peripheralUUID] = retryCount
-
-            if retryCount < self.maxRetries {
-                // Calculate shorter exponential backoff delay
-                let delay = min(Double(retryCount), 3.0) // 1s, 2s, 3s
-                AppLogger.ble.bleConnection("🔄 Retrying connection in \(delay)s (attempt \(retryCount + 1)/\(self.maxRetries))")
-
-                self.scheduler.schedule(after: delay) { [weak self] in
-                    Task { @MainActor in
-                        self?.connect(to: peripheralUUID)
-                    }
-                }
-            } else {
-                AppLogger.ble.bleError("⛔️ Max retries reached for device \(peripheralUUID)")
-                if let connection = self.connections[peripheralUUID] {
-                    connection.handleConnectionFailed(error: error ?? ConnectionError.maxRetriesExceeded)
-                }
-            }
+            self.handleAttemptFailure(for: peripheralUUID, reason: .failedToConnect, underlyingError: error)
         }
     }
 

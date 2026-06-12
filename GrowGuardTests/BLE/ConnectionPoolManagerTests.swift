@@ -20,7 +20,7 @@ struct ConnectionPoolManagerTests {
     let central = FakeCentral()
 
     private func makePool() -> ConnectionPoolManager {
-        ConnectionPoolManager(central: central, scheduler: scheduler)
+        ConnectionPoolManager(central: central, scheduler: scheduler, now: { [scheduler] in scheduler.now })
     }
 
     private func makeSensor(entries: Int = 0) -> FakeFlowerCarePeripheral {
@@ -203,7 +203,7 @@ struct ConnectionPoolManagerTests {
     }
 
     @Test("Normal disconnect without an active history flow does not auto-reconnect")
-    func noAutoReconnectAfterNormalDisconnect() async throws {
+    func noAutoReconnectAfterNormalDisconnect() async {
         let pool = makePool()
         let sensor = makeSensor()
 
@@ -214,14 +214,45 @@ struct ConnectionPoolManagerTests {
 
         central.simulateDisconnect(of: sensor.identifier)
         await pump()
-
-        // The auto-reconnect path waits 1.0s real time before acting; give it room
-        try await Task.sleep(nanoseconds: 1_500_000_000)
-        await pump()
-        scheduler.advance(by: 5.0)
+        scheduler.advance(by: 10.0)
         await pump()
 
         #expect(central.connectRequests.count == 1, "No reconnect attempt after a normal disconnect")
+    }
+
+    @Test("Repeated disconnects without history progress trip the loop guard")
+    func loopGuardStopsReconnectStorm() async {
+        let pool = makePool()
+        let sensor = makeSensor(entries: 10)
+        // Sensor never answers the metadata request -> history flow stays
+        // active with zero progress on every reconnect
+        sensor.suppressMetadataResponse = true
+
+        let connection = pool.getConnection(for: sensor.identifier.uuidString)
+        pool.connect(to: sensor.identifier.uuidString)
+        await pump()
+        scheduler.advance(by: 1.0) // discovery + auth + history start
+        await pump()
+        #expect(connection.shouldAutoReconnect, "History flow without metadata wants a reconnect")
+
+        // Five disconnects with a frozen history index
+        for _ in 0..<5 {
+            central.simulateDisconnect(of: sensor.identifier)
+            await pump()
+            // reconnect delay (1s, reason .clean) + auth + history restart
+            scheduler.advance(by: 1.8)
+            await pump()
+        }
+
+        #expect(connection.connectionState == .error(ConnectionError.disconnectLoopDetected))
+        #expect(!connection.isHistoryLoading)
+        #expect(!connection.shouldAutoReconnect)
+
+        let requestsAfterTrip = central.connectRequests.count
+        scheduler.advance(by: 30.0)
+        await pump()
+        #expect(central.connectRequests.count == requestsAfterTrip, "No further reconnects after the guard tripped")
+        #expect(requestsAfterTrip == 5, "Initial connect + four reconnects before the fifth stalled drop tripped the guard")
     }
 
     @Test("Two devices get isolated connections and data streams")
@@ -282,8 +313,8 @@ struct ConnectionPoolManagerTests {
         central.simulateDisconnect(of: sensor.identifier)
         await pump()
 
-        // Auto-reconnect waits 1.0s real time before the fast-reconnect attempt
-        try await Task.sleep(nanoseconds: 1_500_000_000)
+        // Auto-reconnect fires via the scheduler (1.0s for a clean disconnect)
+        scheduler.advance(by: 1.0)
         await pump()
         scheduler.advance(by: 1.0) // re-discovery + auth + resume delay
         await pump()

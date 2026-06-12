@@ -120,6 +120,22 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
     /// Laufende zeitgesteuerte Schritte des Historical Data Flows
     private var historyFlowTasks: [BLEScheduledTask] = []
 
+    // MARK: Per-Entry Retry/Skip (Reliability)
+
+    /// Antwort-Timeout pro Entry — ein stummer Sensor friert den Flow nicht
+    /// mehr bis zum globalen 10-Minuten-Timeout ein
+    private var entryResponseTimeoutTask: BLEScheduledTask?
+    private let entryResponseTimeout: TimeInterval = 2.0
+
+    /// Retries für den aktuellen Entry (keine Antwort ODER Garbage-Frame)
+    private var entryRetryCount = 0
+    private let maxRetriesPerEntry = 2
+
+    /// Übersprungene Entries dieses Syncs; Budget schützt vor einem Sensor,
+    /// der nur noch Müll liefert
+    private(set) var skippedEntryCount = 0
+    private var maxSkippedEntries: Int { max(20, totalEntries / 20) }
+
     /// Connection Quality Monitoring
     private var connectionMonitorTask: BLEScheduledTask?
 
@@ -301,14 +317,7 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
         // Handle Historical Data Flow Disconnect
         if isHistoryFlowActive {
             AppLogger.ble.bleWarning("Device \(deviceUUID) disconnected during history flow at entry \(currentEntryIndex)/\(totalEntries)")
-
-            // Don't cleanup yet - we'll try to resume
-            // Only cleanup scheduled steps to prevent stale work firing
-            for task in historyFlowTasks {
-                task.cancel()
-            }
-            historyFlowTasks.removeAll()
-
+            suspendHistoryFlow()
             AppLogger.ble.info("🔄 Will attempt to resume history flow after reconnect")
         }
 
@@ -585,7 +594,7 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
                   let peripheral = self.peripheral,
                   peripheral.state == .connected else {
                 AppLogger.ble.bleError("Device \(self?.deviceUUID ?? "unknown") disconnected before step 2")
-                self?.cleanupHistoryFlow()
+                self?.suspendHistoryFlow()
                 return
             }
 
@@ -602,7 +611,7 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
                           let peripheral = self.peripheral,
                           peripheral.state == .connected else {
                         AppLogger.ble.bleError("Device \(self?.deviceUUID ?? "unknown") disconnected before resume")
-                        self?.cleanupHistoryFlow()
+                        self?.suspendHistoryFlow()
                         return
                     }
                     _ = peripheral
@@ -619,7 +628,7 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
                       let peripheral = self.peripheral,
                       peripheral.state == .connected else {
                     AppLogger.ble.bleError("Device \(self?.deviceUUID ?? "unknown") disconnected before step 3")
-                    self?.cleanupHistoryFlow()
+                    self?.suspendHistoryFlow()
                     return
                 }
 
@@ -633,7 +642,7 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
                           let peripheral = self.peripheral,
                           peripheral.state == .connected else {
                         AppLogger.ble.bleError("Device \(self?.deviceUUID ?? "unknown") disconnected before step 4")
-                        self?.cleanupHistoryFlow()
+                        self?.suspendHistoryFlow()
                         return
                     }
 
@@ -668,15 +677,17 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
 
         guard let peripheral = peripheral,
               peripheral.state == .connected else {
-            AppLogger.ble.bleError("Cannot fetch history entry: device \(deviceUUID) disconnected")
-            cleanupHistoryFlow()
+            // Disconnect mitten im Fetch: Fortschritt behalten, der Pool
+            // reconnected und resumed an genau diesem Index
+            AppLogger.ble.bleError("Cannot fetch history entry: device \(deviceUUID) disconnected, suspending for resume")
+            suspendHistoryFlow()
             return
         }
 
         guard hasHistoryControlCharacteristic,
               hasHistoryDataCharacteristic else {
             AppLogger.ble.bleError("Cannot fetch history entry: characteristics unavailable for device \(deviceUUID)")
-            cleanupHistoryFlow()
+            suspendHistoryFlow()
             return
         }
 
@@ -690,23 +701,91 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
 
         // Minimal delay to give the device time to respond
         let readTask = scheduler.schedule(after: 0.02) { [weak self] in
-            guard let self = self,
-                  let peripheral = self.peripheral,
+            guard let self = self, self.isHistoryFlowActive else { return }
+            guard let peripheral = self.peripheral,
                   peripheral.state == .connected,
-                  self.isHistoryFlowActive,
                   self.hasHistoryDataCharacteristic else {
-                AppLogger.ble.bleError("Device \(self?.deviceUUID ?? "unknown") disconnected or flow cancelled before reading data")
-                self?.cleanupHistoryFlow()
+                AppLogger.ble.bleError("Device \(self.deviceUUID) disconnected before reading data, suspending for resume")
+                self.suspendHistoryFlow()
                 return
             }
 
             peripheral.readValue(forCharacteristic: historicalSensorValuesCharacteristicUUID)
         }
         historyFlowTasks.append(readTask)
+
+        // Antwort-Timeout: stummer Sensor → Retry, dann Skip
+        entryResponseTimeoutTask?.cancel()
+        entryResponseTimeoutTask = scheduler.schedule(after: entryResponseTimeout) { [weak self] in
+            guard let self = self,
+                  self.isHistoryFlowActive,
+                  self.currentEntryIndex == index,
+                  self.peripheral?.state == .connected else { return }
+            AppLogger.ble.bleWarning("⏰ No response for history entry \(index) on device \(self.deviceUUID)")
+            self.handleEntryFailure(index: index)
+        }
     }
 
-    /// Räumt den Historical Data Flow auf und beendet ihn
-    /// Can be called externally to cancel an ongoing history flow
+    /// Gemeinsame Behandlung für fehlgeschlagene Entries (keine Antwort oder
+    /// Garbage-Frame): begrenzte Retries, dann Skip mit Budget
+    private func handleEntryFailure(index: Int) {
+        entryResponseTimeoutTask?.cancel()
+        entryResponseTimeoutTask = nil
+
+        if entryRetryCount < maxRetriesPerEntry {
+            entryRetryCount += 1
+            AppLogger.ble.info("🔁 Retrying history entry \(index) (attempt \(self.entryRetryCount)/\(self.maxRetriesPerEntry)) for device \(self.deviceUUID)")
+            let retryTask = scheduler.schedule(after: 0.1) { [weak self] in
+                self?.fetchHistoricalDataEntry(index: index)
+            }
+            historyFlowTasks.append(retryTask)
+            return
+        }
+
+        // Retries aufgebraucht → Entry überspringen
+        entryRetryCount = 0
+        skippedEntryCount += 1
+        AppLogger.ble.bleWarning("⏭️ Skipping history entry \(index) for device \(self.deviceUUID) (skipped so far: \(self.skippedEntryCount))")
+
+        guard skippedEntryCount <= maxSkippedEntries else {
+            AppLogger.ble.bleError("⛔️ Skip budget exceeded (\(self.skippedEntryCount)/\(self.maxSkippedEntries)) for device \(self.deviceUUID) - aborting sync")
+            cleanupHistoryFlow()
+            stateSubject.send(.error(ConnectionError.tooManyCorruptEntries))
+            return
+        }
+
+        let nextIndex = index + 1
+        currentEntryIndex = nextIndex
+        historyProgressSubject.send((nextIndex, totalEntries))
+
+        if nextIndex < totalEntries {
+            let nextTask = scheduler.schedule(after: 0.1) { [weak self] in
+                self?.fetchHistoricalDataEntry(index: nextIndex)
+            }
+            historyFlowTasks.append(nextTask)
+        } else {
+            AppLogger.ble.info("✅ History sync finished for device \(self.deviceUUID) (last entry skipped, \(self.skippedEntryCount) skipped total)")
+            NotificationCenter.default.post(name: NSNotification.Name("HistoricalDataLoadingCompleted"), object: deviceUUID)
+            cleanupHistoryFlow()
+        }
+    }
+
+    /// Pausiert den History Flow für einen Resume nach Reconnect:
+    /// laufende Tasks stoppen, Fortschritt (totalEntries/currentEntryIndex)
+    /// BEHALTEN. Gegenstück: cleanupHistoryFlow() setzt alles zurück.
+    private func suspendHistoryFlow() {
+        for task in historyFlowTasks {
+            task.cancel()
+        }
+        historyFlowTasks.removeAll()
+        entryResponseTimeoutTask?.cancel()
+        entryResponseTimeoutTask = nil
+        stopConnectionQualityMonitoring()
+    }
+
+    /// Räumt den Historical Data Flow auf und beendet ihn endgültig
+    /// (Abschluss, User-Abbruch, globaler Timeout, Loop-Guard).
+    /// Für Disconnects mit Resume-Absicht stattdessen suspendHistoryFlow().
     func cleanupHistoryFlow() {
         AppLogger.ble.info("🧹 Cleaning up history flow for device \(self.deviceUUID)")
         isHistoryFlowActive = false
@@ -716,6 +795,8 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
             task.cancel()
         }
         historyFlowTasks.removeAll()
+        entryResponseTimeoutTask?.cancel()
+        entryResponseTimeoutTask = nil
 
         // Stop connection monitoring
         stopConnectionQualityMonitoring()
@@ -724,6 +805,8 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
         totalEntries = 0
         currentEntryIndex = 0
         deviceBootTime = nil
+        entryRetryCount = 0
+        skippedEntryCount = 0
 
         AppLogger.ble.info("🧹 History flow cleanup complete for device \(self.deviceUUID) - state reset")
     }
@@ -1011,6 +1094,10 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
             return
         }
 
+        // Antwort angekommen → Entry-Timeout entschärfen
+        entryResponseTimeoutTask?.cancel()
+        entryResponseTimeoutTask = nil
+
         AppLogger.ble.bleData("📦 Received history data: \(data.count) bytes for device \(deviceUUID)")
 
         // Check if this is metadata or an actual history entry
@@ -1040,6 +1127,9 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
             // This is an actual history entry
             if let historicalData = decoder.decodeHistoricalSensorData(data: data, deviceUUID: deviceUUID) {
                 AppLogger.ble.info("📊 Decoded history entry \(self.currentEntryIndex) for device \(self.deviceUUID): temp=\(historicalData.temperature)°C, moisture=\(historicalData.moisture)%, conductivity=\(historicalData.conductivity)µS/cm")
+
+                // Erfolg → Retry-Zähler für den nächsten Entry zurücksetzen
+                entryRetryCount = 0
 
                 // Send historical data via publisher
                 historicalDataSubject.send(historicalData)
@@ -1078,20 +1168,9 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
                 }
             } else {
                 AppLogger.ble.bleError("⚠️ Failed to decode history entry \(currentEntryIndex) for device \(deviceUUID)")
-
-                // Try to recover from failed decoding by skipping to the next entry
-                let nextIndex = currentEntryIndex + 1
-                if nextIndex < totalEntries {
-                    AppLogger.ble.info("⏭️ Skipping corrupted entry \(self.currentEntryIndex), continuing with next for device \(self.deviceUUID)")
-                    currentEntryIndex = nextIndex
-
-                    let skipTask = scheduler.schedule(after: 0.1) { [weak self] in
-                        self?.fetchHistoricalDataEntry(index: nextIndex)
-                    }
-                    self.historyFlowTasks.append(skipTask)
-                } else {
-                    cleanupHistoryFlow()
-                }
+                // Garbage-Frame: gleicher Pfad wie "keine Antwort" —
+                // begrenzte Retries, dann Skip mit Budget
+                handleEntryFailure(index: currentEntryIndex)
             }
         }
     }
