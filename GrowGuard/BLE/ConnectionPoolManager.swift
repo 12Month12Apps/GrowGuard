@@ -59,6 +59,9 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
 
     // Connection retry management
     private var connectionRetryCount: [String: Int] = [:]
+    /// Kumulative Fehlversuche/Reconnects seit dem letzten resetRetryCounter
+    /// (Diagnose für Benchmark/UI; connectionRetryCount resettet bei Erfolg)
+    private var cumulativeRetryCount: [String: Int] = [:]
     private var connectionTimeouts: [String: BLEScheduledTask] = [:]
     private let reconnectPolicy = ReconnectPolicy()
     private var loopGuards: [String: DisconnectLoopGuard] = [:]
@@ -216,6 +219,7 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
     private func handleAttemptFailure(for deviceUUID: String, reason: DisconnectReason, underlyingError: Error?) {
         let attempt = (connectionRetryCount[deviceUUID] ?? 0) + 1
         connectionRetryCount[deviceUUID] = attempt
+        cumulativeRetryCount[deviceUUID, default: 0] += 1
 
         switch reconnectPolicy.decision(attempt: attempt, reason: reason) {
         case .retry(let delay):
@@ -292,8 +296,15 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
     /// zurück. Nützlich wenn User manuell eine neue Verbindung startet.
     func resetRetryCounter(for deviceUUID: String) {
         connectionRetryCount[deviceUUID] = 0
+        cumulativeRetryCount[deviceUUID] = 0
         loopGuards[deviceUUID]?.reset()
         AppLogger.ble.bleConnection("Reset retry counter for device: \(deviceUUID)")
+    }
+
+    /// Fehlversuche + Auto-Reconnects seit dem letzten resetRetryCounter
+    /// (read-only Diagnose für Benchmark/UI)
+    func retryCount(for deviceUUID: String) -> Int {
+        cumulativeRetryCount[deviceUUID] ?? 0
     }
 
     func connectToMultiple(deviceUUIDs: [String]) {
@@ -501,6 +512,7 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
 
                 let reason = DisconnectReason(error: error)
                 let delay = reconnectPolicy.reconnectDelay(reason: reason)
+                cumulativeRetryCount[peripheralUUID, default: 0] += 1
                 AppLogger.ble.info("🔄 Auto-reconnect for device \(peripheralUUID) in \(delay)s (reason: \(String(describing: reason)))")
 
                 scheduler.schedule(after: delay) { [weak self] in

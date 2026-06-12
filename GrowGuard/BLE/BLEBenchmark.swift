@@ -19,6 +19,7 @@ struct BenchmarkResult {
     let entriesPerSecond: Double
     let retryCount: Int
     let errorCount: Int
+    let skippedEntries: Int
     let successRate: Double
 
     var summary: String {
@@ -33,6 +34,7 @@ struct BenchmarkResult {
         ⚡️ Speed:            \(String(format: "%.1f", entriesPerSecond)) entries/sec
         🔄 Retries:          \(retryCount)
         ❌ Errors:           \(errorCount)
+        ⏭️ Skipped Entries:  \(skippedEntries)
         ✅ Success Rate:     \(String(format: "%.1f", successRate))%
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         """
@@ -174,7 +176,7 @@ class BLEBenchmark: ObservableObject {
                 log("⏱ Elapsed: \(Int(elapsed))s - Entries: \(entriesReceived)/\(totalEntriesToLoad)")
             }
 
-            if let result = checkConnectionPoolCompletion(connection: connection) {
+            if let result = checkConnectionPoolCompletion(connection: connection, pool: pool) {
                 connectionPoolResult = result
                 let totalTime = Date().timeIntervalSince(startTime!)
                 log("✅ ConnectionPool test completed in \(String(format: "%.1f", totalTime))s")
@@ -221,7 +223,7 @@ class BLEBenchmark: ObservableObject {
         }
     }
 
-    private func checkConnectionPoolCompletion(connection: DeviceConnection) -> BenchmarkResult? {
+    private func checkConnectionPoolCompletion(connection: DeviceConnection, pool: ConnectionPoolManager) -> BenchmarkResult? {
         guard let start = startTime else { return nil }
 
         // Check if completed - don't wait for disconnect, just check if loading is complete
@@ -247,8 +249,9 @@ class BLEBenchmark: ObservableObject {
                 totalDownloadTime: totalTime,
                 totalEntries: entriesReceived,
                 entriesPerSecond: Double(entriesReceived) / totalTime,
-                retryCount: retryCount,
+                retryCount: pool.retryCount(for: connection.deviceUUID),
                 errorCount: errorCount,
+                skippedEntries: connection.lastSyncSkippedEntries,
                 successRate: entriesReceived > 0 ? 100.0 : 0.0
             )
         }

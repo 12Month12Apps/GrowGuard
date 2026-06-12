@@ -151,6 +151,12 @@ struct BenchmarkView: View {
 
                 metricRow(label: "Retries", value: "\(result.retryCount)")
                 metricRow(label: "Errors", value: "\(result.errorCount)")
+                metricRow(label: "Skipped Entries", value: "\(result.skippedEntries)")
+            }
+
+            ShareLink(item: result.summary) {
+                Label("Share Result", systemImage: "square.and.arrow.up")
+                    .font(.caption)
             }
         }
         .padding()

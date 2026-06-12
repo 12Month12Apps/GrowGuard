@@ -45,6 +45,7 @@
 		56FA2DEC0DE4F1B500000008 /* FakeBLETransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */; };
 		56FA2DEC0DE4F1B50000000A /* DeviceConnectionScenarioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */; };
 		56FA2DEC0DE4F1B50000000C /* ConnectionPoolManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */; };
+		E74116E2F3304A11BD446D55 /* BLEPerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59E679C227EE418A9C585478 /* BLEPerformanceTests.swift */; };
 		F59A2B14028549EBAAD0673A /* ReliabilityPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F10F04E3674D099816889E /* ReliabilityPolicyTests.swift */; };
 		BCC00C56EBF746EEAAD64298 /* Recordings in Resources */ = {isa = PBXBuildFile; fileRef = DC03DBA5E52147B48284AC39 /* Recordings */; };
 		10F70A0DB6B34BF6AFFF6504 /* ReplaySessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE5968580C64DA890C5A581 /* ReplaySessionTests.swift */; };
@@ -195,6 +196,7 @@
 		56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakeBLETransport.swift; sourceTree = "<group>"; };
 		56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnectionScenarioTests.swift; sourceTree = "<group>"; };
 		56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionPoolManagerTests.swift; sourceTree = "<group>"; };
+		59E679C227EE418A9C585478 /* BLEPerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEPerformanceTests.swift; sourceTree = "<group>"; };
 		C8F10F04E3674D099816889E /* ReliabilityPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReliabilityPolicyTests.swift; sourceTree = "<group>"; };
 		DC03DBA5E52147B48284AC39 /* Recordings */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Recordings; sourceTree = "<group>"; };
 		CEE5968580C64DA890C5A581 /* ReplaySessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplaySessionTests.swift; sourceTree = "<group>"; };
@@ -428,6 +430,7 @@
 				56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */,
 				56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */,
 				56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */,
+				59E679C227EE418A9C585478 /* BLEPerformanceTests.swift */,
 				C8F10F04E3674D099816889E /* ReliabilityPolicyTests.swift */,
 				DC03DBA5E52147B48284AC39 /* Recordings */,
 				CEE5968580C64DA890C5A581 /* ReplaySessionTests.swift */,
@@ -970,6 +973,7 @@
 				56FA2DEC0DE4F1B500000008 /* FakeBLETransport.swift in Sources */,
 				56FA2DEC0DE4F1B50000000A /* DeviceConnectionScenarioTests.swift in Sources */,
 				56FA2DEC0DE4F1B50000000C /* ConnectionPoolManagerTests.swift in Sources */,
+				E74116E2F3304A11BD446D55 /* BLEPerformanceTests.swift in Sources */,
 				F59A2B14028549EBAAD0673A /* ReliabilityPolicyTests.swift in Sources */,
 				10F70A0DB6B34BF6AFFF6504 /* ReplaySessionTests.swift in Sources */,
 				F8A3B6561F3C42D8ADF1E790 /* ReplayBLETransport.swift in Sources */,

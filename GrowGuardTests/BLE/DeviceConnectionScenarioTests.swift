@@ -287,6 +287,7 @@ struct DeviceConnectionScenarioTests {
         #expect(entries.map(\.timestamp) == [100, 160, 280, 340])
         #expect(sensor.servedEntryIndices == [0, 1, 2, 2, 2, 3, 4],
                 "Entry 2 fetched three times (initial + 2 retries), then skipped")
+        #expect(connection.lastSyncSkippedEntries == 1)
         #expect(connection.skippedEntryCount == 0, "Counter resets after the flow completes")
         #expect(!connection.isHistoryLoading)
         #expect(!connection.shouldAutoReconnect)

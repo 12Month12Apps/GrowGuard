@@ -136,6 +136,10 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
     private(set) var skippedEntryCount = 0
     private var maxSkippedEntries: Int { max(20, totalEntries / 20) }
 
+    /// Skips des zuletzt beendeten Syncs (Benchmark/UI — skippedEntryCount
+    /// wird beim Cleanup zurückgesetzt)
+    private(set) var lastSyncSkippedEntries = 0
+
     /// Connection Quality Monitoring
     private var connectionMonitorTask: BLEScheduledTask?
 
@@ -806,6 +810,7 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
         currentEntryIndex = 0
         deviceBootTime = nil
         entryRetryCount = 0
+        lastSyncSkippedEntries = skippedEntryCount
         skippedEntryCount = 0
 
         AppLogger.ble.info("🧹 History flow cleanup complete for device \(self.deviceUUID) - state reset")
