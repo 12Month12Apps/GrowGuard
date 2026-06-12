@@ -380,30 +380,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 //        }
 //    }
     
-//    func scanAndCollectData(for device: FlowerDevice, using ble: FlowerCareManager) async {
-//        await withCheckedContinuation { continuation in
-//            var subscription: AnyCancellable?
-//
-//            ble.connectToKnownDevice(device: device)
-//            ble.requestLiveData()
-//
-//            subscription = ble.sensorDataPublisher.sink { data in
-//                device.sensorData.append(data)
-//                
-//                // Check moisture level after adding new data
-//                PlantMonitorService.shared.checkDeviceStatus(device: device)
-//                
-//                do {
-//                    try DataService.sharedModelContainer.mainContext.save()
-//                } catch {
-//                    print(error.localizedDescription)
-//                }
-//                
-//                subscription?.cancel()
-//                continuation.resume()
-//            }
-//        }
-//    }
     
 //    // Methode zum Senden einer lokalen Benachrichtigung
 //    func sendCompletionNotification() {

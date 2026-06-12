@@ -61,12 +61,6 @@ class InitialSensorDataService {
     /// Fordert genau eine Live-Daten-Aktualisierung für die angegebenen Geräte über den ConnectionPool an
     /// - Parameter deviceUUIDs: Liste der zu aktualisierenden Sensor-UUIDs
     func requestLiveData(for deviceUUIDs: [String]) async {
-        // Stelle sicher, dass ConnectionPool genutzt werden soll
-        guard SettingsStore.shared.useConnectionPool else {
-            AppLogger.ble.info("⚙️ Skipping live data request - ConnectionPool mode disabled")
-            return
-        }
-
         let targets = Array(Set(deviceUUIDs)).filter { !$0.isEmpty }
         guard !targets.isEmpty else {
             AppLogger.ble.info("ℹ️ No sensor UUIDs provided for live data refresh")

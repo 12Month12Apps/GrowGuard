@@ -134,6 +134,96 @@ struct ConnectionPoolManagerTests {
         #expect(central.connectRequests.count == 3, "Should attempt exactly maxRetries connections")
     }
 
+    @Test("Max-retries error is sticky until resetRetryCounter")
+    func maxRetriesStickyUntilReset() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        central.connectSucceeds = false
+
+        pool.connect(to: sensor.identifier.uuidString, autoStartHistoryFlow: false)
+        await pump()
+        for delay in [10.0, 1.0, 10.0, 2.0, 10.0, 3.0] {
+            scheduler.advance(by: delay)
+            await pump()
+        }
+        #expect(central.connectRequests.count == 3)
+
+        // Further connect requests fail immediately without a new attempt
+        pool.connect(to: sensor.identifier.uuidString, autoStartHistoryFlow: false)
+        await pump()
+        scheduler.advance(by: 15.0)
+        await pump()
+        #expect(central.connectRequests.count == 3, "No further attempts while the counter is exhausted")
+
+        // Reset + working link -> fresh attempt succeeds
+        pool.resetRetryCounter(for: sensor.identifier.uuidString)
+        central.connectSucceeds = true
+        pool.connect(to: sensor.identifier.uuidString, autoStartHistoryFlow: false)
+        await pump()
+        scheduler.advance(by: 0.2)
+
+        let connection = pool.getConnection(for: sensor.identifier.uuidString)
+        #expect(central.connectRequests.count == 4)
+        #expect(connection.connectionState == .authenticated)
+    }
+
+    @Test("Retry counter resets after a successful connection")
+    func retryCounterResetsOnSuccess() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        central.connectSucceeds = false
+
+        pool.connect(to: sensor.identifier.uuidString, autoStartHistoryFlow: false)
+        await pump()
+        scheduler.advance(by: 10.0) // attempt 1 times out
+        await pump()
+
+        central.connectSucceeds = true
+        scheduler.advance(by: 1.0) // retry fires -> attempt 2 succeeds
+        await pump()
+        scheduler.advance(by: 0.2)
+        await pump()
+
+        let connection = pool.getConnection(for: sensor.identifier.uuidString)
+        #expect(connection.connectionState == .authenticated)
+        #expect(central.connectRequests.count == 2)
+
+        // Disconnect (no history flow -> no auto-reconnect), then fail again:
+        // the counter starts fresh with the full 3 attempts
+        central.simulateDisconnect(of: sensor.identifier)
+        await pump()
+        central.connectSucceeds = false
+        pool.connect(to: sensor.identifier.uuidString, autoStartHistoryFlow: false)
+        await pump()
+        for delay in [10.0, 1.0, 10.0, 2.0, 10.0, 3.0] {
+            scheduler.advance(by: delay)
+            await pump()
+        }
+        #expect(central.connectRequests.count == 5, "Successful connect resets the counter to allow 3 fresh attempts")
+    }
+
+    @Test("Normal disconnect without an active history flow does not auto-reconnect")
+    func noAutoReconnectAfterNormalDisconnect() async throws {
+        let pool = makePool()
+        let sensor = makeSensor()
+
+        pool.connect(to: sensor.identifier.uuidString, autoStartHistoryFlow: false)
+        await pump()
+        scheduler.advance(by: 0.2)
+        #expect(central.connectRequests.count == 1)
+
+        central.simulateDisconnect(of: sensor.identifier)
+        await pump()
+
+        // The auto-reconnect path waits 1.0s real time before acting; give it room
+        try await Task.sleep(nanoseconds: 1_500_000_000)
+        await pump()
+        scheduler.advance(by: 5.0)
+        await pump()
+
+        #expect(central.connectRequests.count == 1, "No reconnect attempt after a normal disconnect")
+    }
+
     @Test("Two devices get isolated connections and data streams")
     func multiDeviceIsolation() async {
         let pool = makePool()

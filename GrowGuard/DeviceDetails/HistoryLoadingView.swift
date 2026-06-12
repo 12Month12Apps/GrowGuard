@@ -9,7 +9,7 @@ import SwiftUI
 import Combine
 
 /// Loading state of the history sheet — view-local so the UI has no
-/// dependency on the legacy FlowerCareManager types
+/// dependency on BLE-layer types
 enum HistoryLoadingState: Equatable {
     case idle
     case loading

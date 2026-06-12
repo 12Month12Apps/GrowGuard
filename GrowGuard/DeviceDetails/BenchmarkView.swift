@@ -26,7 +26,7 @@ struct BenchmarkView: View {
                         Text("BLE Performance Benchmark")
                             .font(.title2.bold())
 
-                        Text("Compare FlowerManager vs ConnectionPool")
+                        Text("Measure ConnectionPool history-sync performance")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -61,19 +61,9 @@ struct BenchmarkView: View {
                         .padding()
                     }
 
-                    // Results
-                    if let fm = benchmark.flowerManagerResult {
-                        resultCard(result: fm, color: .orange)
-                    }
-
+                    // Result
                     if let cp = benchmark.connectionPoolResult {
                         resultCard(result: cp, color: .green)
-                    }
-
-                    // Comparison
-                    if let fm = benchmark.flowerManagerResult,
-                       let cp = benchmark.connectionPoolResult {
-                        comparisonCard(flowerManager: fm, connectionPool: cp)
                     }
 
                     // Logs
@@ -131,7 +121,7 @@ struct BenchmarkView: View {
     private func resultCard(result: BenchmarkResult, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: result.implementation == "FlowerManager" ? "briefcase.fill" : "gearshape.2.fill")
+                Image(systemName: "gearshape.2.fill")
                     .foregroundColor(color)
 
                 Text(result.implementation)
@@ -184,106 +174,6 @@ struct BenchmarkView: View {
             Text(value)
                 .font(highlight ? .headline : .body)
                 .foregroundColor(highlight ? .primary : .secondary)
-        }
-    }
-
-    // MARK: - Comparison Card
-
-    private func comparisonCard(flowerManager: BenchmarkResult, connectionPool: BenchmarkResult) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "chart.bar.xaxis")
-                    .foregroundColor(.blue)
-
-                Text("Performance Comparison")
-                    .font(.headline)
-
-                Spacer()
-
-                let winner = connectionPool.entriesPerSecond > flowerManager.entriesPerSecond ? "New" : "Legacy"
-                Text("Winner: \(winner)")
-                    .font(.caption.bold())
-                    .foregroundColor(.blue)
-            }
-
-            Divider()
-
-            // Speed comparison
-            comparisonRow(
-                title: "Speed",
-                oldValue: flowerManager.entriesPerSecond,
-                newValue: connectionPool.entriesPerSecond,
-                unit: " entries/s",
-                higherIsBetter: true
-            )
-
-            // Time comparison
-            comparisonRow(
-                title: "Total Time",
-                oldValue: flowerManager.totalDownloadTime,
-                newValue: connectionPool.totalDownloadTime,
-                unit: "s",
-                higherIsBetter: false
-            )
-
-            // Error comparison
-            HStack {
-                Text("Errors")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                Spacer()
-
-                Text("\(flowerManager.errorCount) → \(connectionPool.errorCount)")
-                    .font(.body)
-                    .foregroundColor(connectionPool.errorCount < flowerManager.errorCount ? .green : .orange)
-            }
-        }
-        .padding()
-        .background(Color(.systemGroupedBackground))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.blue, lineWidth: 2)
-        )
-        .padding(.horizontal)
-    }
-
-    private func comparisonRow(title: String, oldValue: Double, newValue: Double, unit: String, higherIsBetter: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            HStack {
-                // Old value
-                Text("\(String(format: "%.2f", oldValue))\(unit)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Image(systemName: "arrow.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                // New value
-                Text("\(String(format: "%.2f", newValue))\(unit)")
-                    .font(.body.bold())
-
-                Spacer()
-
-                // Percentage change
-                let diff = ((newValue - oldValue) / oldValue) * 100
-                let isImprovement = higherIsBetter ? diff > 0 : diff < 0
-
-                HStack(spacing: 4) {
-                    Image(systemName: isImprovement ? "arrow.up.right" : "arrow.down.right")
-                        .font(.caption)
-
-                    Text("\(String(format: "%.1f", abs(diff)))%")
-                        .font(.caption.bold())
-                }
-                .foregroundColor(isImprovement ? .green : .red)
-            }
         }
     }
 

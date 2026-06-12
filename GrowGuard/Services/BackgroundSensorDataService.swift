@@ -80,17 +80,6 @@ class BackgroundSensorDataService {
             )
         }
 
-        // Check if ConnectionPool is enabled
-        guard SettingsStore.shared.useConnectionPool else {
-            AppLogger.ble.info("ConnectionPool disabled, skipping background fetch")
-            return BackgroundFetchResult(
-                successfulDevices: [],
-                failedDevices: [],
-                totalDataPoints: 0,
-                duration: 0
-            )
-        }
-
         AppLogger.ble.info("Starting background sensor data fetch (source: \(source.rawValue))")
 
         // Reset state

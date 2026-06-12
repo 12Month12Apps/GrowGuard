@@ -101,6 +101,8 @@ final class FakeFlowerCarePeripheral: BLEPeripheralLink {
     var suppressMetadataResponse = false
     /// Indices answered with a garbage frame that fails decoding
     var corruptEntryIndices: Set<Int> = []
+    /// Indices that never get a response (sensor goes silent mid-sync)
+    var silentEntryIndices: Set<Int> = []
 
     // MARK: Introspection
 
@@ -223,7 +225,9 @@ final class FakeFlowerCarePeripheral: BLEPeripheralLink {
                         value: FlowerCareFrames.historyMetadata(entryCount: UInt16(count)))
             case .entry(let index):
                 servedEntryIndices.append(index)
-                if corruptEntryIndices.contains(index) {
+                if silentEntryIndices.contains(index) {
+                    // Sensor goes silent — no response at all
+                } else if corruptEntryIndices.contains(index) {
                     // Garbage frame: timestamp 0xFFFFFFFF > uptime -> decode fails
                     respond(characteristic: historicalSensorValuesCharacteristicUUID,
                             value: Data(repeating: 0xFF, count: 14))

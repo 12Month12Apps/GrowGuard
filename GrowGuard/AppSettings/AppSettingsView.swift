@@ -9,7 +9,6 @@ final class AppSettingsViewModel {
     private var settingsObserver: NSObjectProtocol?
 
     var preferredReminderTime: Date
-    var useConnectionPool: Bool
 
     // Push Token Debug Info
     var currentDeviceToken: String?
@@ -39,7 +38,6 @@ final class AppSettingsViewModel {
         self.calendar = calendar
         self.notificationService = notificationService
         self.preferredReminderTime = settingsStore.reminderDate(for: calendar)
-        self.useConnectionPool = settingsStore.useConnectionPool
         self.currentDeviceToken = settingsStore.deviceToken
 
         settingsObserver = NotificationCenter.default.addObserver(
@@ -54,8 +52,6 @@ final class AppSettingsViewModel {
             else { return }
 
             switch key {
-            case .connectionMode:
-                self.useConnectionPool = self.settingsStore.useConnectionPool
             case .reminderTime:
                 self.preferredReminderTime = self.settingsStore.reminderDate(for: self.calendar)
             case .serverURL:
@@ -97,11 +93,6 @@ final class AppSettingsViewModel {
         Task {
             await notificationService.reschedulePersistentWateringReminders()
         }
-    }
-
-    func updateConnectionMode(_ newValue: Bool) {
-        let mode: ConnectionMode = newValue ? .connectionPool : .flowercare
-        settingsStore.connectionMode = mode
     }
 
     @MainActor
@@ -150,18 +141,6 @@ struct AppSettingsView: View {
                 }
 
                 Text(L10n.Settings.dailyReminderDescription)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 4)
-            }
-
-            Section(header: Text(L10n.Settings.connectionModeSection)) {
-                Toggle(L10n.Settings.connectionModeToggle, isOn: $viewModel.useConnectionPool)
-                    .onChange(of: viewModel.useConnectionPool) { newValue in
-                        viewModel.updateConnectionMode(newValue)
-                    }
-
-                Text(L10n.Settings.connectionModeDescription)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .padding(.top, 4)

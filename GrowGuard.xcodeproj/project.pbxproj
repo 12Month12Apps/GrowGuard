@@ -83,7 +83,6 @@
 		56AF11372BDED05B00887073 /* GrowGuardUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11362BDED05B00887073 /* GrowGuardUITests.swift */; };
 		56AF11392BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11382BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift */; };
 		56B3B7392EA5181700AE41E9 /* WeeklySensorUpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B3B7382EA5181700AE41E9 /* WeeklySensorUpdateService.swift */; };
-		56B44CC32D6E7B3F00A6A75A /* FlowerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CBE2D6E7B3F00A6A75A /* FlowerManager.swift */; };
 		56B44CC42D6E7B3F00A6A75A /* HistoricalSensorData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */; };
 		56B44CC52D6E7B3F00A6A75A /* SensorDataDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */; };
 		56B44CC62D6E7B3F00A6A75A /* UUIDs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */; };
@@ -101,7 +100,6 @@
 		56F0F7DD2E564C2800B538AF /* MoistureAnomalyServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */; };
 		56F9D1A12E5B4E0D00A1B2C3 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */; };
 		56FD6C862E34194C00905984 /* SensorDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C852E34194C00905984 /* SensorDataManager.swift */; };
-		56FD6C8D2E36960300905984 /* FlowerManagerHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C8A2E36960300905984 /* FlowerManagerHistoryTests.swift */; };
 		56HLA0022EC8000000000001 /* HistoryLoadingAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56HLA0012EC8000000000001 /* HistoryLoadingAttributes.swift */; };
 		56HLAS022EC8000000000002 /* HistoryLoadingActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56HLAS012EC8000000000002 /* HistoryLoadingActivityService.swift */; };
 		82C2F563DA3B44BCBC8B6AF8 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24F27E79B00A42959FBED19D /* SettingsStore.swift */; };
@@ -231,7 +229,6 @@
 		56AF11382BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		56AF11452BE2492300887073 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		56B3B7382EA5181700AE41E9 /* WeeklySensorUpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklySensorUpdateService.swift; sourceTree = "<group>"; };
-		56B44CBE2D6E7B3F00A6A75A /* FlowerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerManager.swift; sourceTree = "<group>"; };
 		56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalSensorData.swift; sourceTree = "<group>"; };
 		56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataDecoder.swift; sourceTree = "<group>"; };
 		56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UUIDs.swift; sourceTree = "<group>"; };
@@ -248,7 +245,6 @@
 		56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoistureAnomalyServiceTests.swift; sourceTree = "<group>"; };
 		56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationService.swift; path = ../Core/NotificationService.swift; sourceTree = "<group>"; };
 		56FD6C852E34194C00905984 /* SensorDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataManager.swift; sourceTree = "<group>"; };
-		56FD6C8A2E36960300905984 /* FlowerManagerHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerManagerHistoryTests.swift; sourceTree = "<group>"; };
 		56HLA0012EC8000000000001 /* HistoryLoadingAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryLoadingAttributes.swift; sourceTree = "<group>"; };
 		56HLAS012EC8000000000002 /* HistoryLoadingActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryLoadingActivityService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -410,7 +406,6 @@
 		5654B2BF2CB46EF200EED3D3 /* BLE */ = {
 			isa = PBXGroup;
 			children = (
-				56FD6C8A2E36960300905984 /* FlowerManagerHistoryTests.swift */,
 				56FA2DEC0DE4F1B500000001 /* FlowerCareFrameFixtures.swift */,
 				56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */,
 				56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */,
@@ -637,7 +632,6 @@
 				56FA2DEC0DE4F1B500000005 /* CoreBluetoothTransport.swift */,
 				5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */,
 				5663FEB62EB684800038209F /* DeviceConnection.swift */,
-				56B44CBE2D6E7B3F00A6A75A /* FlowerManager.swift */,
 				56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */,
 				56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */,
 				56B44CC12D6E7B3F00A6A75A /* UUIDs.swift */,
@@ -866,7 +860,6 @@
 				5663FEB92EB690AB0038209F /* InitialSensorDataService.swift in Sources */,
 				5622B0CD2E3176F5002C7E74 /* FlowerDeviceDTO.swift in Sources */,
 				56D35EB72E2BE5730059FEE6 /* PotView.swift in Sources */,
-				56B44CC32D6E7B3F00A6A75A /* FlowerManager.swift in Sources */,
 				56241CE12E03591C0012B18E /* FlowerPot.swift in Sources */,
 				5622B0EE2E327ADD002C7E74 /* SensorDataDTO+CoreData.swift in Sources */,
 				569417562E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld in Sources */,
@@ -946,7 +939,6 @@
 				56FA2DEC0DE4F1B50000000A /* DeviceConnectionScenarioTests.swift in Sources */,
 				56FA2DEC0DE4F1B50000000C /* ConnectionPoolManagerTests.swift in Sources */,
 				56FA2DEC0DE4F1B50000000E /* DeviceConnectionHistoryTests.swift in Sources */,
-				56FD6C8D2E36960300905984 /* FlowerManagerHistoryTests.swift in Sources */,
 				5654B2BD2CB46EE600EED3D3 /* OverviewListViewModelTests.swift in Sources */,
 				56AF112D2BDED05B00887073 /* GrowGuardTests.swift in Sources */,
 				56F0F7DD2E564C2800B538AF /* MoistureAnomalyServiceTests.swift in Sources */,

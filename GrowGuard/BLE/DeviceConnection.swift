@@ -47,6 +47,12 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
         }
     }
 
+    /// Geräte-Infos, die nach der Authentifizierung vom Sensor gelesen werden
+    struct DeviceInfo: Equatable {
+        let battery: Int
+        let firmware: String
+    }
+
     // MARK: - Public Properties
 
     /// UUID des Geräts - eindeutige Identifikation des Sensors
@@ -146,6 +152,12 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
     /// Sendet (current, total) Updates während des History Flows
     private let historyProgressSubject = PassthroughSubject<(Int, Int), Never>()
 
+    /// Subject für Geräte-Infos (Batterie/Firmware)
+    private let deviceInfoSubject = PassthroughSubject<DeviceInfo, Never>()
+
+    /// Subject für RSSI-Messwerte (Verbindungsqualität)
+    private let rssiSubject = PassthroughSubject<Int, Never>()
+
     /// Public Publisher für Connection State
     var connectionStatePublisher: AnyPublisher<ConnectionState, Never> {
         stateSubject.eraseToAnyPublisher()
@@ -164,6 +176,16 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
     /// Public Publisher für Historical Data Loading Progress
     var historyProgressPublisher: AnyPublisher<(Int, Int), Never> {
         historyProgressSubject.eraseToAnyPublisher()
+    }
+
+    /// Public Publisher für Geräte-Infos (Batterie/Firmware nach Authentifizierung)
+    var deviceInfoPublisher: AnyPublisher<DeviceInfo, Never> {
+        deviceInfoSubject.eraseToAnyPublisher()
+    }
+
+    /// Public Publisher für RSSI-Messwerte
+    var rssiPublisher: AnyPublisher<Int, Never> {
+        rssiSubject.eraseToAnyPublisher()
     }
 
     /// Convenience Property für aktuellen Connection State
@@ -324,33 +346,7 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
     private func startAuthentication() {
         guard hasAuthenticationCharacteristic else {
             AppLogger.ble.info("🔐 No authentication characteristic found for device \(self.deviceUUID), proceeding without auth")
-            // Ohne Authentication direkt als authenticated markieren
-            isAuthenticated = true
-            stateSubject.send(.authenticated)
-
-            // CRITICAL FIX: Start history flow (like FlowerManager)
-            // Check if required characteristics are available
-            guard autoStartHistoryFlowEnabled else {
-                AppLogger.ble.info("⏭️ Auto history start disabled for device \(self.deviceUUID) - waiting for explicit trigger")
-                return
-            }
-
-            if hasHistoryControlCharacteristic &&
-               hasHistoryDataCharacteristic &&
-               hasDeviceTimeCharacteristic {
-                if isHistoryFlowActive && totalEntries > 0 && currentEntryIndex < totalEntries {
-                    AppLogger.ble.info("🔄 Resuming history flow (no auth) at entry \(self.currentEntryIndex)/\(self.totalEntries)")
-                } else {
-                    AppLogger.ble.info("🆕 Starting fresh history flow (no auth required)")
-                }
-                scheduler.schedule(after: 0.5) { [weak self] in
-                    guard let self = self else { return }
-                    self.startHistoryDataFlow()
-                }
-            } else {
-                AppLogger.ble.info("⏳ History flow needs to start but characteristics not ready yet, waiting for discovery")
-                waitingForCharacteristicsForHistoryResume = true
-            }
+            completeAuthentication()
             return
         }
 
@@ -366,39 +362,59 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
         // Set expected response for validation
         expectedResponse = Data([0x23, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00])
 
-        // Set a timeout for authentication
+        // Set a timeout for authentication. Sensors with a silent auth
+        // characteristic hit this branch on EVERY connect.
         scheduler.schedule(after: 4.0) { [weak self] in
             guard let self = self else { return }
             if self.authenticationStep > 0 && !self.isAuthenticated {
                 AppLogger.ble.bleError("🔐 Authentication timeout for device \(self.deviceUUID), proceeding without auth")
-                self.authenticationStep = 0
-                self.isAuthenticated = true
-                self.stateSubject.send(.authenticated)
-
-                // Start or resume the history flow, like the other two auth
-                // outcomes do. Sensors with a silent auth characteristic land
-                // here on EVERY connect, so without the fresh-start case
-                // auto-start would never work for them.
-                guard self.autoStartHistoryFlowEnabled else { return }
-
-                if self.hasHistoryControlCharacteristic &&
-                   self.hasHistoryDataCharacteristic &&
-                   self.hasDeviceTimeCharacteristic {
-                    if self.isHistoryFlowActive && self.totalEntries > 0 && self.currentEntryIndex < self.totalEntries {
-                        AppLogger.ble.info("🔄 Resuming history flow after auth timeout at entry \(self.currentEntryIndex)/\(self.totalEntries)")
-                    } else {
-                        AppLogger.ble.info("🆕 Starting fresh history flow after auth timeout")
-                    }
-                    self.scheduler.schedule(after: 0.5) { [weak self] in
-                        guard let self = self else { return }
-                        self.startHistoryDataFlow()
-                    }
-                } else {
-                    AppLogger.ble.info("⏳ History flow needs to start but characteristics not ready yet, waiting for discovery")
-                    self.waitingForCharacteristicsForHistoryResume = true
-                }
+                self.completeAuthentication()
             }
         }
+    }
+
+    /// Markiert die Verbindung als authentifiziert, liest die Geräte-Infos
+    /// (Batterie/Firmware) und startet bzw. resumed den History Flow.
+    /// Gemeinsamer Endpunkt aller drei Auth-Pfade (ohne Auth-Characteristic,
+    /// Challenge/Response erfolgreich, Auth-Timeout).
+    private func completeAuthentication() {
+        authenticationStep = 0
+        isAuthenticated = true
+        stateSubject.send(.authenticated)
+
+        readDeviceInfo()
+
+        guard autoStartHistoryFlowEnabled else {
+            AppLogger.ble.info("⏭️ Auto history start disabled for device \(self.deviceUUID) - waiting for explicit trigger")
+            return
+        }
+
+        if hasHistoryControlCharacteristic &&
+           hasHistoryDataCharacteristic &&
+           hasDeviceTimeCharacteristic {
+            if isHistoryFlowActive && totalEntries > 0 && currentEntryIndex < totalEntries {
+                AppLogger.ble.info("🔄 Resuming history flow at entry \(self.currentEntryIndex)/\(self.totalEntries) for device \(self.deviceUUID)")
+            } else {
+                AppLogger.ble.info("🆕 Starting fresh history flow for device \(self.deviceUUID)")
+            }
+            // Small delay to let connection stabilize
+            scheduler.schedule(after: 0.5) { [weak self] in
+                self?.startHistoryDataFlow()
+            }
+        } else {
+            AppLogger.ble.info("⏳ History flow needs to start but characteristics not ready yet, waiting for discovery")
+            waitingForCharacteristicsForHistoryResume = true
+        }
+    }
+
+    /// Liest Batterie/Firmware vom Sensor (Antwort kommt asynchron über
+    /// `didUpdateValueFor` und wird via `deviceInfoPublisher` veröffentlicht)
+    private func readDeviceInfo() {
+        guard discoveredCharacteristics.contains(firmwareVersionCharacteristicUUID),
+              let peripheral = peripheral, peripheral.state == .connected else {
+            return
+        }
+        peripheral.readValue(forCharacteristic: firmwareVersionCharacteristicUUID)
     }
 
     /// Behandelt die Authentication Response vom Sensor
@@ -430,36 +446,7 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
         case 2:
             // Final authentication step
             AppLogger.ble.info("✅ Authentication completed successfully for device \(self.deviceUUID)")
-            isAuthenticated = true
-            authenticationStep = 0
-            stateSubject.send(.authenticated)
-
-            // CRITICAL FIX: Start history flow after authentication (like FlowerManager)
-            // This handles both initial start AND resume
-            guard autoStartHistoryFlowEnabled else {
-                AppLogger.ble.info("⏭️ Auto history start disabled for device \(self.deviceUUID) - waiting for explicit trigger")
-                return
-            }
-
-            if hasHistoryControlCharacteristic &&
-               hasHistoryDataCharacteristic &&
-               hasDeviceTimeCharacteristic {
-                if isHistoryFlowActive && totalEntries > 0 && currentEntryIndex < totalEntries {
-                    AppLogger.ble.info("🔄 Resuming history flow after authentication at entry \(self.currentEntryIndex)/\(self.totalEntries)")
-                } else {
-                    AppLogger.ble.info("🆕 Starting fresh history flow after authentication")
-                }
-                // Small delay to let connection stabilize
-                scheduler.schedule(after: 0.5) { [weak self] in
-                    guard let self = self else { return }
-                    self.startHistoryDataFlow()
-                }
-            } else {
-                AppLogger.ble.bleWarning("⏳ History flow needs to start but characteristics not ready yet, waiting for discovery")
-                if autoStartHistoryFlowEnabled {
-                    waitingForCharacteristicsForHistoryResume = true
-                }
-            }
+            completeAuthentication()
 
         default:
             AppLogger.ble.bleError("❌ Unexpected authentication step: \(authenticationStep) for device \(deviceUUID)")
@@ -946,11 +933,7 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
 
         AppLogger.ble.bleConnection("📶 RSSI for device \(deviceUUID): \(rssi) dBm")
 
-        // Signal Quality Classification:
-        // > -50 dBm: Excellent
-        // -50 to -60 dBm: Good
-        // -60 to -70 dBm: Fair
-        // < -70 dBm: Poor
+        rssiSubject.send(rssi)
 
         if rssi < -70 {
             AppLogger.ble.bleWarning("⚠️ Weak signal for device \(deviceUUID): \(rssi) dBm")
@@ -984,7 +967,7 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
 
         AppLogger.sensor.info("🔋 Device \(self.deviceUUID) battery: \(battery)%, firmware: \(firmware)")
 
-        // TODO: Update Device Info in Database (kommt später)
+        deviceInfoSubject.send(DeviceInfo(battery: Int(battery), firmware: firmware))
     }
 
     /// Verarbeitet Device Name Daten

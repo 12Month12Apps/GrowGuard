@@ -132,7 +132,8 @@ final class CoreBluetoothCentral: NSObject, BLECentral, CBCentralManagerDelegate
     private func wrapper(for peripheral: CBPeripheral) -> CoreBluetoothPeripheral {
         if let existing = wrappers[peripheral.identifier] {
             // Re-assert the delegate in case another component (e.g. the
-            // legacy FlowerCareManager) claimed this CBPeripheral meanwhile
+            // pairing flow's own CBCentralManager in AddDeviceBLE) claimed
+            // this CBPeripheral meanwhile
             peripheral.delegate = existing
             return existing
         }

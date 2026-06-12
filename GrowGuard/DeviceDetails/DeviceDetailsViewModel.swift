@@ -12,31 +12,20 @@ import CoreData
 import ActivityKit
 
 @Observable class DeviceDetailsViewModel {
-    let ble = FlowerCareManager.shared
     var device: FlowerDeviceDTO
-    var subscription: AnyCancellable?
-    var subscriptionHistory: AnyCancellable?
-    var rssiDistanceSubscription: AnyCancellable?
-    var deviceUpdateSubscription: AnyCancellable?
     var groupingOption: Calendar.Component = .day
     private let repositoryManager = RepositoryManager.shared
 
-    // MARK: - Connection Pool Migration (Parallel Implementation)
-    // AKTIVIERT: ConnectionPool-Implementierung ist jetzt aktiv!
-    // WICHTIG: ConnectionPoolManager.swift und DeviceConnection.swift müssen im Xcode Target sein!
-    // Falls Build-Fehler: In Xcode -> File Inspector -> Target Membership -> GrowGuard anhaken
+    // MARK: - BLE (ConnectionPool)
     private let connectionPool = ConnectionPoolManager.shared
-    private let settingsStore = SettingsStore.shared
     private var deviceConnection: DeviceConnection?
     private var poolConnectionStateSubscription: AnyCancellable?
     private var poolSensorDataSubscription: AnyCancellable?
     private var poolHistoricalDataSubscription: AnyCancellable?
     private var poolHistoryProgressSubscription: AnyCancellable?
+    private var poolDeviceInfoSubscription: AnyCancellable?
+    private var poolRSSISubscription: AnyCancellable?
     private var blinkOnAuthenticationSubscription: AnyCancellable?
-    private var connectionModeObserver: NSObjectProtocol?
-
-    // Feature Flag: true = neue ConnectionPool Implementierung, false = alte FlowerCareManager
-    var useConnectionPool: Bool
 
     // MARK: - Historical Data Loading
     var isLoadingHistory = false
@@ -75,7 +64,6 @@ import ActivityKit
     
     init(device: FlowerDeviceDTO) {
         self.device = device
-        self.useConnectionPool = settingsStore.useConnectionPool
 
         Task { @MainActor in
             // Check immediately if history loading is already in progress for this device
@@ -87,40 +75,7 @@ import ActivityKit
 
         Task {
             try await PlantMonitorService.shared.checkDeviceStatus(device: device)
-            
-            self.subscription = ble.sensorDataPublisher.sink { data in
-                print("📡 DeviceDetailsViewModel: Received new sensor data from BLE")
-                Task {
-                    if let dto = data.toTemp() {
-                        print("📡 DeviceDetailsViewModel: Converting sensor data to temp format")
-                        let success = await self.saveSensorData(dto)
-                        if success {
-                            await self.updateDeviceLastUpdate()
-                        }
-                    } else {
-                        print("❌ DeviceDetailsViewModel: Failed to convert sensor data to temp format")
-                    }
-                }
-            }
-            
-            // Subscribe to distance hints for connection quality feedback
-            self.rssiDistanceSubscription = ble.rssiDistancePublisher.sink { hint in
-                Task { @MainActor in
-                    self.connectionDistanceHint = hint
-                }
-            }
-            
-            // Subscribe to device updates (battery, firmware, etc.)
-            self.deviceUpdateSubscription = ble.deviceUpdatePublisher.sink { updatedDevice in
-                Task { @MainActor in
-                    // Only update if this is the same device
-                    if updatedDevice.uuid == self.device.uuid {
-                        print("📱 DeviceDetailsViewModel: Received device update for \(updatedDevice.uuid)")
-                        self.device = updatedDevice
-                    }
-                }
-            }
-            
+
             // Load current week's sensor data immediately
             do {
                 let weekData = try await self.sensorDataManager.getCurrentWeekData(for: device.uuid)
@@ -131,27 +86,6 @@ import ActivityKit
                 await self.sensorDataManager.preloadAdjacentWeeks(for: device.uuid)
             } catch {
                 print("Failed to load current week data: \(error)")
-            }
-        }
-        
-        self.subscriptionHistory = ble.historicalDataPublisher.sink { data in
-            Task {
-                await self.saveHistoricalSensorData(data)
-            }
-        }
-
-        connectionModeObserver = NotificationCenter.default.addObserver(
-            forName: .settingsDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard
-                let rawValue = notification.userInfo?[SettingsStore.changeUserInfoKey] as? String,
-                let key = SettingsStore.ChangeKey(rawValue: rawValue)
-            else { return }
-
-            if key == .connectionMode {
-                self?.handleConnectionModeChange(self?.settingsStore.connectionMode ?? .connectionPool)
             }
         }
 
@@ -168,31 +102,9 @@ import ActivityKit
         }
     }
 
-    deinit {
-        if let observer = connectionModeObserver {
-            NotificationCenter.default.removeObserver(observer)
-        }
-    }
+    // MARK: - Connection Pool Methods
 
-    // MARK: - Connection Pool Methods (New Implementation)
-    // ✅ AKTIVIERT: ConnectionPool-Implementierung ist jetzt verfügbar!
-
-    private func handleConnectionModeChange(_ mode: ConnectionMode) {
-        let shouldUsePool = (mode == .connectionPool)
-
-        Task { @MainActor in
-            guard shouldUsePool != self.useConnectionPool else { return }
-            self.useConnectionPool = shouldUsePool
-
-            if shouldUsePool {
-                self.connectionPool.resetRetryCounter(for: self.device.uuid)
-            } else {
-                self.disconnectViaPool()
-            }
-        }
-    }
-
-    /// Verbindet zum Gerät über den ConnectionPoolManager (neue Implementierung)
+    /// Verbindet zum Gerät über den ConnectionPoolManager
     @MainActor private func connectViaPool() {
         AppLogger.ble.bleConnection("DeviceDetailsViewModel: Connecting via ConnectionPool to device \(device.uuid)")
 
@@ -232,6 +144,20 @@ import ActivityKit
                 if success {
                     await self.updateDeviceLastUpdate()
                 }
+            }
+        }
+
+        // Subscribe zu Geräte-Infos (Batterie/Firmware) vom ConnectionPool
+        poolDeviceInfoSubscription = connection.deviceInfoPublisher.sink { [weak self] info in
+            Task { @MainActor in
+                await self?.updateDeviceInfo(battery: info.battery, firmware: info.firmware)
+            }
+        }
+
+        // Subscribe zu RSSI für den Entfernungs-Hinweis in der UI
+        poolRSSISubscription = connection.rssiPublisher.sink { [weak self] rssi in
+            Task { @MainActor in
+                self?.connectionDistanceHint = Self.distanceHint(forRSSI: rssi)
             }
         }
 
@@ -378,6 +304,8 @@ import ActivityKit
         poolHistoricalDataSubscription?.cancel()
         poolHistoryProgressSubscription?.cancel()
         poolConnectionStateSubscription?.cancel()
+        poolDeviceInfoSubscription?.cancel()
+        poolRSSISubscription?.cancel()
 
         // End Live Activity if still running
         if liveActivityService.hasActivity(for: device.uuid) {
@@ -393,47 +321,27 @@ import ActivityKit
     }
 
     @MainActor func loadDetails() {
-        // ✅ AKTIVIERT: Nutzt jetzt ConnectionPool (wenn useConnectionPool = true)
-        // Fallback auf alte FlowerCareManager Implementierung (wenn useConnectionPool = false)
-
-        if useConnectionPool {
-            // Neue Implementierung: Nutze ConnectionPoolManager
-            AppLogger.ble.bleConnection("DeviceDetailsViewModel: Using ConnectionPool implementation")
-
-            // Reset retry counter for fresh start
-            connectionPool.resetRetryCounter(for: device.uuid)
-
-            connectViaPool()
-        } else {
-            // Alte Implementierung: Nutze FlowerCareManager (Fallback)
-            AppLogger.ble.bleConnection("DeviceDetailsViewModel: Using legacy FlowerCareManager implementation")
-            ble.connectToKnownDevice(deviceUUID: device.uuid)
-            ble.requestLiveData()
-        }
+        // Reset retry counter for fresh start
+        connectionPool.resetRetryCounter(for: device.uuid)
+        connectViaPool()
     }
-    
+
     @MainActor
     func blinkLED() {
-        if useConnectionPool {
-            if let connection = deviceConnection, connection.connectionState == .authenticated {
-                connection.blinkLED()
-            } else {
-                // Nicht verbunden (Sensor trennt nach Inaktivität selbst):
-                // erst verbinden, dann einmalig nach Authentifizierung blinken
-                connectionPool.resetRetryCounter(for: device.uuid)
-                connectViaPool()
-                blinkOnAuthenticationSubscription = deviceConnection?.connectionStatePublisher
-                    .filter { $0 == .authenticated }
-                    .prefix(1)
-                    .sink { [weak self] _ in
-                        self?.deviceConnection?.blinkLED()
-                        self?.blinkOnAuthenticationSubscription = nil
-                    }
-            }
+        if let connection = deviceConnection, connection.connectionState == .authenticated {
+            connection.blinkLED()
         } else {
-            // Legacy-Fallback
-            ble.connectToKnownDevice(deviceUUID: device.uuid)
-            ble.blinkLED()
+            // Nicht verbunden (Sensor trennt nach Inaktivität selbst):
+            // erst verbinden, dann einmalig nach Authentifizierung blinken
+            connectionPool.resetRetryCounter(for: device.uuid)
+            connectViaPool()
+            blinkOnAuthenticationSubscription = deviceConnection?.connectionStatePublisher
+                .filter { $0 == .authenticated }
+                .prefix(1)
+                .sink { [weak self] _ in
+                    self?.deviceConnection?.blinkLED()
+                    self?.blinkOnAuthenticationSubscription = nil
+                }
         }
     }
     
@@ -519,6 +427,45 @@ import ActivityKit
         }
     }
     
+    /// Aktualisiert Batterie/Firmware in der Datenbank.
+    /// `lastUpdate` bleibt unverändert — Batterie-Reads sind keine Messung.
+    @MainActor
+    private func updateDeviceInfo(battery: Int, firmware: String) async {
+        do {
+            let updatedDevice = FlowerDeviceDTO(
+                id: device.id,
+                name: device.name,
+                uuid: device.uuid,
+                peripheralID: device.peripheralID,
+                battery: Int16(battery),
+                firmware: firmware,
+                isSensor: device.isSensor,
+                added: device.added,
+                lastUpdate: device.lastUpdate,
+                optimalRange: device.optimalRange,
+                potSize: device.potSize,
+                selectedFlower: device.selectedFlower,
+                sensorData: device.sensorData
+            )
+            try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
+            self.device = updatedDevice
+            AppLogger.ble.info("🔋 Updated battery to \(battery)% / firmware \(firmware) for device \(self.device.uuid)")
+        } catch {
+            print("Error updating device battery: \(error.localizedDescription)")
+        }
+    }
+
+    /// RSSI → Entfernungs-Hinweis für die UI
+    private static func distanceHint(forRSSI rssi: Int) -> String {
+        if rssi >= -65 {
+            return "Close (Good signal)"
+        } else if rssi >= -80 {
+            return "Medium (Fair signal)"
+        } else {
+            return "Far (Poor signal)"
+        }
+    }
+
     @MainActor
     private func updateDeviceLastUpdate() async {
         do {
@@ -605,39 +552,28 @@ import ActivityKit
             }
         }
 
-        if useConnectionPool {
-            // ✅ Neue Implementierung: Nutze ConnectionPool
-            AppLogger.ble.bleConnection("DeviceDetailsViewModel: Using ConnectionPool for historical data")
-
-            // Eine Connection ist nur nutzbar, wenn sie authenticated ist.
-            // FlowerCare-Sensoren trennen die Verbindung selbst nach wenigen
-            // Sekunden Inaktivität — ein vorhandenes, aber totes Connection-
-            // Objekt muss daher wie "nicht verbunden" behandelt werden
-            // (startHistoryDataFlow auf einer toten Connection ist ein No-Op).
-            guard let connection = deviceConnection, connection.connectionState == .authenticated else {
-                AppLogger.ble.bleConnection("DeviceDetailsViewModel: No usable connection (state: \(String(describing: deviceConnection?.connectionState))), reconnecting first...")
-                isLoadingHistory = true
-                connectionPool.resetRetryCounter(for: device.uuid)
-                connectViaPool()
-                // Explizite Nutzer-Aktion erzwingt Auto-Start, unabhängig von
-                // historyLoadedThisSession (connectViaPool setzt das Flag sonst
-                // konservativ) — der Flow startet nach der Authentifizierung
-                deviceConnection?.setAutoStartHistoryFlowEnabled(true)
-                return
-            }
-
-            // Connection existiert bereits - starte History Flow direkt
-            // Enable auto-start for reconnection during history loading
-            connection.setAutoStartHistoryFlowEnabled(true)
+        // Eine Connection ist nur nutzbar, wenn sie authenticated ist.
+        // FlowerCare-Sensoren trennen die Verbindung selbst nach wenigen
+        // Sekunden Inaktivität — ein vorhandenes, aber totes Connection-
+        // Objekt muss daher wie "nicht verbunden" behandelt werden
+        // (startHistoryDataFlow auf einer toten Connection ist ein No-Op).
+        guard let connection = deviceConnection, connection.connectionState == .authenticated else {
+            AppLogger.ble.bleConnection("DeviceDetailsViewModel: No usable connection (state: \(String(describing: deviceConnection?.connectionState))), reconnecting first...")
             isLoadingHistory = true
-            connection.startHistoryDataFlow()
-
-        } else {
-            // Alte Implementierung: Nutze FlowerCareManager (Fallback)
-            AppLogger.ble.bleConnection("DeviceDetailsViewModel: Using legacy FlowerCareManager for historical data")
-            ble.connectToKnownDevice(deviceUUID: device.uuid)
-            ble.requestHistoricalData()
+            connectionPool.resetRetryCounter(for: device.uuid)
+            connectViaPool()
+            // Explizite Nutzer-Aktion erzwingt Auto-Start, unabhängig von
+            // historyLoadedThisSession (connectViaPool setzt das Flag sonst
+            // konservativ) — der Flow startet nach der Authentifizierung
+            deviceConnection?.setAutoStartHistoryFlowEnabled(true)
+            return
         }
+
+        // Connection existiert bereits - starte History Flow direkt
+        // Enable auto-start for reconnection during history loading
+        connection.setAutoStartHistoryFlowEnabled(true)
+        isLoadingHistory = true
+        connection.startHistoryDataFlow()
     }
 
     /// Cancel the ongoing history loading and end Live Activity
@@ -653,14 +589,11 @@ import ActivityKit
             liveActivityService.endActivity(status: HistoryLoadingAttributes.ConnectionStatus.failed)
         }
 
-        // Stop the history flow based on connection mode
-        if useConnectionPool, let connection = deviceConnection {
+        // Stop the history flow
+        if let connection = deviceConnection {
             // Disable auto-start to prevent unwanted resumption
             connection.setAutoStartHistoryFlowEnabled(false)
             connection.cleanupHistoryFlow()
-        } else {
-            // Legacy FlowerCareManager mode
-            FlowerCareManager.shared.cancelHistoryDataLoading()
         }
     }
     

@@ -145,6 +145,56 @@ struct DeviceConnectionScenarioTests {
         #expect(!sensor.writeLog.contains { $0.data == Data([0xA0, 0x1F]) })
     }
 
+    // MARK: - Device Info & RSSI
+
+    @Test("After authentication the firmware characteristic is read and device info published")
+    func deviceInfoPublishedAfterAuth() {
+        let (sensor, connection) = makeSensor()
+        connection.setAutoStartHistoryFlowEnabled(false)
+
+        var infos: [DeviceConnection.DeviceInfo] = []
+        let cancellable = connection.deviceInfoPublisher.sink { infos.append($0) }
+        defer { cancellable.cancel() }
+
+        connect(sensor, connection)
+        scheduler.advance(by: 0.1)
+
+        #expect(infos.count == 1)
+        #expect(infos.first?.battery == 80)
+        #expect(infos.first?.firmware == "3.2.9")
+    }
+
+    @Test("Device info is also published after challenge/response authentication")
+    func deviceInfoPublishedAfterChallengeAuth() {
+        let (sensor, connection) = makeSensor(hasAuth: true)
+        connection.setAutoStartHistoryFlowEnabled(false)
+
+        var infos: [DeviceConnection.DeviceInfo] = []
+        let cancellable = connection.deviceInfoPublisher.sink { infos.append($0) }
+        defer { cancellable.cancel() }
+
+        connect(sensor, connection)
+        scheduler.advance(by: 0.1)
+
+        #expect(infos.first?.battery == 80)
+        #expect(infos.first?.firmware == "3.2.9")
+    }
+
+    @Test("RSSI monitoring publishes signal strength readings")
+    func rssiPublished() {
+        let (sensor, connection) = makeSensor()
+        connection.setAutoStartHistoryFlowEnabled(false)
+
+        var readings: [Int] = []
+        let cancellable = connection.rssiPublisher.sink { readings.append($0) }
+        defer { cancellable.cancel() }
+
+        connect(sensor, connection)
+        scheduler.advance(by: 5.1) // first periodic RSSI read + response
+
+        #expect(readings.contains(-55))
+    }
+
     // MARK: - History Flow
 
     @Test("History happy path loads all entries and finishes")
@@ -220,6 +270,33 @@ struct DeviceConnectionScenarioTests {
         #expect(!connection.isHistoryLoading)
     }
 
+    @Test("Entry that never gets a response stalls the flow until the 10-minute global timeout")
+    func stalledEntryStallsUntilGlobalTimeout() {
+        // Characterization of current behavior: there is no per-entry response
+        // timeout, so a silent sensor freezes the flow until the 600s global
+        // timeout aborts everything. P4 replaces this with retry/skip logic.
+        let (sensor, connection) = makeSensor(entries: 5)
+        sensor.silentEntryIndices = [2]
+
+        var entries: [HistoricalSensorData] = []
+        let cancellable = connection.historicalDataPublisher.sink { entries.append($0) }
+        defer { cancellable.cancel() }
+
+        connect(sensor, connection)
+        scheduler.advance(by: 5.0)
+
+        // Flow is stuck on entry 2: no retry, no skip, no progress
+        #expect(entries.count == 2)
+        #expect(connection.isHistoryLoading)
+        #expect(sensor.servedEntryIndices == [0, 1, 2])
+
+        scheduler.advance(by: 600.0)
+
+        #expect(entries.count == 2)
+        #expect(!connection.isHistoryLoading)
+        #expect(!connection.shouldAutoReconnect)
+    }
+
     @Test("Disconnect mid-history resumes at the same entry without duplicates")
     func disconnectResumesAtSameEntry() {
         let (sensor, connection) = makeSensor(entries: 10)
@@ -257,6 +334,12 @@ struct DeviceConnectionScenarioTests {
         #expect(Set(entries.map(\.timestamp)).count == 10, "No duplicate entries after resume")
         #expect(!connection.isHistoryLoading)
         #expect(!connection.shouldAutoReconnect)
+
+        // Entries received before the disconnect must not be fetched again
+        let serveCounts = Dictionary(grouping: sensor.servedEntryIndices, by: { $0 }).mapValues(\.count)
+        for index in 0..<4 {
+            #expect(serveCounts[index] == 1, "Entry \(index) was re-fetched after resume")
+        }
     }
 
     @Test("Cancelling the history flow stops all further fetches")
