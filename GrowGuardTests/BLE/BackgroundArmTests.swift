@@ -109,4 +109,61 @@ struct BackgroundArmTests {
         let relaunchedPool = makePool()
         #expect(relaunchedPool.isBackgroundArmed(sensor.identifier.uuidString))
     }
+
+    @Test("didFailToConnect for an armed device burns no retries and stays armed")
+    func armedFailToConnectStaysArmed() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        central.connectSucceeds = false
+
+        pool.armBackgroundConnect(for: sensor.identifier.uuidString)
+        await pump()
+
+        // Simulate iOS reporting a transient connect failure 3x
+        for _ in 0..<3 {
+            central.centralDelegate?.central(central, didFailToConnect: sensor, error: nil)
+            await pump()
+            scheduler.advance(by: 30)
+            await pump()
+        }
+
+        let connection = pool.getConnection(for: sensor.identifier.uuidString)
+        if case .error = connection.connectionState {
+            Issue.record("Armed connect failure must not surface as error state")
+        }
+        #expect(pool.isBackgroundArmed(sensor.identifier.uuidString))
+    }
+
+    @Test("poweredOn re-issues pending connects for persisted armed devices")
+    func poweredOnRearmsPersistedDevices() async {
+        let sensor = makeSensor()
+        defaults.set([sensor.identifier.uuidString], forKey: "ble_background_armed_devices")
+        central.state = .poweredOff
+
+        let pool = makePool()
+        #expect(pool.isBackgroundArmed(sensor.identifier.uuidString))
+        #expect(central.connectRequests.isEmpty)
+
+        central.simulateStateChange(to: .poweredOn)
+        await pump()
+
+        #expect(central.connectRequests == [sensor.identifier])
+    }
+
+    @Test("willRestoreState emits wake for already-connected armed devices")
+    func restoreEmitsForConnectedArmedDevice() async {
+        let sensor = makeSensor()
+        defaults.set([sensor.identifier.uuidString], forKey: "ble_background_armed_devices")
+        sensor.state = .connected
+
+        let pool = makePool()
+        var emitted: [String] = []
+        let sub = pool.armedConnectionPublisher.sink { emitted.append($0) }
+        defer { sub.cancel() }
+
+        central.centralDelegate?.central(central, willRestoreState: [sensor])
+        await pump()
+
+        #expect(emitted == [sensor.identifier.uuidString])
+    }
 }

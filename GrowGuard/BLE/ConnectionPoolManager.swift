@@ -478,6 +478,12 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
                         connect(to: uuid, autoStartHistoryFlow: historyFlag)
                     }
                 }
+                // Re-issue pending connects für armed Geräte (Restoration-
+                // Relaunch oder BT-Toggle); für bereits pendende Peripherals
+                // ein No-Op
+                for deviceUUID in Array(backgroundArmedDevices) {
+                    armBackgroundConnect(for: deviceUUID)
+                }
             case .poweredOff:
                 AppLogger.ble.bleError("Bluetooth is powered off")
             case .unsupported:
@@ -627,6 +633,13 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
             // Cancel timeout
             self.cancelConnectionTimeout(for: peripheralUUID)
 
+            if self.backgroundArmedDevices.contains(peripheralUUID) {
+                // Armed Connects haben kein Retry-Budget: bleiben armed, der
+                // nächste Trigger oder poweredOn re-issued den Pending-Connect
+                AppLogger.ble.bleWarning("Armed connect failed for \(peripheralUUID) — staying armed, no retry burn")
+                return
+            }
+
             self.handleAttemptFailure(for: peripheralUUID, reason: .failedToConnect, underlyingError: error)
         }
     }
@@ -650,6 +663,11 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
                 if peripheral.state == .connected {
                     AppLogger.ble.bleConnection("✅ Device \(peripheralUUID) already connected after restore")
                     connection.handleConnected()
+
+                    if backgroundArmedDevices.contains(peripheralUUID) {
+                        AppLogger.ble.info("🛡 Restored armed connection for \(peripheralUUID), emitting wake")
+                        armedConnectionSubject.send(peripheralUUID)
+                    }
                 }
             }
         }
