@@ -30,6 +30,7 @@ final class BackgroundBLEWakeService {
     private let runStatusCheck: (String) async -> Void
     private let beginBackgroundTask: () -> UIBackgroundTaskIdentifier
     private let endBackgroundTask: (UIBackgroundTaskIdentifier) -> Void
+    private let notificationCenter: NotificationCenter
 
     // MARK: - State
 
@@ -38,6 +39,7 @@ final class BackgroundBLEWakeService {
     private var activeReads: [String: WakeRead] = [:]
     private var armedConnectionSubscription: AnyCancellable?
     private var foregroundObserver: NSObjectProtocol?
+    private var backgroundObserver: NSObjectProtocol?
 
     /// iOS grants ~10 s after a BLE wake; auth alone can take 4 s
     private let wakeReadTimeout: TimeInterval = 9.0
@@ -56,7 +58,9 @@ final class BackgroundBLEWakeService {
          saveSample: ((SensorDataTemp, String, SensorDataSource) async -> Bool)? = nil,
          runStatusCheck: ((String) async -> Void)? = nil,
          beginBackgroundTask: (() -> UIBackgroundTaskIdentifier)? = nil,
-         endBackgroundTask: ((UIBackgroundTaskIdentifier) -> Void)? = nil) {
+         endBackgroundTask: ((UIBackgroundTaskIdentifier) -> Void)? = nil,
+         notificationCenter: NotificationCenter = .default) {
+        self.notificationCenter = notificationCenter
         self.pool = pool ?? ConnectionPoolManager.shared
         self.scheduler = scheduler
         self.loadSensorDeviceUUIDs = loadSensorDeviceUUIDs ?? {
@@ -96,13 +100,26 @@ final class BackgroundBLEWakeService {
                 self?.handleArmedConnection(deviceUUID)
             }
 
-        foregroundObserver = NotificationCenter.default.addObserver(
+        foregroundObserver = notificationCenter.addObserver(
             forName: UIApplication.didBecomeActiveNotification,
             object: nil,
             queue: .main
-        ) { _ in
+        ) { [weak self] _ in
             Task { @MainActor in
-                BackgroundBLEWakeService.shared.disarmAll()
+                self?.disarmAll()
+            }
+        }
+
+        // SwiftUI scene lifecycle: UIKit never calls the app delegate's
+        // applicationDidEnterBackground — the UIApplication notification is
+        // posted in every lifecycle, so arming hangs off it instead
+        backgroundObserver = notificationCenter.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                await self?.armAll(source: .backgroundTask)
             }
         }
     }

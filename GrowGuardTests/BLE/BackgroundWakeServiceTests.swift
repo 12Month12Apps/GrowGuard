@@ -27,6 +27,8 @@ struct BackgroundWakeServiceTests {
     let central = FakeCentral()
     let defaults = UserDefaults(suiteName: "BackgroundWakeServiceTests-\(UUID().uuidString)")!
     let recorder = Recorder()
+    /// Per-test center: lifecycle posts must not leak into parallel tests
+    let notificationCenter = NotificationCenter()
 
     private func makePool() -> ConnectionPoolManager {
         ConnectionPoolManager(central: central,
@@ -49,7 +51,8 @@ struct BackgroundWakeServiceTests {
             },
             runStatusCheck: { uuid in recorder.statusChecks.append(uuid) },
             beginBackgroundTask: { recorder.began += 1; return UIBackgroundTaskIdentifier(rawValue: 7) },
-            endBackgroundTask: { _ in recorder.ended += 1 }
+            endBackgroundTask: { _ in recorder.ended += 1 },
+            notificationCenter: notificationCenter
         )
         service.start()
         return service
@@ -94,6 +97,20 @@ struct BackgroundWakeServiceTests {
         #expect(recorder.ended == 1)
         #expect(!pool.isBackgroundArmed(sensor.identifier.uuidString))
         #expect(sensor.state == .disconnected, "Wake handler must disconnect to save sensor battery")
+    }
+
+    @Test("didEnterBackground notification arms pending connects (SwiftUI lifecycle: app-delegate callback is never called)")
+    func enterBackgroundNotificationArms() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString])
+        _ = service // observer registered via start() in makeService
+
+        notificationCenter.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        await pump()
+
+        #expect(pool.isBackgroundArmed(sensor.identifier.uuidString))
+        #expect(central.connectRequests == [sensor.identifier])
     }
 
     @Test("Disconnect before data ends the read cleanly and disarms (no re-arm)")

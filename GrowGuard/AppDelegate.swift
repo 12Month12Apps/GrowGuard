@@ -24,6 +24,18 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ = ConnectionPoolManager.shared
         BackgroundBLEWakeService.shared.start()
 
+        // SwiftUI scene lifecycle: applicationDidEnterBackground is never
+        // called on the app delegate — schedule BG tasks via the
+        // UIApplication notification instead (posted in every lifecycle)
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.schedulePlantMonitoringTask(source: .enterBackground)
+            self?.scheduleProcessingTask(source: .enterBackground)
+        }
+
         // Clear any lingering notification badges from previous sessions
         application.applicationIconBadgeNumber = 0
 
@@ -110,20 +122,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
     
-    func applicationDidEnterBackground(_ application: UIApplication) {
-        // Schedule plant monitoring task when app goes to background
-        schedulePlantMonitoringTask(source: .enterBackground)
-
-        // Schedule processing task for historical sync
-        scheduleProcessingTask(source: .enterBackground)
-
-        // One near-guaranteed fresh sample right after the user leaves the
-        // app: arm pending connects, the BLE wake does the read
-        Task { @MainActor in
-            await BackgroundBLEWakeService.shared.armAll(source: .backgroundTask)
-        }
-    }
-
     // MARK: - Remote Notification Registration
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
