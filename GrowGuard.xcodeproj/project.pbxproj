@@ -45,6 +45,7 @@
 		56FA2DEC0DE4F1B500000008 /* FakeBLETransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */; };
 		56FA2DEC0DE4F1B50000000A /* DeviceConnectionScenarioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */; };
 		56FA2DEC0DE4F1B50000000C /* ConnectionPoolManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */; };
+		56FA2DEC0DE4F1B50000000E /* DeviceConnectionHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B50000000D /* DeviceConnectionHistoryTests.swift */; };
 		5654B2BD2CB46EE600EED3D3 /* OverviewListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2BC2CB46EDB00EED3D3 /* OverviewListViewModelTests.swift */; };
 		5654B2C12CB4739C00EED3D3 /* AddDeviceViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2C02CB4739400EED3D3 /* AddDeviceViewModelTests.swift */; };
 		565DEC402C159B93002D784A /* DeviceDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */; };
@@ -187,6 +188,7 @@
 		56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakeBLETransport.swift; sourceTree = "<group>"; };
 		56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnectionScenarioTests.swift; sourceTree = "<group>"; };
 		56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionPoolManagerTests.swift; sourceTree = "<group>"; };
+		56FA2DEC0DE4F1B50000000D /* DeviceConnectionHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnectionHistoryTests.swift; sourceTree = "<group>"; };
 		5654B2BC2CB46EDB00EED3D3 /* OverviewListViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewListViewModelTests.swift; sourceTree = "<group>"; };
 		5654B2C02CB4739400EED3D3 /* AddDeviceViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceViewModelTests.swift; sourceTree = "<group>"; };
 		565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsView.swift; sourceTree = "<group>"; };
@@ -413,6 +415,7 @@
 				56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */,
 				56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */,
 				56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */,
+				56FA2DEC0DE4F1B50000000D /* DeviceConnectionHistoryTests.swift */,
 				5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */,
 			);
 			path = BLE;
@@ -942,6 +945,7 @@
 				56FA2DEC0DE4F1B500000008 /* FakeBLETransport.swift in Sources */,
 				56FA2DEC0DE4F1B50000000A /* DeviceConnectionScenarioTests.swift in Sources */,
 				56FA2DEC0DE4F1B50000000C /* ConnectionPoolManagerTests.swift in Sources */,
+				56FA2DEC0DE4F1B50000000E /* DeviceConnectionHistoryTests.swift in Sources */,
 				56FD6C8D2E36960300905984 /* FlowerManagerHistoryTests.swift in Sources */,
 				5654B2BD2CB46EE600EED3D3 /* OverviewListViewModelTests.swift in Sources */,
 				56AF112D2BDED05B00887073 /* GrowGuardTests.swift in Sources */,

@@ -63,3 +63,4 @@ first — two BLE clients fight over the sensor.
 | Date | Build/Branch | Platform | Scope | Result |
 |---|---|---|---|---|
 | 2026-06-12 | ble-phase3-transport-seams | macOS (Designed for iPad) | 1.3, 1.4, 1.6 | ✅ live read works; 84-entry sync completes incl. reconnect after idle-drop |
+| 2026-06-12 | ble-phase3-transport-seams | macOS (Designed for iPad) | 0 (automated suite) | ✅ all 5 tests passed across runs (89-entry syncs at ~1.6 entries/s; two mid-sync sensor disconnects auto-recovered with resume). ⚠️ Sensor battery at 0 % caused stalls in later runs — replace the CR2032 before relying on suite timing |

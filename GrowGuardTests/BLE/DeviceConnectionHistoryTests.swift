@@ -43,6 +43,12 @@ final class DeviceConnectionHistoryTests: XCTestCase {
     override func tearDown() async throws {
         cancellables?.removeAll()
         if let connection = deviceConnection {
+            // Fully stop any running history flow BEFORE disconnecting:
+            // an active flow makes shouldAutoReconnect true, so a plain
+            // disconnect triggers auto-reconnect and the abandoned flow
+            // resumes during the NEXT test (cross-test contamination)
+            connection.setAutoStartHistoryFlowEnabled(false)
+            connection.cleanupHistoryFlow()
             connectionPool?.disconnect(from: connection.deviceUUID)
         }
         deviceConnection = nil
@@ -93,11 +99,14 @@ final class DeviceConnectionHistoryTests: XCTestCase {
             .store(in: &cancellables)
 
         // Listen for completion
+        // object: nil + manual filter — NotificationCenter matches object by
+        // identity, so a posted String never matches another String instance
         NotificationCenter.default.addObserver(
             forName: NSNotification.Name("HistoricalDataLoadingCompleted"),
-            object: testDeviceUUID,
+            object: nil,
             queue: .main
-        ) { _ in
+        ) { [testDeviceUUID] notification in
+            guard let uuid = notification.object as? String, uuid == testDeviceUUID else { return }
             print("✅ History loading completed notification received")
             expectation.fulfill()
         }
@@ -286,9 +295,10 @@ final class DeviceConnectionHistoryTests: XCTestCase {
 
         NotificationCenter.default.addObserver(
             forName: NSNotification.Name("HistoricalDataLoadingCompleted"),
-            object: testDeviceUUID,
+            object: nil,
             queue: .main
-        ) { _ in
+        ) { [testDeviceUUID] notification in
+            guard let uuid = notification.object as? String, uuid == testDeviceUUID else { return }
             expectation.fulfill()
         }
 
@@ -312,7 +322,9 @@ final class DeviceConnectionHistoryTests: XCTestCase {
         print("Speed: \(String(format: "%.1f", entriesPerSecond)) entries/sec")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
-        XCTAssertLessThan(firstEntryDelay, 10.0, "Should receive first entry within 10 seconds")
+        // Budget: BLE connect (variable, up to ~10s) + 4s auth timeout for
+        // sensors with a silent auth characteristic + history-mode handshake
+        XCTAssertLessThan(firstEntryDelay, 30.0, "Should receive first entry within 30 seconds")
         XCTAssertGreaterThan(entriesPerSecond, 1.0, "Should download at least 1 entry/sec")
 
         print("✅ Performance test passed!\n")
