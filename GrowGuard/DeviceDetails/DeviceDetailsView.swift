@@ -558,7 +558,7 @@ struct DeviceDetailsView: View {
             }
         }
         .sheet(isPresented: $showingLoadingScreen) {
-            HistoryLoadingView(viewModel: viewModel.useConnectionPool ? viewModel : nil)
+            HistoryLoadingView(viewModel: viewModel)
         }
         .sheet(isPresented: $showingBenchmark) {
             BenchmarkView(deviceUUID: viewModel.device.uuid)

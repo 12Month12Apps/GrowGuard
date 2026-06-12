@@ -505,6 +505,23 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
         peripheral.writeValue(Data(command), forCharacteristic: deviceModeChangeCharacteristicUUID, type: .withResponse)
     }
 
+    /// Lässt die LED des Sensors blinken (Befehl 0xFDFF auf der Mode-Change
+    /// Characteristic — gleiche Characteristic wie beim FlowerCareManager)
+    func blinkLED() {
+        guard let peripheral = peripheral, peripheral.state == .connected else {
+            AppLogger.ble.bleWarning("Cannot blink LED - device \(deviceUUID) not connected")
+            return
+        }
+
+        guard discoveredCharacteristics.contains(deviceModeChangeCharacteristicUUID) else {
+            AppLogger.ble.bleWarning("Cannot blink LED - mode characteristic not found for device \(deviceUUID)")
+            return
+        }
+
+        AppLogger.ble.bleData("💡 Sending LED blink command (0xFDFF) to device \(deviceUUID)")
+        peripheral.writeValue(Data([0xFD, 0xFF]), forCharacteristic: deviceModeChangeCharacteristicUUID, type: .withResponse)
+    }
+
     /// Stoppt Live-Daten-Updates
     func stopLiveData() {
         AppLogger.ble.bleConnection("Stopping live data for device \(deviceUUID)")
