@@ -53,6 +53,17 @@ called on user-initiated connects — resets the guard.
   the connection's `autoStartHistoryFlowEnabled` — a live-only refresh never
   escalates into a full history sync on retry (regression test:
   `retryPreservesHistoryFlowFlag`).
+- **An active history sync is protected from live-only callers.**
+  `setAutoStartHistoryFlowEnabled(false)` is deferred while
+  `isHistoryFlowActive` (the flag gates resume-after-reconnect), and
+  `InitialSensorDataService` skips syncing devices entirely. To cancel a sync
+  deliberately, call `cleanupHistoryFlow()` *first*, then disable auto-start
+  (regression tests: `dashboardRefreshDoesNotBreakActiveHistorySync`,
+  `autoStartDisableIgnoredDuringActiveFlow`).
+- **UI reads sync state from the pool, not from ActivityKit.** The overview's
+  per-device loading indicator subscribes to `historyProgressPublisher` /
+  `isHistoryLoading`; the Live Activity is only a fallback (it does not exist
+  on Mac "Designed for iPhone" or with Live Activities disabled).
 
 ## Per-entry retry/skip (DeviceConnection)
 

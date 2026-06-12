@@ -327,6 +327,82 @@ struct ConnectionPoolManagerTests {
         #expect(!connection.isHistoryLoading, "Live-only session must not start the history flow after a retry")
     }
 
+    @Test("Dashboard refresh leaves an active history sync untouched")
+    func dashboardRefreshDoesNotBreakActiveHistorySync() async {
+        let pool = makePool()
+        let sensor = makeSensor(entries: 10)
+
+        let connection = pool.getConnection(for: sensor.identifier.uuidString)
+        var entries: [HistoricalSensorData] = []
+        let cancellable = connection.historicalDataPublisher.sink { entries.append($0) }
+        defer { cancellable.cancel() }
+
+        pool.connect(to: sensor.identifier.uuidString)
+        await pump()
+        scheduler.advance(by: 0.7) // discovery + auth + history start delay
+
+        var safety = 0
+        while entries.count < 3 && safety < 200 {
+            scheduler.advance(by: 0.05)
+            safety += 1
+        }
+        #expect(entries.count >= 3, "Sync should be mid-flight before the dashboard appears")
+
+        // User navigates back to the overview: dashboard triggers its
+        // one-time live refresh for all sensors — including the syncing one
+        let service = InitialSensorDataService(pool: pool)
+        await service.requestLiveData(for: [sensor.identifier.uuidString])
+        await pump()
+
+        // Mid-sync disconnect afterwards (FlowerCare does this constantly)
+        central.simulateDisconnect(of: sensor.identifier)
+        await pump()
+        scheduler.advance(by: 1.0) // auto-reconnect delay (clean disconnect)
+        await pump()
+        scheduler.advance(by: 1.0) // re-discovery + auth + resume delay
+        await pump()
+        scheduler.advance(by: 10.0) // drain remaining entries
+
+        #expect(entries.count == 10, "History sync must resume and complete despite the dashboard refresh")
+        #expect(!connection.isHistoryLoading)
+    }
+
+    @Test("Disabling auto-start is ignored while a history flow is active")
+    func autoStartDisableIgnoredDuringActiveFlow() async {
+        let pool = makePool()
+        let sensor = makeSensor(entries: 10)
+
+        let connection = pool.getConnection(for: sensor.identifier.uuidString)
+        var entries: [HistoricalSensorData] = []
+        let cancellable = connection.historicalDataPublisher.sink { entries.append($0) }
+        defer { cancellable.cancel() }
+
+        pool.connect(to: sensor.identifier.uuidString)
+        await pump()
+        scheduler.advance(by: 0.7)
+
+        var safety = 0
+        while entries.count < 3 && safety < 200 {
+            scheduler.advance(by: 0.05)
+            safety += 1
+        }
+        #expect(entries.count >= 3)
+
+        // Live-only callers (background fetch) must not flip a running session
+        connection.setAutoStartHistoryFlowEnabled(false)
+        #expect(connection.autoStartHistoryFlowEnabled, "Disable is deferred while the flow is active")
+
+        central.simulateDisconnect(of: sensor.identifier)
+        await pump()
+        scheduler.advance(by: 1.0)
+        await pump()
+        scheduler.advance(by: 1.0)
+        await pump()
+        scheduler.advance(by: 10.0)
+
+        #expect(entries.count == 10, "Sync resumes after reconnect even though a caller tried to disable auto-start")
+    }
+
     @Test("Two devices get isolated connections and data streams")
     func multiDeviceIsolation() async {
         let pool = makePool()
