@@ -46,6 +46,7 @@
 		56FA2DEC0DE4F1B50000000A /* DeviceConnectionScenarioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */; };
 		56FA2DEC0DE4F1B50000000C /* ConnectionPoolManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */; };
 		56BARM012EC7000000000001 /* BackgroundArmTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BARM002EC7000000000001 /* BackgroundArmTests.swift */; };
+		56BWKT012EC7000000000001 /* BackgroundWakeServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BWKT002EC7000000000001 /* BackgroundWakeServiceTests.swift */; };
 		E74116E2F3304A11BD446D55 /* BLEPerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59E679C227EE418A9C585478 /* BLEPerformanceTests.swift */; };
 		F59A2B14028549EBAAD0673A /* ReliabilityPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F10F04E3674D099816889E /* ReliabilityPolicyTests.swift */; };
 		BCC00C56EBF746EEAAD64298 /* Recordings in Resources */ = {isa = PBXBuildFile; fileRef = DC03DBA5E52147B48284AC39 /* Recordings */; };
@@ -108,6 +109,7 @@
 		56BF5F9D2DFA5E9100D9B2AE /* AddWithoutSensorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */; };
 		56BGSD012EC7000000000001 /* BackgroundSensorDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BGSD002EC7000000000001 /* BackgroundSensorDataService.swift */; };
 		56BGTR012EC7000000000002 /* BackgroundTaskTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */; };
+		56BWKS012EC7000000000001 /* BackgroundBLEWakeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BWKS002EC7000000000001 /* BackgroundBLEWakeService.swift */; };
 		56D35EB72E2BE5730059FEE6 /* PotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D35EB62E2BE56C0059FEE6 /* PotView.swift */; };
 		56DC564D2DD9256800041DBA /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 56DC564C2DD9256800041DBA /* GRDB */; };
 		56E9573D2ED3088100082A6F /* GrowGuardAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E9573C2ED3088100082A6F /* GrowGuardAPIClient.swift */; };
@@ -202,6 +204,7 @@
 		56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnectionScenarioTests.swift; sourceTree = "<group>"; };
 		56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionPoolManagerTests.swift; sourceTree = "<group>"; };
 		56BARM002EC7000000000001 /* BackgroundArmTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundArmTests.swift; sourceTree = "<group>"; };
+		56BWKT002EC7000000000001 /* BackgroundWakeServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundWakeServiceTests.swift; sourceTree = "<group>"; };
 		59E679C227EE418A9C585478 /* BLEPerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEPerformanceTests.swift; sourceTree = "<group>"; };
 		C8F10F04E3674D099816889E /* ReliabilityPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReliabilityPolicyTests.swift; sourceTree = "<group>"; };
 		DC03DBA5E52147B48284AC39 /* Recordings */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Recordings; sourceTree = "<group>"; };
@@ -269,6 +272,7 @@
 		56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWithoutSensorViewModel.swift; sourceTree = "<group>"; };
 		56BGSD002EC7000000000001 /* BackgroundSensorDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundSensorDataService.swift; sourceTree = "<group>"; };
 		56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskTracker.swift; sourceTree = "<group>"; };
+		56BWKS002EC7000000000001 /* BackgroundBLEWakeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundBLEWakeService.swift; sourceTree = "<group>"; };
 		56D35EB62E2BE56C0059FEE6 /* PotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PotView.swift; sourceTree = "<group>"; };
 		56E9573C2ED3088100082A6F /* GrowGuardAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardAPIClient.swift; sourceTree = "<group>"; };
 		56F0F7DA2E564C0400B538AF /* MoistureAnomalyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoistureAnomalyService.swift; sourceTree = "<group>"; };
@@ -441,6 +445,7 @@
 				56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */,
 				56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */,
 				56BARM002EC7000000000001 /* BackgroundArmTests.swift */,
+				56BWKT002EC7000000000001 /* BackgroundWakeServiceTests.swift */,
 				59E679C227EE418A9C585478 /* BLEPerformanceTests.swift */,
 				C8F10F04E3674D099816889E /* ReliabilityPolicyTests.swift */,
 				DC03DBA5E52147B48284AC39 /* Recordings */,
@@ -518,6 +523,7 @@
 			children = (
 				56BGSD002EC7000000000001 /* BackgroundSensorDataService.swift */,
 				56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */,
+				56BWKS002EC7000000000001 /* BackgroundBLEWakeService.swift */,
 				56E9573C2ED3088100082A6F /* GrowGuardAPIClient.swift */,
 				56HLA0012EC8000000000001 /* HistoryLoadingAttributes.swift */,
 				56HLAS012EC8000000000002 /* HistoryLoadingActivityService.swift */,
@@ -967,6 +973,7 @@
 				56B3B7392EA5181700AE41E9 /* WeeklySensorUpdateService.swift in Sources */,
 				56BGSD012EC7000000000001 /* BackgroundSensorDataService.swift in Sources */,
 				56BGTR012EC7000000000002 /* BackgroundTaskTracker.swift in Sources */,
+				56BWKS012EC7000000000001 /* BackgroundBLEWakeService.swift in Sources */,
 				56HLA0022EC8000000000001 /* HistoryLoadingAttributes.swift in Sources */,
 				56HLAS022EC8000000000002 /* HistoryLoadingActivityService.swift in Sources */,
 				5622B0E92E317737002C7E74 /* OptimalRange+DTO.swift in Sources */,
@@ -993,6 +1000,7 @@
 				56FA2DEC0DE4F1B50000000A /* DeviceConnectionScenarioTests.swift in Sources */,
 				56FA2DEC0DE4F1B50000000C /* ConnectionPoolManagerTests.swift in Sources */,
 				56BARM012EC7000000000001 /* BackgroundArmTests.swift in Sources */,
+				56BWKT012EC7000000000001 /* BackgroundWakeServiceTests.swift in Sources */,
 				E74116E2F3304A11BD446D55 /* BLEPerformanceTests.swift in Sources */,
 				F59A2B14028549EBAAD0673A /* ReliabilityPolicyTests.swift in Sources */,
 				10F70A0DB6B34BF6AFFF6504 /* ReplaySessionTests.swift in Sources */,
