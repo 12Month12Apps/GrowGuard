@@ -32,6 +32,7 @@ import ActivityKit
     private var poolSensorDataSubscription: AnyCancellable?
     private var poolHistoricalDataSubscription: AnyCancellable?
     private var poolHistoryProgressSubscription: AnyCancellable?
+    private var blinkOnAuthenticationSubscription: AnyCancellable?
     private var connectionModeObserver: NSObjectProtocol?
 
     // Feature Flag: true = neue ConnectionPool Implementierung, false = alte FlowerCareManager
@@ -411,11 +412,29 @@ import ActivityKit
         }
     }
     
+    @MainActor
     func blinkLED() {
-        // Note: blinkLED() nutzt vorerst immer FlowerCareManager
-        // TODO: DeviceConnection.blinkLED() implementieren für ConnectionPool
-        ble.connectToKnownDevice(deviceUUID: device.uuid)
-        ble.blinkLED()
+        if useConnectionPool {
+            if let connection = deviceConnection, connection.connectionState == .authenticated {
+                connection.blinkLED()
+            } else {
+                // Nicht verbunden (Sensor trennt nach Inaktivität selbst):
+                // erst verbinden, dann einmalig nach Authentifizierung blinken
+                connectionPool.resetRetryCounter(for: device.uuid)
+                connectViaPool()
+                blinkOnAuthenticationSubscription = deviceConnection?.connectionStatePublisher
+                    .filter { $0 == .authenticated }
+                    .prefix(1)
+                    .sink { [weak self] _ in
+                        self?.deviceConnection?.blinkLED()
+                        self?.blinkOnAuthenticationSubscription = nil
+                    }
+            }
+        } else {
+            // Legacy-Fallback
+            ble.connectToKnownDevice(deviceUUID: device.uuid)
+            ble.blinkLED()
+        }
     }
     
     @MainActor

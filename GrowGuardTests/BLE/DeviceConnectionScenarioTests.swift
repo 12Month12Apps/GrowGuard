@@ -131,6 +131,20 @@ struct DeviceConnectionScenarioTests {
         #expect(!sensor.writeLog.contains { $0.data == Data([0xA0, 0x1F]) })
     }
 
+    @Test("LED blink writes the blink command to the mode characteristic")
+    func blinkLEDWritesCommand() {
+        let (sensor, connection) = makeSensor()
+        connection.setAutoStartHistoryFlowEnabled(false)
+        connect(sensor, connection)
+
+        connection.blinkLED()
+        scheduler.advance(by: 0.1)
+
+        #expect(sensor.writeLog.contains { $0.characteristic == deviceModeChangeCharacteristicUUID && $0.data == Data([0xFD, 0xFF]) })
+        // A blink must not trigger a live-data read
+        #expect(!sensor.writeLog.contains { $0.data == Data([0xA0, 0x1F]) })
+    }
+
     // MARK: - History Flow
 
     @Test("History happy path loads all entries and finishes")
