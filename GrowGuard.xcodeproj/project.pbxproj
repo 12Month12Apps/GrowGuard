@@ -45,6 +45,9 @@
 		56FA2DEC0DE4F1B500000008 /* FakeBLETransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */; };
 		56FA2DEC0DE4F1B50000000A /* DeviceConnectionScenarioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */; };
 		56FA2DEC0DE4F1B50000000C /* ConnectionPoolManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */; };
+		BCC00C56EBF746EEAAD64298 /* Recordings in Resources */ = {isa = PBXBuildFile; fileRef = DC03DBA5E52147B48284AC39 /* Recordings */; };
+		10F70A0DB6B34BF6AFFF6504 /* ReplaySessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE5968580C64DA890C5A581 /* ReplaySessionTests.swift */; };
+		F8A3B6561F3C42D8ADF1E790 /* ReplayBLETransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56C780520D1F48A1A95C9D43 /* ReplayBLETransport.swift */; };
 		7A2AEC55247A408289006BDC /* RecordingTransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B315B4E6C8DD42B5B4E28E2D /* RecordingTransportTests.swift */; };
 		56FA2DEC0DE4F1B50000000E /* DeviceConnectionHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B50000000D /* DeviceConnectionHistoryTests.swift */; };
 		5654B2BD2CB46EE600EED3D3 /* OverviewListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2BC2CB46EDB00EED3D3 /* OverviewListViewModelTests.swift */; };
@@ -190,6 +193,9 @@
 		56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakeBLETransport.swift; sourceTree = "<group>"; };
 		56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnectionScenarioTests.swift; sourceTree = "<group>"; };
 		56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionPoolManagerTests.swift; sourceTree = "<group>"; };
+		DC03DBA5E52147B48284AC39 /* Recordings */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Recordings; sourceTree = "<group>"; };
+		CEE5968580C64DA890C5A581 /* ReplaySessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplaySessionTests.swift; sourceTree = "<group>"; };
+		56C780520D1F48A1A95C9D43 /* ReplayBLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplayBLETransport.swift; sourceTree = "<group>"; };
 		B315B4E6C8DD42B5B4E28E2D /* RecordingTransportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingTransportTests.swift; sourceTree = "<group>"; };
 		56FA2DEC0DE4F1B50000000D /* DeviceConnectionHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnectionHistoryTests.swift; sourceTree = "<group>"; };
 		5654B2BC2CB46EDB00EED3D3 /* OverviewListViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewListViewModelTests.swift; sourceTree = "<group>"; };
@@ -418,6 +424,9 @@
 				56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */,
 				56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */,
 				56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */,
+				DC03DBA5E52147B48284AC39 /* Recordings */,
+				CEE5968580C64DA890C5A581 /* ReplaySessionTests.swift */,
+				56C780520D1F48A1A95C9D43 /* ReplayBLETransport.swift */,
 				B315B4E6C8DD42B5B4E28E2D /* RecordingTransportTests.swift */,
 				56FA2DEC0DE4F1B50000000D /* DeviceConnectionHistoryTests.swift */,
 				5654B2BA2CB45C6600EED3D3 /* SensorDataDecoderTests.swift */,
@@ -814,6 +823,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BCC00C56EBF746EEAAD64298 /* Recordings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -953,6 +963,8 @@
 				56FA2DEC0DE4F1B500000008 /* FakeBLETransport.swift in Sources */,
 				56FA2DEC0DE4F1B50000000A /* DeviceConnectionScenarioTests.swift in Sources */,
 				56FA2DEC0DE4F1B50000000C /* ConnectionPoolManagerTests.swift in Sources */,
+				10F70A0DB6B34BF6AFFF6504 /* ReplaySessionTests.swift in Sources */,
+				F8A3B6561F3C42D8ADF1E790 /* ReplayBLETransport.swift in Sources */,
 				7A2AEC55247A408289006BDC /* RecordingTransportTests.swift in Sources */,
 				56FA2DEC0DE4F1B50000000E /* DeviceConnectionHistoryTests.swift in Sources */,
 				5654B2BD2CB46EE600EED3D3 /* OverviewListViewModelTests.swift in Sources */,
