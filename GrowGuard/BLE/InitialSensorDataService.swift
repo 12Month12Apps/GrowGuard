@@ -20,6 +20,9 @@ class InitialSensorDataService {
 
     // MARK: - Properties
 
+    /// ConnectionPool für alle Verbindungen (Tests injizieren einen Pool mit Fake-Central)
+    private let pool: ConnectionPoolManager
+
     /// Set von Device UUIDs, für die bereits Live-Daten angefordert wurden
     private var requestedDevices: Set<String> = []
 
@@ -28,7 +31,8 @@ class InitialSensorDataService {
 
     // MARK: - Initialization
 
-    private init() {
+    init(pool: ConnectionPoolManager = .shared) {
+        self.pool = pool
         AppLogger.ble.info("🚀 InitialSensorDataService initialized")
     }
 
@@ -74,7 +78,11 @@ class InitialSensorDataService {
         for deviceUUID in targets {
             AppLogger.ble.bleConnection("🧭 InitialSensorDataService: Observing connection state for \(deviceUUID)")
             setupConnectionObserver(for: deviceUUID)
-            ConnectionPoolManager.shared.connect(to: deviceUUID, autoStartHistoryFlow: false)
+            // Neue user-sichtbare Session: frisches Retry-Budget, sonst bleibt
+            // ein früher erschöpfter Zähler für immer auf .error (Pool-Kontrakt,
+            // siehe "Max-retries error is sticky until resetRetryCounter")
+            pool.resetRetryCounter(for: deviceUUID)
+            pool.connect(to: deviceUUID, autoStartHistoryFlow: false)
         }
     }
 
@@ -91,7 +99,7 @@ class InitialSensorDataService {
     /// - Parameter deviceUUID: Die UUID des zu beobachtenden Geräts
     private func setupConnectionObserver(for deviceUUID: String) {
         // Hole Connection für Device
-        let connection = ConnectionPoolManager.shared.getConnection(for: deviceUUID)
+        let connection = pool.getConnection(for: deviceUUID)
 
         // Subscribe zu Connection State Changes
         connection.connectionStatePublisher

@@ -32,6 +32,28 @@ resets the streak); a frozen index is a loop and aborts with
 ~25 s background-fetch budget too). `resetRetryCounter(for:)` —
 called on user-initiated connects — resets the guard.
 
+## Session contract: retry budget + state semantics
+
+- **Max-retries is sticky by design** (pinned by
+  `maxRetriesStickyUntilReset`): once a device exhausts its 3 attempts, the
+  pool refuses further `connect(to:)` calls and re-emits `.error` until
+  `resetRetryCounter(for:)` is called. This prevents auto-paths from retrying
+  forever.
+- **Every caller that starts a new session MUST call
+  `resetRetryCounter(for:)` first.** Callers: `DeviceDetailsViewModel`,
+  `AppIntent`, `BLEBenchmark`, `InitialSensorDataService` (dashboard live
+  refresh), `BackgroundSensorDataService` (background fetch). Forgetting this
+  makes a device permanently show "Error" after one unreachable episode
+  (regression test: `dashboardRefreshResetsRetryBudget`).
+- **Sensor-initiated disconnects are not errors.** FlowerCare drops the link
+  itself after idle (CBError 7, `peripheralDisconnected`);
+  `DeviceConnection.handleDisconnected` maps it to `.disconnected`, not
+  `.error` (regression test: `sensorIdleDisconnectIsNotAnError`).
+- **Retries preserve the session config.** The pool's backoff path re-uses
+  the connection's `autoStartHistoryFlowEnabled` — a live-only refresh never
+  escalates into a full history sync on retry (regression test:
+  `retryPreservesHistoryFlowFlag`).
+
 ## Per-entry retry/skip (DeviceConnection)
 
 - **Response timeout: 2 s per entry.** A silent sensor no longer freezes the

@@ -255,6 +255,78 @@ struct ConnectionPoolManagerTests {
         #expect(requestsAfterTrip == 5, "Initial connect + four reconnects before the fifth stalled drop tripped the guard")
     }
 
+    @Test("Dashboard live refresh starts a fresh retry budget after exhaustion")
+    func dashboardRefreshResetsRetryBudget() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        central.connectSucceeds = false
+
+        // Exhaust the retry budget (e.g. sensor was out of range earlier)
+        pool.connect(to: sensor.identifier.uuidString, autoStartHistoryFlow: false)
+        await pump()
+        for delay in [10.0, 1.0, 10.0, 2.0, 10.0, 3.0] {
+            scheduler.advance(by: delay)
+            await pump()
+        }
+        #expect(central.connectRequests.count == 3)
+
+        // Sensor is reachable again; the dashboard triggers its live refresh
+        central.connectSucceeds = true
+        let service = InitialSensorDataService(pool: pool)
+        await service.requestLiveData(for: [sensor.identifier.uuidString])
+        await pump()
+        scheduler.advance(by: 0.2)
+        await pump()
+
+        let connection = pool.getConnection(for: sensor.identifier.uuidString)
+        #expect(central.connectRequests.count == 4, "Dashboard refresh should grant a fresh connection attempt")
+        #expect(connection.connectionState == .authenticated)
+    }
+
+    @Test("Sensor-initiated disconnect (CBError 7) surfaces as disconnected, not error")
+    func sensorIdleDisconnectIsNotAnError() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+
+        pool.connect(to: sensor.identifier.uuidString, autoStartHistoryFlow: false)
+        await pump()
+        scheduler.advance(by: 0.2)
+
+        let connection = pool.getConnection(for: sensor.identifier.uuidString)
+        #expect(connection.connectionState == .authenticated)
+
+        // FlowerCare sensors drop the link themselves after idle —
+        // iOS reports that as CBError.peripheralDisconnected (code 7)
+        let idleDisconnect = NSError(domain: CBErrorDomain,
+                                     code: CBError.peripheralDisconnected.rawValue)
+        central.simulateDisconnect(of: sensor.identifier, error: idleDisconnect)
+        await pump()
+
+        #expect(connection.connectionState == .disconnected)
+    }
+
+    @Test("Timeout retry keeps autoStartHistoryFlow disabled")
+    func retryPreservesHistoryFlowFlag() async {
+        let pool = makePool()
+        let sensor = makeSensor(entries: 5)
+        central.connectSucceeds = false
+
+        pool.connect(to: sensor.identifier.uuidString, autoStartHistoryFlow: false)
+        await pump()
+        scheduler.advance(by: 10.0) // attempt 1 times out -> retry scheduled in 1s
+        await pump()
+
+        central.connectSucceeds = true
+        scheduler.advance(by: 1.0) // retry fires -> attempt 2 succeeds
+        await pump()
+        scheduler.advance(by: 1.0) // auth + (potential) history start delay
+        await pump()
+
+        let connection = pool.getConnection(for: sensor.identifier.uuidString)
+        #expect(connection.connectionState == .authenticated)
+        #expect(!connection.isHistoryLoading, "Live-only session must not start the history flow after a retry")
+    }
+
     @Test("Two devices get isolated connections and data streams")
     func multiDeviceIsolation() async {
         let pool = makePool()

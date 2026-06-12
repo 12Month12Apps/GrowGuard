@@ -148,7 +148,7 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
 
     /// Flag ob wir auf Characteristics Discovery warten für History Resume
     private var waitingForCharacteristicsForHistoryResume: Bool = false
-    private var autoStartHistoryFlowEnabled: Bool = true
+    private(set) var autoStartHistoryFlowEnabled: Bool = true
 
     /// Live-Daten-Request wartet auf die Write-Bestätigung des Mode-Change
     /// Commands, danach wird der Realtime-Wert gelesen (FlowerCare-Protokoll)
@@ -325,8 +325,10 @@ class DeviceConnection: NSObject, BLEPeripheralLinkDelegate {
             AppLogger.ble.info("🔄 Will attempt to resume history flow after reconnect")
         }
 
-        // Update Connection State basierend auf Error
-        if let error = error {
+        // Update Connection State basierend auf Error. Sensor-seitige
+        // Disconnects (CBError 7) sind beim FlowerCare Normalbetrieb
+        // (Idle-Timeout nach dem Auslesen) — kein Fehlerzustand fürs UI.
+        if let error = error, DisconnectReason(error: error) != .peripheralDisconnected {
             stateSubject.send(.error(error))
             AppLogger.ble.bleConnection("Device \(deviceUUID) disconnected with error: \(error.localizedDescription)")
         } else {
