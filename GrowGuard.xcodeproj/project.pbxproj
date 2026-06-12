@@ -60,6 +60,10 @@
 		56FA2DEC0DE4F1B500000004 /* BLETransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000003 /* BLETransport.swift */; };
 		56FA2DEC0DE4F1B500000006 /* CoreBluetoothTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000005 /* CoreBluetoothTransport.swift */; };
 		5663FEB72EB684800038209F /* DeviceConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB62EB684800038209F /* DeviceConnection.swift */; };
+		4A1BC0DE12340001AB00B001 /* DeviceConnection+Authentication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A1BC0DE12340001AB00A001 /* DeviceConnection+Authentication.swift */; };
+		4A1BC0DE12340002AB00B002 /* DeviceConnection+LiveData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A1BC0DE12340002AB00A002 /* DeviceConnection+LiveData.swift */; };
+		4A1BC0DE12340003AB00B003 /* DeviceConnection+HistoryFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A1BC0DE12340003AB00A003 /* DeviceConnection+HistoryFlow.swift */; };
+		4A1BC0DE12340004AB00B004 /* DeviceConnection+PeripheralLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A1BC0DE12340004AB00A004 /* DeviceConnection+PeripheralLink.swift */; };
 		72786845BCFE411B9C1C8ED3 /* ReconnectPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DC1AD58445F4401A17AC775 /* ReconnectPolicy.swift */; };
 		B27894E2B06444D4AF2D50CA /* BLESessionRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3A0417191C8495FA72F14E0 /* BLESessionRecording.swift */; };
 		EB70D5C99D1B4DB2A3030B57 /* BLESessionRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FD4C68830544BCC861334C6 /* BLESessionRecorder.swift */; };
@@ -211,6 +215,10 @@
 		56FA2DEC0DE4F1B500000003 /* BLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLETransport.swift; sourceTree = "<group>"; };
 		56FA2DEC0DE4F1B500000005 /* CoreBluetoothTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreBluetoothTransport.swift; sourceTree = "<group>"; };
 		5663FEB62EB684800038209F /* DeviceConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnection.swift; sourceTree = "<group>"; };
+		4A1BC0DE12340001AB00A001 /* DeviceConnection+Authentication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DeviceConnection+Authentication.swift"; sourceTree = "<group>"; };
+		4A1BC0DE12340002AB00A002 /* DeviceConnection+LiveData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DeviceConnection+LiveData.swift"; sourceTree = "<group>"; };
+		4A1BC0DE12340003AB00A003 /* DeviceConnection+HistoryFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DeviceConnection+HistoryFlow.swift"; sourceTree = "<group>"; };
+		4A1BC0DE12340004AB00A004 /* DeviceConnection+PeripheralLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DeviceConnection+PeripheralLink.swift"; sourceTree = "<group>"; };
 		7DC1AD58445F4401A17AC775 /* ReconnectPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReconnectPolicy.swift; sourceTree = "<group>"; };
 		F3A0417191C8495FA72F14E0 /* BLESessionRecording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLESessionRecording.swift; sourceTree = "<group>"; };
 		5FD4C68830544BCC861334C6 /* BLESessionRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLESessionRecorder.swift; sourceTree = "<group>"; };
@@ -658,6 +666,10 @@
 				56FA2DEC0DE4F1B500000005 /* CoreBluetoothTransport.swift */,
 				5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */,
 				5663FEB62EB684800038209F /* DeviceConnection.swift */,
+				4A1BC0DE12340001AB00A001 /* DeviceConnection+Authentication.swift */,
+				4A1BC0DE12340002AB00A002 /* DeviceConnection+LiveData.swift */,
+				4A1BC0DE12340003AB00A003 /* DeviceConnection+HistoryFlow.swift */,
+				4A1BC0DE12340004AB00A004 /* DeviceConnection+PeripheralLink.swift */,
 				7DC1AD58445F4401A17AC775 /* ReconnectPolicy.swift */,
 				F3A0417191C8495FA72F14E0 /* BLESessionRecording.swift */,
 				5FD4C68830544BCC861334C6 /* BLESessionRecorder.swift */,
@@ -903,6 +915,10 @@
 				56A8C6EA2D8ECF37004021C0 /* AddDeviceDetails.swift in Sources */,
 				565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */,
 				5663FEB72EB684800038209F /* DeviceConnection.swift in Sources */,
+				4A1BC0DE12340001AB00B001 /* DeviceConnection+Authentication.swift in Sources */,
+				4A1BC0DE12340002AB00B002 /* DeviceConnection+LiveData.swift in Sources */,
+				4A1BC0DE12340003AB00B003 /* DeviceConnection+HistoryFlow.swift in Sources */,
+				4A1BC0DE12340004AB00B004 /* DeviceConnection+PeripheralLink.swift in Sources */,
 				72786845BCFE411B9C1C8ED3 /* ReconnectPolicy.swift in Sources */,
 				B27894E2B06444D4AF2D50CA /* BLESessionRecording.swift in Sources */,
 				EB70D5C99D1B4DB2A3030B57 /* BLESessionRecorder.swift in Sources */,
