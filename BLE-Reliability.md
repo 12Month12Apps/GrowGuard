@@ -42,7 +42,7 @@ called on user-initiated connects — resets the guard.
 - **Every caller that starts a new session MUST call
   `resetRetryCounter(for:)` first.** Callers: `DeviceDetailsViewModel`,
   `AppIntent`, `BLEBenchmark`, `InitialSensorDataService` (dashboard live
-  refresh), `BackgroundSensorDataService` (background fetch). Forgetting this
+  refresh), `BackgroundHistorySyncService` (background history sync). Forgetting this
   makes a device permanently show "Error" after one unreachable episode
   (regression test: `dashboardRefreshResetsRetryBudget`).
 - **Sensor-initiated disconnects are not errors.** FlowerCare drops the link
@@ -53,6 +53,30 @@ called on user-initiated connects — resets the guard.
   the connection's `autoStartHistoryFlowEnabled` — a live-only refresh never
   escalates into a full history sync on retry (regression test:
   `retryPreservesHistoryFlowFlag`).
+
+## Background arming (arm-don't-fetch)
+
+Spec: `docs/superpowers/specs/2026-06-12-background-ble-design.md`.
+Background triggers (BGAppRefreshTask, silent push, enter-background) call
+`ConnectionPoolManager.armBackgroundConnect(for:)` instead of racing a full
+connect+read against the ~30 s window:
+
+- **No watchdog, no retry budget by design.** The pending `connect()` IS
+  the reliability mechanism — iOS completes it whenever the sensor
+  advertises, minutes or hours later. Armed devices never enter the
+  sticky-error path; `didFailToConnect` keeps them armed without burning
+  retries (tests: `BackgroundArmTests`).
+- **Armed set persisted** in UserDefaults key `ble_background_armed_devices`
+  so a state-restoration relaunch re-recognizes armed devices; the
+  `poweredOn` handler re-issues their pending connects.
+- **Wake handling never re-arms** (`BackgroundBLEWakeService`): the sensor
+  advertises continuously in range, so re-arming after a read would create a
+  connect/disconnect wake loop. Arming comes exclusively from time-based
+  triggers — one trigger, one sample (tests: `BackgroundWakeServiceTests`).
+- **History sync in BGProcessingTask** (`BackgroundHistorySyncService`):
+  sequential per device, suspends via `suspendHistoryFlow()` on task
+  expiration so a later window can resume (tests:
+  `BackgroundHistorySyncTests`).
 
 ## Per-entry retry/skip (DeviceConnection)
 

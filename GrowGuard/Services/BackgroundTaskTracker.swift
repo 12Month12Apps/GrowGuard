@@ -7,6 +7,14 @@
 
 import Foundation
 
+/// Result of a background sensor read (today: one device per BLE wake)
+struct BackgroundFetchResult {
+    let successfulDevices: [String]
+    let failedDevices: [String]
+    let totalDataPoints: Int
+    let duration: TimeInterval
+}
+
 /// Tracks background task execution history for debugging purposes
 class BackgroundTaskTracker {
 

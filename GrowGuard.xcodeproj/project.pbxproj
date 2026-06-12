@@ -108,7 +108,6 @@
 		56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CCD2D78E8EB00A6A75A /* print.swift */; };
 		56BF5F9B2DFA5D7300D9B2AE /* AddWithoutSensor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BF5F9A2DFA5D6C00D9B2AE /* AddWithoutSensor.swift */; };
 		56BF5F9D2DFA5E9100D9B2AE /* AddWithoutSensorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */; };
-		56BGSD012EC7000000000001 /* BackgroundSensorDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BGSD002EC7000000000001 /* BackgroundSensorDataService.swift */; };
 		56BGTR012EC7000000000002 /* BackgroundTaskTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */; };
 		56BWKS012EC7000000000001 /* BackgroundBLEWakeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BWKS002EC7000000000001 /* BackgroundBLEWakeService.swift */; };
 		56BHSY012EC7000000000001 /* BackgroundHistorySyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BHSY002EC7000000000001 /* BackgroundHistorySyncService.swift */; };
@@ -273,7 +272,6 @@
 		56B44CCD2D78E8EB00A6A75A /* print.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = print.swift; sourceTree = "<group>"; };
 		56BF5F9A2DFA5D6C00D9B2AE /* AddWithoutSensor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWithoutSensor.swift; sourceTree = "<group>"; };
 		56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWithoutSensorViewModel.swift; sourceTree = "<group>"; };
-		56BGSD002EC7000000000001 /* BackgroundSensorDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundSensorDataService.swift; sourceTree = "<group>"; };
 		56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskTracker.swift; sourceTree = "<group>"; };
 		56BWKS002EC7000000000001 /* BackgroundBLEWakeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundBLEWakeService.swift; sourceTree = "<group>"; };
 		56BHSY002EC7000000000001 /* BackgroundHistorySyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundHistorySyncService.swift; sourceTree = "<group>"; };
@@ -526,7 +524,6 @@
 		568EA33D2EB625CE00F6BB25 /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				56BGSD002EC7000000000001 /* BackgroundSensorDataService.swift */,
 				56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */,
 				56BWKS002EC7000000000001 /* BackgroundBLEWakeService.swift */,
 				56BHSY002EC7000000000001 /* BackgroundHistorySyncService.swift */,
@@ -977,7 +974,6 @@
 				56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */,
 				5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */,
 				56B3B7392EA5181700AE41E9 /* WeeklySensorUpdateService.swift in Sources */,
-				56BGSD012EC7000000000001 /* BackgroundSensorDataService.swift in Sources */,
 				56BGTR012EC7000000000002 /* BackgroundTaskTracker.swift in Sources */,
 				56BWKS012EC7000000000001 /* BackgroundBLEWakeService.swift in Sources */,
 				56BHSY012EC7000000000001 /* BackgroundHistorySyncService.swift in Sources */,
