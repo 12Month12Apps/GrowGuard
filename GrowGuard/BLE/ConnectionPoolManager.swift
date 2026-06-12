@@ -70,7 +70,10 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
                 CBCentralManagerOptionRestoreIdentifierKey: "pro.veit.GrowGuard.centralManager",
                 CBCentralManagerOptionShowPowerAlertKey: true
             ]
-            self.central = CoreBluetoothCentral(options: options)
+            // Recording-Decorator ist immer installiert; solange die
+            // Aufzeichnung deaktiviert ist, reicht er nur durch (Opt-in
+            // Toggle im Debug-Menü, BLESessionRecorder.isEnabled)
+            self.central = RecordingBLECentral(wrapping: CoreBluetoothCentral(options: options))
         }
         self.scheduler = scheduler
 

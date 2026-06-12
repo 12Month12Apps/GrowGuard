@@ -171,6 +171,15 @@ struct LogExportView: View {
     @State private var allDevices: [FlowerDeviceDTO] = []
     @State private var showDeleteConfirmation = false
 
+    // BLE session recording
+    private struct ShareableRecording: Identifiable {
+        let url: URL
+        var id: URL { url }
+    }
+    @State private var isBLERecordingEnabled = BLESessionRecorder.shared.isEnabled
+    @State private var bleRecordings: [URL] = []
+    @State private var recordingToShare: ShareableRecording?
+
     let logHourOptions = [6, 12, 24, 48, 72]
     
     var body: some View {
@@ -222,6 +231,46 @@ struct LogExportView: View {
                 }
             }
             
+            Section(
+                header: Text("BLE Session Recording"),
+                footer: Text("Records raw sensor communication (no personal data). Reproduce the problem while recording, then share the file with the developer.")
+            ) {
+                Toggle("Record BLE Sessions", isOn: $isBLERecordingEnabled)
+                    .onChange(of: isBLERecordingEnabled) { _, newValue in
+                        BLESessionRecorder.shared.isEnabled = newValue
+                        refreshBLERecordings()
+                    }
+
+                ForEach(bleRecordings, id: \.self) { url in
+                    Button {
+                        recordingToShare = ShareableRecording(url: url)
+                    } label: {
+                        HStack {
+                            Image(systemName: "waveform.circle")
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(url.lastPathComponent)
+                                    .font(.caption)
+                                    .lineLimit(1)
+                                Text(fileDetails(for: url))
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.caption)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if !bleRecordings.isEmpty {
+                    Button("Delete All Recordings", role: .destructive) {
+                        BLESessionRecorder.shared.deleteAllRecordings()
+                        refreshBLERecordings()
+                    }
+                }
+            }
+
             Section(header: Text("Database Maintenance")) {
                 VStack(alignment: .leading, spacing: 8) {
                     if let stats = viewModel.cleanupStats {
@@ -416,6 +465,9 @@ struct LogExportView: View {
         }
         .navigationTitle("Debug Tools")
         .task {
+            // Save in-flight sessions so they show up in the list below
+            BLESessionRecorder.shared.flushAllSessions()
+            refreshBLERecordings()
             async let devices = loadDevices()
             async let stats = viewModel.loadDatabaseStats()
             async let notifStatus = viewModel.checkNotificationStatus()
@@ -456,6 +508,23 @@ struct LogExportView: View {
                 ShareSheet(items: [url])
             }
         }
+        .sheet(item: $recordingToShare) { recording in
+            ShareSheet(items: [recording.url])
+        }
+    }
+
+    private func refreshBLERecordings() {
+        bleRecordings = BLESessionRecorder.shared.listRecordings()
+    }
+
+    private func fileDetails(for url: URL) -> String {
+        let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+        let size = values?.fileSize ?? 0
+        let sizeText = ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file)
+        if let date = values?.contentModificationDate {
+            return "\(sizeText) · \(date.formatted(date: .abbreviated, time: .shortened))"
+        }
+        return sizeText
     }
 
     @MainActor
