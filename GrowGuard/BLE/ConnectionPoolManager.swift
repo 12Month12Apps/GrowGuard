@@ -86,25 +86,33 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
     init(central: BLECentral? = nil,
          scheduler: BLEScheduler = MainRunLoopScheduler(),
          now: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) {
-        if let central = central {
-            self.central = central
-        } else {
-            // Initialize with options for better connection stability
-            let options: [String: Any] = [
-                CBCentralManagerOptionRestoreIdentifierKey: "pro.veit.GrowGuard.centralManager",
-                CBCentralManagerOptionShowPowerAlertKey: true
-            ]
-            // Recording-Decorator ist immer installiert; solange die
-            // Aufzeichnung deaktiviert ist, reicht er nur durch (Opt-in
-            // Toggle im Debug-Menü, BLESessionRecorder.isEnabled)
-            self.central = RecordingBLECentral(wrapping: CoreBluetoothCentral(options: options))
-        }
+        self.central = central ?? Self.makeDefaultCentral()
         self.scheduler = scheduler
         self.now = now
 
         super.init()
 
         self.central.centralDelegate = self
+    }
+
+    /// Builds the production central. In DEBUG, when `GROWGUARD_BLE_BRIDGE` is
+    /// set, returns the localhost bridge transport (single-machine testing
+    /// against FlowerCareSim) instead of CoreBluetooth. Otherwise the
+    /// recording-decorated CoreBluetooth central (recording is opt-in via
+    /// BLESessionRecorder.isEnabled).
+    private static func makeDefaultCentral() -> BLECentral {
+        #if DEBUG
+        if let endpoint = BLEBridgeConfig.endpoint {
+            AppLogger.ble.info("🔌 BLE bridge active → \(endpoint.host):\(endpoint.port) (no radio)")
+            return BridgeBLECentral(channel: NWBridgeChannel(host: endpoint.host, port: endpoint.port))
+        }
+        #endif
+        // Initialize with options for better connection stability
+        let options: [String: Any] = [
+            CBCentralManagerOptionRestoreIdentifierKey: "pro.veit.GrowGuard.centralManager",
+            CBCentralManagerOptionShowPowerAlertKey: true
+        ]
+        return RecordingBLECentral(wrapping: CoreBluetoothCentral(options: options))
     }
 
     // MARK: - Public API
