@@ -313,6 +313,14 @@ final class FakeCentral: BLECentral {
 
     // MARK: Test triggers
 
+    /// Simulates a pending connect completing much later (background-arm
+    /// path: connectSucceeds was false when connect() was issued)
+    func simulateConnectCompletion(of identifier: UUID) {
+        guard let fake = knownPeripherals[identifier] else { return }
+        fake.state = .connected
+        centralDelegate?.central(self, didConnect: fake)
+    }
+
     /// Simulates the central reporting a discovery for a registered peripheral
     func simulateDiscovery(of identifier: UUID) {
         guard let fake = knownPeripherals[identifier] else { return }

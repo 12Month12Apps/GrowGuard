@@ -18,6 +18,24 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Create the BLE stack and wake handler before anything else: when
+        // iOS relaunches the app for a completed pending connect (state
+        // restoration), these must exist to receive the events
+        _ = ConnectionPoolManager.shared
+        BackgroundBLEWakeService.shared.start()
+
+        // SwiftUI scene lifecycle: applicationDidEnterBackground is never
+        // called on the app delegate — schedule BG tasks via the
+        // UIApplication notification instead (posted in every lifecycle)
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.schedulePlantMonitoringTask(source: .enterBackground)
+            self?.scheduleProcessingTask(source: .enterBackground)
+        }
+
         // Clear any lingering notification badges from previous sessions
         application.applicationIconBadgeNumber = 0
 
@@ -55,16 +73,23 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             self.handleProcessingTask(task: task as! BGProcessingTask)
         }
         
+        // Silent pushes (phase 2: hourly server push arms pending connects)
+        // need NO user permission — register unconditionally so the device
+        // token reaches the server even if notification permission is denied
+        print("📲 AppDelegate: Registering for remote notifications...")
+        application.registerForRemoteNotifications()
+
+        // BGTask scheduling must not depend on the notification permission
+        // either — schedule at launch unconditionally
+        schedulePlantMonitoringTask(source: .appLaunch)
+        scheduleProcessingTask(source: .appLaunch)
+
         // Anfrage für die Berechtigung, Benachrichtigungen zu senden (inkl. Time-Sensitive)
         print("🔐 AppDelegate: Requesting notification permissions including Time-Sensitive...")
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge, .timeSensitive]) { granted, error in
             DispatchQueue.main.async {
                 if granted {
                     print("✅ AppDelegate: Notification permissions granted (including Time-Sensitive)")
-
-                    // Register for remote notifications
-                    print("📲 AppDelegate: Registering for remote notifications...")
-                    application.registerForRemoteNotifications()
 
                     // Check if time-sensitive notifications are actually enabled
                     UNUserNotificationCenter.current().getNotificationSettings { settings in
@@ -89,10 +114,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                         // Schedule weekly sensor update reminder
                         await WeeklySensorUpdateService.shared.scheduleWeeklyReminder()
                     }
-
-                    // Schedule background tasks on app launch (more aggressive scheduling)
-                    self.schedulePlantMonitoringTask(source: .appLaunch)
-                    self.scheduleProcessingTask(source: .appLaunch)
                 } else if let error = error {
                     print("❌ AppDelegate: Failed to request authorization for notifications: \(error.localizedDescription)")
                 } else {
@@ -104,14 +125,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
     
-    func applicationDidEnterBackground(_ application: UIApplication) {
-        // Schedule plant monitoring task when app goes to background
-        schedulePlantMonitoringTask(source: .enterBackground)
-
-        // Schedule processing task for historical sync
-        scheduleProcessingTask(source: .enterBackground)
-    }
-
     // MARK: - Remote Notification Registration
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
@@ -155,25 +168,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         let isContentAvailable = (userInfo["aps"] as? [String: Any])?["content-available"] as? Int == 1
 
         if isContentAvailable {
-            print("🔄 AppDelegate: Processing background notification - triggering sensor data fetch")
-
-            // Trigger background sensor data fetch (source: backgroundPush)
+            print("🔄 AppDelegate: Silent push — arming background connects")
+            BackgroundTaskTracker.shared.recordPushReceived()
             Task { @MainActor in
-                let fetchResult = await BackgroundSensorDataService.shared.fetchSensorDataInBackground(source: .backgroundPush)
-
-                print("📊 AppDelegate: Remote push fetch completed - \(fetchResult.successfulDevices.count) devices, \(fetchResult.totalDataPoints) data points in \(String(format: "%.1f", fetchResult.duration))s")
-
-                // Perform device status checks with the new data
-                await PlantMonitorService.shared.performDailyDeviceCheck()
-
-                // Report result to iOS
-                if fetchResult.successfulDevices.isEmpty && fetchResult.failedDevices.isEmpty {
-                    completionHandler(.noData)
-                } else if !fetchResult.successfulDevices.isEmpty {
-                    completionHandler(.newData)
-                } else {
-                    completionHandler(.failed)
-                }
+                await BackgroundBLEWakeService.shared.armAll(source: .backgroundPush)
+                completionHandler(.newData)
             }
         } else {
             print("ℹ️ AppDelegate: Non-silent notification received")
@@ -207,50 +206,17 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Schedule next monitoring task
         schedulePlantMonitoringTask(source: .afterExecution)
 
-        let queue = OperationQueue()
-        queue.maxConcurrentOperationCount = 1
-
-        let operation = BlockOperation {
-            // Perform device monitoring in background with sensor data fetch
-            let group = DispatchGroup()
-            group.enter()
-
-            Task { @MainActor in
-                defer { group.leave() }
-
-                print("🔄 AppDelegate: Starting background sensor data fetch")
-
-                // Step 1: Fetch fresh sensor data from devices using ConnectionPool (source: backgroundTask)
-                let fetchResult = await BackgroundSensorDataService.shared.fetchSensorDataInBackground(source: .backgroundTask)
-
-                print("📊 AppDelegate: Background fetch completed - \(fetchResult.successfulDevices.count) devices, \(fetchResult.totalDataPoints) data points in \(String(format: "%.1f", fetchResult.duration))s")
-
-                // Track execution for debugging
-                BackgroundTaskTracker.shared.recordRefreshTaskExecution(result: fetchResult)
-                BackgroundTaskTracker.shared.printSummary()
-
-                // Step 2: Perform device status checks with the new data
-                await PlantMonitorService.shared.performDailyDeviceCheck()
-
-                print("✅ AppDelegate: Completed plant monitoring task")
-            }
-
-            group.wait()
+        // Arm-don't-fetch (spec 2026-06-12): only issue pending connects
+        // here. The read happens on the BLE wake via BackgroundBLEWakeService,
+        // so nothing races the ~30 s window.
+        let armWork = Task { @MainActor in
+            await BackgroundBLEWakeService.shared.armAll(source: .backgroundTask)
+            task.setTaskCompleted(success: !Task.isCancelled)
         }
 
         task.expirationHandler = {
-            print("⏰ AppDelegate: Plant monitoring task expired, cancelling fetch")
-            Task { @MainActor in
-                BackgroundSensorDataService.shared.cancelFetch()
-            }
-            queue.cancelAllOperations()
+            armWork.cancel()
         }
-
-        operation.completionBlock = {
-            task.setTaskCompleted(success: !operation.isCancelled)
-        }
-
-        queue.addOperation(operation)
     }
 
     // MARK: - Background Processing Task (Historical Sync)
@@ -283,52 +249,22 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Schedule next processing task
         scheduleProcessingTask(source: .afterExecution)
 
-        print("🔄 AppDelegate: Starting background processing task for historical sync")
+        print("📚 AppDelegate: Processing task — background history sync")
 
-        let queue = OperationQueue()
-        queue.maxConcurrentOperationCount = 1
-
-        let operation = BlockOperation {
-            let group = DispatchGroup()
-            group.enter()
-
-            Task { @MainActor in
-                defer { group.leave() }
-
-                // Processing task has more time - fetch data and sync historical if needed
-                print("📊 AppDelegate: Processing task - fetching sensor data with extended time")
-
-                // Use extended timeout for processing task (source: backgroundTask)
-                let fetchResult = await BackgroundSensorDataService.shared.fetchSensorDataInBackground(source: .backgroundTask)
-
-                print("📊 AppDelegate: Processing fetch completed - \(fetchResult.successfulDevices.count) devices in \(String(format: "%.1f", fetchResult.duration))s")
-
-                // Track execution for debugging
-                BackgroundTaskTracker.shared.recordProcessingTaskExecution(result: fetchResult)
-                BackgroundTaskTracker.shared.printSummary()
-
-                // Run device checks
-                await PlantMonitorService.shared.performDailyDeviceCheck()
-
-                print("✅ AppDelegate: Completed processing task")
-            }
-
-            group.wait()
+        let syncWork = Task { @MainActor in
+            await BackgroundHistorySyncService.shared.syncAllDevices()
+            await PlantMonitorService.shared.performDailyDeviceCheck()
+            task.setTaskCompleted(success: true)
         }
 
         task.expirationHandler = {
-            print("⏰ AppDelegate: Processing task expired")
+            // Suspends the in-flight flow (progress kept for resume) and
+            // makes syncAllDevices return, which completes the task above
             Task { @MainActor in
-                BackgroundSensorDataService.shared.cancelFetch()
+                BackgroundHistorySyncService.shared.requestExpiration()
             }
-            queue.cancelAllOperations()
+            _ = syncWork
         }
-
-        operation.completionBlock = {
-            task.setTaskCompleted(success: !operation.isCancelled)
-        }
-
-        queue.addOperation(operation)
     }
 
     // MARK: - Notification System Validation

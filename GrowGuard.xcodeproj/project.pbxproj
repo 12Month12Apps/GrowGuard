@@ -91,8 +91,9 @@
 		56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CCD2D78E8EB00A6A75A /* print.swift */; };
 		56BF5F9B2DFA5D7300D9B2AE /* AddWithoutSensor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BF5F9A2DFA5D6C00D9B2AE /* AddWithoutSensor.swift */; };
 		56BF5F9D2DFA5E9100D9B2AE /* AddWithoutSensorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */; };
-		56BGSD012EC7000000000001 /* BackgroundSensorDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BGSD002EC7000000000001 /* BackgroundSensorDataService.swift */; };
 		56BGTR012EC7000000000002 /* BackgroundTaskTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */; };
+		56BWKS012EC7000000000001 /* BackgroundBLEWakeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BWKS002EC7000000000001 /* BackgroundBLEWakeService.swift */; };
+		56BHSY012EC7000000000001 /* BackgroundHistorySyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BHSY002EC7000000000001 /* BackgroundHistorySyncService.swift */; };
 		56D35EB72E2BE5730059FEE6 /* PotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D35EB62E2BE56C0059FEE6 /* PotView.swift */; };
 		56DC564D2DD9256800041DBA /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 56DC564C2DD9256800041DBA /* GRDB */; };
 		56E9573D2ED3088100082A6F /* GrowGuardAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E9573C2ED3088100082A6F /* GrowGuardAPIClient.swift */; };
@@ -105,6 +106,9 @@
 		56FA2DEC0DE4F1B500000008 /* FakeBLETransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */; };
 		56FA2DEC0DE4F1B50000000A /* DeviceConnectionScenarioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */; };
 		56FA2DEC0DE4F1B50000000C /* ConnectionPoolManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */; };
+		56BHST012EC7000000000001 /* BackgroundHistorySyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BHST002EC7000000000001 /* BackgroundHistorySyncTests.swift */; };
+		56BWKT012EC7000000000001 /* BackgroundWakeServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BWKT002EC7000000000001 /* BackgroundWakeServiceTests.swift */; };
+		56BARM012EC7000000000001 /* BackgroundArmTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BARM002EC7000000000001 /* BackgroundArmTests.swift */; };
 		56FA2DEC0DE4F1B50000000E /* DeviceConnectionHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B50000000D /* DeviceConnectionHistoryTests.swift */; };
 		56FD6C862E34194C00905984 /* SensorDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FD6C852E34194C00905984 /* SensorDataManager.swift */; };
 		56HLA0022EC8000000000001 /* HistoryLoadingAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56HLA0012EC8000000000001 /* HistoryLoadingAttributes.swift */; };
@@ -262,8 +266,9 @@
 		56B44CCD2D78E8EB00A6A75A /* print.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = print.swift; sourceTree = "<group>"; };
 		56BF5F9A2DFA5D6C00D9B2AE /* AddWithoutSensor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWithoutSensor.swift; sourceTree = "<group>"; };
 		56BF5F9C2DFA5E8900D9B2AE /* AddWithoutSensorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWithoutSensorViewModel.swift; sourceTree = "<group>"; };
-		56BGSD002EC7000000000001 /* BackgroundSensorDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundSensorDataService.swift; sourceTree = "<group>"; };
 		56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskTracker.swift; sourceTree = "<group>"; };
+		56BWKS002EC7000000000001 /* BackgroundBLEWakeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundBLEWakeService.swift; sourceTree = "<group>"; };
+		56BHSY002EC7000000000001 /* BackgroundHistorySyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundHistorySyncService.swift; sourceTree = "<group>"; };
 		56C780520D1F48A1A95C9D43 /* ReplayBLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplayBLETransport.swift; sourceTree = "<group>"; };
 		56D35EB62E2BE56C0059FEE6 /* PotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PotView.swift; sourceTree = "<group>"; };
 		56E9573C2ED3088100082A6F /* GrowGuardAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardAPIClient.swift; sourceTree = "<group>"; };
@@ -276,6 +281,9 @@
 		56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakeBLETransport.swift; sourceTree = "<group>"; };
 		56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnectionScenarioTests.swift; sourceTree = "<group>"; };
 		56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionPoolManagerTests.swift; sourceTree = "<group>"; };
+		56BHST002EC7000000000001 /* BackgroundHistorySyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundHistorySyncTests.swift; sourceTree = "<group>"; };
+		56BWKT002EC7000000000001 /* BackgroundWakeServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundWakeServiceTests.swift; sourceTree = "<group>"; };
+		56BARM002EC7000000000001 /* BackgroundArmTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundArmTests.swift; sourceTree = "<group>"; };
 		56FA2DEC0DE4F1B50000000D /* DeviceConnectionHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnectionHistoryTests.swift; sourceTree = "<group>"; };
 		56FD6C852E34194C00905984 /* SensorDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataManager.swift; sourceTree = "<group>"; };
 		56HLA0012EC8000000000001 /* HistoryLoadingAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryLoadingAttributes.swift; sourceTree = "<group>"; };
@@ -486,6 +494,9 @@
 				56FA2DEC0DE4F1B500000007 /* FakeBLETransport.swift */,
 				56FA2DEC0DE4F1B500000009 /* DeviceConnectionScenarioTests.swift */,
 				56FA2DEC0DE4F1B50000000B /* ConnectionPoolManagerTests.swift */,
+				56BHST002EC7000000000001 /* BackgroundHistorySyncTests.swift */,
+				56BWKT002EC7000000000001 /* BackgroundWakeServiceTests.swift */,
+				56BARM002EC7000000000001 /* BackgroundArmTests.swift */,
 				59E679C227EE418A9C585478 /* BLEPerformanceTests.swift */,
 				C8F10F04E3674D099816889E /* ReliabilityPolicyTests.swift */,
 				DC03DBA5E52147B48284AC39 /* Recordings */,
@@ -564,8 +575,9 @@
 		568EA33D2EB625CE00F6BB25 /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				56BGSD002EC7000000000001 /* BackgroundSensorDataService.swift */,
 				56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */,
+				56BWKS002EC7000000000001 /* BackgroundBLEWakeService.swift */,
+				56BHSY002EC7000000000001 /* BackgroundHistorySyncService.swift */,
 				56E9573C2ED3088100082A6F /* GrowGuardAPIClient.swift */,
 				56HLA0012EC8000000000001 /* HistoryLoadingAttributes.swift */,
 				56HLAS012EC8000000000002 /* HistoryLoadingActivityService.swift */,
@@ -1021,8 +1033,9 @@
 				56AF11192BDED05900887073 /* GrowGuardApp.swift in Sources */,
 				5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */,
 				56B3B7392EA5181700AE41E9 /* WeeklySensorUpdateService.swift in Sources */,
-				56BGSD012EC7000000000001 /* BackgroundSensorDataService.swift in Sources */,
 				56BGTR012EC7000000000002 /* BackgroundTaskTracker.swift in Sources */,
+				56BWKS012EC7000000000001 /* BackgroundBLEWakeService.swift in Sources */,
+				56BHSY012EC7000000000001 /* BackgroundHistorySyncService.swift in Sources */,
 				56HLA0022EC8000000000001 /* HistoryLoadingAttributes.swift in Sources */,
 				56HLAS022EC8000000000002 /* HistoryLoadingActivityService.swift in Sources */,
 				5622B0E92E317737002C7E74 /* OptimalRange+DTO.swift in Sources */,
@@ -1054,6 +1067,9 @@
 				56FA2DEC0DE4F1B500000008 /* FakeBLETransport.swift in Sources */,
 				56FA2DEC0DE4F1B50000000A /* DeviceConnectionScenarioTests.swift in Sources */,
 				56FA2DEC0DE4F1B50000000C /* ConnectionPoolManagerTests.swift in Sources */,
+				56BHST012EC7000000000001 /* BackgroundHistorySyncTests.swift in Sources */,
+				56BWKT012EC7000000000001 /* BackgroundWakeServiceTests.swift in Sources */,
+				56BARM012EC7000000000001 /* BackgroundArmTests.swift in Sources */,
 				E74116E2F3304A11BD446D55 /* BLEPerformanceTests.swift in Sources */,
 				F59A2B14028549EBAAD0673A /* ReliabilityPolicyTests.swift in Sources */,
 				10F70A0DB6B34BF6AFFF6504 /* ReplaySessionTests.swift in Sources */,

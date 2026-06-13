@@ -79,16 +79,34 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
         CBConnectPeripheralOptionStartDelayKey: 0 // Sofort verbinden
     ]
 
+    // MARK: - Background Arm (pending connects, spec 2026-06-12)
+
+    /// Geräte mit aktivem Background-Pending-Connect. Persistiert, damit ein
+    /// State-Restoration-Relaunch armed-Geräte wiedererkennt.
+    private var backgroundArmedDevices: Set<String> = []
+    private let armedDevicesDefaultsKey = "ble_background_armed_devices"
+    private let defaults: UserDefaults
+
+    /// Meldet Geräte, deren Background-Pending-Connect zustande kam —
+    /// BackgroundBLEWakeService liest dann live aus und disarmt
+    private let armedConnectionSubject = PassthroughSubject<String, Never>()
+    var armedConnectionPublisher: AnyPublisher<String, Never> {
+        armedConnectionSubject.eraseToAnyPublisher()
+    }
+
     // MARK: - Initialization
 
     /// Produktion nutzt `shared` (CoreBluetooth-Transport mit State Restoration).
     /// Tests injizieren ein Fake-Central und einen TestScheduler.
     init(central: BLECentral? = nil,
          scheduler: BLEScheduler = MainRunLoopScheduler(),
-         now: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) {
+         now: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
+         defaults: UserDefaults = .standard) {
         self.central = central ?? Self.makeDefaultCentral()
         self.scheduler = scheduler
         self.now = now
+        self.defaults = defaults
+        self.backgroundArmedDevices = Set(defaults.stringArray(forKey: armedDevicesDefaultsKey) ?? [])
 
         super.init()
 
@@ -319,6 +337,71 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
         cumulativeRetryCount[deviceUUID] ?? 0
     }
 
+    // MARK: - Background Arm API
+
+    /// Pending-Connect ohne Watchdog/Retry-Budget: iOS verbindet, sobald der
+    /// Sensor advertised — Minuten oder Stunden später. Der Connect überlebt
+    /// App-Suspension und (mit State Restoration) System-Termination.
+    func armBackgroundConnect(for deviceUUID: String) {
+        guard let uuid = UUID(uuidString: deviceUUID) else {
+            AppLogger.ble.bleError("armBackgroundConnect: invalid UUID \(deviceUUID)")
+            return
+        }
+
+        let connection = getConnection(for: deviceUUID)
+
+        // Laufenden History-Sync nicht kapern (Auto-Reconnect hält ihn am Leben)
+        guard !connection.isHistoryFlowActive else {
+            AppLogger.ble.bleConnection("armBackgroundConnect: history flow active for \(deviceUUID), skipping")
+            return
+        }
+
+        connection.setAutoStartHistoryFlowEnabled(false)
+        backgroundArmedDevices.insert(deviceUUID)
+        persistArmedDevices()
+
+        guard central.state == .poweredOn else {
+            // Bleibt armed; der poweredOn-Handler re-armt aus dem Set
+            AppLogger.ble.bleWarning("armBackgroundConnect: Bluetooth not ready, \(deviceUUID) stays armed")
+            return
+        }
+
+        if connection.connectionState == .connected || connection.connectionState == .authenticated {
+            AppLogger.ble.bleConnection("armBackgroundConnect: \(deviceUUID) already connected, emitting wake")
+            armedConnectionSubject.send(deviceUUID)
+            return
+        }
+
+        guard let peripheral = central.retrievePeripherals(withIdentifiers: [uuid]).first else {
+            // Kein Scan-Fallback: Background-Scans sind langsam; das Gerät war
+            // schon mal verbunden, der nächste Trigger versucht es erneut
+            AppLogger.ble.bleWarning("armBackgroundConnect: \(deviceUUID) not in retrieve cache, stays armed")
+            return
+        }
+
+        connection.setPeripheral(peripheral)
+        central.connect(peripheral, options: Self.connectOptions)
+        AppLogger.ble.bleConnection("🛡 Armed background pending connect for \(deviceUUID)")
+    }
+
+    func disarmBackgroundConnect(for deviceUUID: String) {
+        backgroundArmedDevices.remove(deviceUUID)
+        persistArmedDevices()
+    }
+
+    func disarmAllBackgroundConnects() {
+        backgroundArmedDevices.removeAll()
+        persistArmedDevices()
+    }
+
+    func isBackgroundArmed(_ deviceUUID: String) -> Bool {
+        backgroundArmedDevices.contains(deviceUUID)
+    }
+
+    private func persistArmedDevices() {
+        defaults.set(Array(backgroundArmedDevices), forKey: armedDevicesDefaultsKey)
+    }
+
     func connectToMultiple(deviceUUIDs: [String]) {
         AppLogger.ble.bleConnection("Connecting to multiple devices: \(deviceUUIDs.count)")
 
@@ -403,6 +486,12 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
                         connect(to: uuid, autoStartHistoryFlow: historyFlag)
                     }
                 }
+                // Re-issue pending connects für armed Geräte (Restoration-
+                // Relaunch oder BT-Toggle); für bereits pendende Peripherals
+                // ein No-Op
+                for deviceUUID in Array(backgroundArmedDevices) {
+                    armBackgroundConnect(for: deviceUUID)
+                }
             case .poweredOff:
                 AppLogger.ble.bleError("Bluetooth is powered off")
             case .unsupported:
@@ -476,6 +565,11 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
 
             // Informiere Connection über erfolgreiche Verbindung
             connection.handleConnected()
+
+            if backgroundArmedDevices.contains(peripheralUUID) {
+                AppLogger.ble.info("🛡 Background-armed connect completed for \(peripheralUUID)")
+                armedConnectionSubject.send(peripheralUUID)
+            }
         }
     }
 
@@ -547,6 +641,13 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
             // Cancel timeout
             self.cancelConnectionTimeout(for: peripheralUUID)
 
+            if self.backgroundArmedDevices.contains(peripheralUUID) {
+                // Armed Connects haben kein Retry-Budget: bleiben armed, der
+                // nächste Trigger oder poweredOn re-issued den Pending-Connect
+                AppLogger.ble.bleWarning("Armed connect failed for \(peripheralUUID) — staying armed, no retry burn")
+                return
+            }
+
             self.handleAttemptFailure(for: peripheralUUID, reason: .failedToConnect, underlyingError: error)
         }
     }
@@ -570,6 +671,11 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
                 if peripheral.state == .connected {
                     AppLogger.ble.bleConnection("✅ Device \(peripheralUUID) already connected after restore")
                     connection.handleConnected()
+
+                    if backgroundArmedDevices.contains(peripheralUUID) {
+                        AppLogger.ble.info("🛡 Restored armed connection for \(peripheralUUID), emitting wake")
+                        armedConnectionSubject.send(peripheralUUID)
+                    }
                 }
             }
         }

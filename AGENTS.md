@@ -22,7 +22,7 @@ UI (SwiftUI Views)
   ↓
 ViewModels (@Observable classes)
   ↓
-Services (singletons: BackgroundSensorDataService, PlantMonitorService, etc.)
+Services (singletons: BackgroundBLEWakeService, PlantMonitorService, etc.)
   ↓
 Repositories (interface-based, backed by Core Data or SQLite)
   ↓
@@ -57,7 +57,7 @@ Hardware (BLE via ConnectionPoolManager + DeviceConnection)
 - **Repositories:** Define protocol in `Database/Repositories/`, implement as `CoreData*` classes. Inject via `RepositoryManager.shared.*`.
 - **Singletons:** Services use `static let shared`. ViewModels are created per-view (not singletons).
 - **Combine:** BLE services emit via `PassthroughSubject` → `AnyPublisher`. ViewModels subscribe and store in `cancellables: Set<AnyCancellable>`.
-- **Background tasks:** `BackgroundSensorDataService` handles periodic sensor reads within iOS time limits (~25s).
+- **Background tasks:** arm-don't-fetch (spec `docs/superpowers/specs/2026-06-12-background-ble-design.md`): triggers (BGAppRefreshTask, silent push, enter-background) only arm pending connects via `ConnectionPoolManager.armBackgroundConnect`; `BackgroundBLEWakeService` does the live read + dry-plant check on the BLE wake. `BackgroundHistorySyncService` runs history sync inside BGProcessingTask windows.
 
 ## BLE Testing & Record/Replay
 
