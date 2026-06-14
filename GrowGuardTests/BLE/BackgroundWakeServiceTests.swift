@@ -14,6 +14,7 @@ import UIKit
 @testable import GrowGuard
 
 @MainActor
+@Suite(.serialized)
 struct BackgroundWakeServiceTests {
 
     final class Recorder {
@@ -65,9 +66,7 @@ struct BackgroundWakeServiceTests {
     }
 
     private func pump() async {
-        for _ in 0..<10 {
-            await Task.yield()
-        }
+        await drainMainActor()
     }
 
     /// Pump + advance in small slices so scheduler work and main-actor
