@@ -42,7 +42,7 @@ import SwiftUI
     }
     
     func navigateToFlowerDetail(flower: VMSpecies) {
-        NavigationService.shared.navigateToDeviceDetails(flower: flower)
+        NavigationService.shared.showSpeciesDetails(flower)
     }
 }
 

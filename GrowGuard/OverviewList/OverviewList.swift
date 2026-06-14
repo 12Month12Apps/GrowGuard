@@ -125,7 +125,7 @@ struct OverviewList: View {
                         List {
                             ForEach(viewModel.allSavedDevices) { device in
                                 DeviceCard(device: device) {
-                                    NavigationService.shared.navigateToDeviceView(flowerDevice: device)
+                                    NavigationService.shared.showDeviceDetail(device)
                                 }
                                 .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                                 .listRowBackground(Color.clear)
@@ -144,6 +144,7 @@ struct OverviewList: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle(L10n.Navigation.overview)
         .navigationBarTitleDisplayMode(.large)
+        .accessibilityIdentifier("overviewScreen")
         .onAppear {
             self.loading = true
             Task { @MainActor in
@@ -426,6 +427,7 @@ struct DeviceCard: View {
             .cornerRadius(16)
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityIdentifier("deviceCard-\(device.uuid)")
         .task {
             let connection = ConnectionPoolManager.shared.getConnection(for: device.uuid)
             connectionState = connection.connectionState

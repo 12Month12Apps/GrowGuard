@@ -22,33 +22,37 @@ struct AddDeviceView: View {
             VStack(spacing: 24) {
                 // Manual add section
                 VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        Image(systemName: "leaf.fill")
-                            .font(.title2)
-                            .foregroundColor(.green)
+                    Button {
+                        NavigationService.shared.showAddWithoutSensor()
+                    } label: {
+                        HStack {
+                            Image(systemName: "leaf.fill")
+                                .font(.title2)
+                                .foregroundColor(.green)
 
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Add Plant Manually")
-                                .font(.headline)
-                                .fontWeight(.semibold)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Add Plant Manually")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.primary)
 
-                            Text("Track your plant without a sensor")
+                                Text("Track your plant without a sensor")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
-
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        .padding()
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .cornerRadius(16)
                     }
-                    .padding()
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .cornerRadius(16)
-                    .onTapGesture {
-                        NavigationService.shared.navigateToAddDeviceWithoutSensor()
-                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("addManuallyCard")
                 }
                 .padding(.horizontal)
                 .padding(.top, 8)
@@ -106,11 +110,11 @@ struct AddDeviceView: View {
                             ) {
                                 if isAdded {
                                     // Already added — navigate with BLE name
-                                    NavigationService.shared.navigateToDeviceDetails(device: device)
+                                    NavigationService.shared.showSensorDetails(device: device)
                                 } else {
                                     // New device — use suggested sequential name
                                     let name = viewModel.nextPlantName ?? (device.name ?? L10n.Device.unknownDevice)
-                                    NavigationService.shared.navigateToDeviceDetails(device: device, suggestedName: name)
+                                    NavigationService.shared.showSensorDetails(device: device, suggestedName: name)
                                 }
                             }
                             .padding(.horizontal)
@@ -123,6 +127,7 @@ struct AddDeviceView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle(L10n.Navigation.addDevice)
         .navigationBarTitleDisplayMode(.large)
+        .accessibilityIdentifier("addDeviceScreen")
         .onAppear {
             viewModel.startScanningIfNeeded()
             Task {
