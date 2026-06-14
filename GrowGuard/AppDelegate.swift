@@ -18,6 +18,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        #if DEBUG
+        // UI-test seam: seed a deterministic device before any view fetches.
+        seedUITestDataIfNeeded()
+        #endif
+
         // Create the BLE stack and wake handler before anything else: when
         // iOS relaunches the app for a completed pending connect (state
         // restoration), these must exist to receive the events
@@ -418,3 +423,53 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         }
     }
 }
+
+#if DEBUG
+extension AppDelegate {
+    /// UI-test seam. When the app is launched with `-uiTestSeedDevice`, reset the
+    /// Core Data store to a single known device so navigation flows (notably
+    /// Overview → Details) are deterministic without BLE hardware. Compiled only
+    /// into DEBUG builds and a no-op unless the launch argument is present.
+    func seedUITestDataIfNeeded() {
+        guard ProcessInfo.processInfo.arguments.contains("-uiTestSeedDevice") else { return }
+
+        let context = DataService.shared.context
+
+        // Clean slate: drop existing devices and sensor data (relationship uses
+        // a nullify rule, so sensor rows must be removed explicitly).
+        if let devices = try? context.fetch(NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")) {
+            devices.forEach(context.delete)
+        }
+        if let samples = try? context.fetch(NSFetchRequest<SensorData>(entityName: "SensorData")) {
+            samples.forEach(context.delete)
+        }
+
+        let device = FlowerDevice(context: context)
+        device.name = "UITest Plant"
+        device.uuid = "UITEST-DEVICE-0001"
+        device.isSensor = true
+        device.battery = 72
+        device.firmware = "1.0.0"
+        device.added = Date()
+        device.lastUpdate = Date()
+
+        // A handful of recent samples so the detail screen has data to render.
+        for dayOffset in 0..<5 {
+            let sample = SensorData(context: context)
+            sample.date = Calendar.current.date(byAdding: .day, value: -dayOffset, to: Date()) ?? Date()
+            sample.moisture = Int16(40 + dayOffset)
+            sample.temperature = 21.5
+            sample.brightness = Int32(1200)
+            sample.conductivity = Int16(350)
+            sample.source = "unknown"
+            sample.device = device
+        }
+
+        do {
+            try context.save()
+        } catch {
+            print("UITest seed failed: \(error.localizedDescription)")
+        }
+    }
+}
+#endif

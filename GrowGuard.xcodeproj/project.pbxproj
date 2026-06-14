@@ -80,8 +80,10 @@
 		56AF111F2BDED05B00887073 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 56AF111E2BDED05B00887073 /* Assets.xcassets */; };
 		56AF11232BDED05B00887073 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 56AF11222BDED05B00887073 /* Preview Assets.xcassets */; };
 		56AF112D2BDED05B00887073 /* GrowGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF112C2BDED05B00887073 /* GrowGuardTests.swift */; };
+		0AB1C2D300000000000000B1 /* NavigationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AB1C2D300000000000000F1 /* NavigationServiceTests.swift */; };
 		56AF11372BDED05B00887073 /* GrowGuardUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11362BDED05B00887073 /* GrowGuardUITests.swift */; };
 		56AF11392BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56AF11382BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift */; };
+		0AB1C2D300000000000000B2 /* NavigationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AB1C2D300000000000000F2 /* NavigationUITests.swift */; };
 		56B3B7392EA5181700AE41E9 /* WeeklySensorUpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B3B7382EA5181700AE41E9 /* WeeklySensorUpdateService.swift */; };
 		56B44CC42D6E7B3F00A6A75A /* HistoricalSensorData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */; };
 		56B44CC52D6E7B3F00A6A75A /* SensorDataDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B44CC02D6E7B3F00A6A75A /* SensorDataDecoder.swift */; };
@@ -253,9 +255,11 @@
 		56AF11222BDED05B00887073 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		56AF11282BDED05B00887073 /* GrowGuardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GrowGuardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		56AF112C2BDED05B00887073 /* GrowGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardTests.swift; sourceTree = "<group>"; };
+		0AB1C2D300000000000000F1 /* NavigationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationServiceTests.swift; sourceTree = "<group>"; };
 		56AF11322BDED05B00887073 /* GrowGuardUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GrowGuardUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		56AF11362BDED05B00887073 /* GrowGuardUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardUITests.swift; sourceTree = "<group>"; };
 		56AF11382BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		0AB1C2D300000000000000F2 /* NavigationUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationUITests.swift; sourceTree = "<group>"; };
 		56AF11452BE2492300887073 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		56B3B7382EA5181700AE41E9 /* WeeklySensorUpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklySensorUpdateService.swift; sourceTree = "<group>"; };
 		56B44CBF2D6E7B3F00A6A75A /* HistoricalSensorData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalSensorData.swift; sourceTree = "<group>"; };
@@ -708,6 +712,7 @@
 				5654B2BF2CB46EF200EED3D3 /* BLE */,
 				5654B2BE2CB46EEA00EED3D3 /* ViewModel */,
 				56AF112C2BDED05B00887073 /* GrowGuardTests.swift */,
+				0AB1C2D300000000000000F1 /* NavigationServiceTests.swift */,
 			);
 			path = GrowGuardTests;
 			sourceTree = "<group>";
@@ -717,6 +722,7 @@
 			children = (
 				56AF11362BDED05B00887073 /* GrowGuardUITests.swift */,
 				56AF11382BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift */,
+				0AB1C2D300000000000000F2 /* NavigationUITests.swift */,
 			);
 			path = GrowGuardUITests;
 			sourceTree = "<group>";
@@ -1078,6 +1084,7 @@
 				56FA2DEC0DE4F1B50000000E /* DeviceConnectionHistoryTests.swift in Sources */,
 				5654B2BD2CB46EE600EED3D3 /* OverviewListViewModelTests.swift in Sources */,
 				56AF112D2BDED05B00887073 /* GrowGuardTests.swift in Sources */,
+				0AB1C2D300000000000000B1 /* NavigationServiceTests.swift in Sources */,
 				56F0F7DD2E564C2800B538AF /* MoistureAnomalyServiceTests.swift in Sources */,
 				26A048DD6828B0F96B4FB336 /* BridgeBLECentralTests.swift in Sources */,
 				1C094F5B7AE87D738830D849 /* BridgeDeviceDiscoveryTests.swift in Sources */,
@@ -1090,6 +1097,7 @@
 			files = (
 				56AF11372BDED05B00887073 /* GrowGuardUITests.swift in Sources */,
 				56AF11392BDED05B00887073 /* GrowGuardUITestsLaunchTests.swift in Sources */,
+				0AB1C2D300000000000000B2 /* NavigationUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
