@@ -14,6 +14,7 @@ import CoreBluetooth
 @testable import GrowGuard
 
 @MainActor
+@Suite(.serialized)
 struct RecordingTransportTests {
 
     let scheduler = TestScheduler()
@@ -46,9 +47,7 @@ struct RecordingTransportTests {
     }
 
     private func pump() async {
-        for _ in 0..<10 {
-            await Task.yield()
-        }
+        await drainMainActor()
     }
 
     // MARK: - Transparency

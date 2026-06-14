@@ -10,7 +10,63 @@
 
 import Foundation
 import CoreBluetooth
+import Testing
 @testable import GrowGuard
+
+// MARK: - Async test helpers
+//
+// ConnectionPoolManager hops every BLECentralDelegate callback and publisher
+// emission through `Task { @MainActor in … }`, so the state a test asserts on
+// settles in a detached main-actor Task rather than synchronously. Tests must
+// drain that queue before asserting. The old per-suite `pump()` did a fixed
+// `for _ in 0..<10 { await Task.yield() }`, which is flaky: under parallel
+// execution ~two dozen @MainActor tests multiplex on the main actor, and ten
+// yields aren't enough for the queued callbacks to run before the assertion.
+
+/// Runs all main-actor work currently enqueued, draining `passes` levels deep.
+///
+/// A freshly-enqueued main-actor job runs only after every job already in the
+/// queue ahead of it (same priority, FIFO order), so awaiting an empty trailing
+/// Task guarantees the pool's Task-hopped callbacks have completed. Each extra
+/// pass drains one more level of callbacks that themselves enqueue follow-up
+/// Tasks (e.g. a fired timer that schedules a reconnect). Unlike a fixed
+/// `Task.yield()` count this is deterministic even under parallel main-actor
+/// contention — FIFO ordering holds regardless of how many other tests are
+/// interleaved on the actor.
+@MainActor
+func drainMainActor(passes: Int = 4) async {
+    for _ in 0..<max(1, passes) {
+        await Task { @MainActor in }.value
+    }
+}
+
+/// Polls `condition` on the main actor, draining queued main-actor work between
+/// checks, and returns as soon as it holds. Records a test failure (at the
+/// caller's source location) if `timeout` elapses first.
+///
+/// Use for assertions whose truth depends on settled async state — a publisher
+/// emission or a connect request issued from a Task-hopped delegate callback.
+/// This waits exactly as long as the state needs and no longer, instead of
+/// guessing a yield count.
+@MainActor
+@discardableResult
+func waitUntil(
+    _ comment: Comment? = nil,
+    timeout: TimeInterval = 5,
+    sourceLocation: SourceLocation = #_sourceLocation,
+    until condition: @MainActor () -> Bool
+) async -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    while Date() < deadline {
+        if condition() { return true }
+        await Task { @MainActor in }.value
+    }
+    let satisfied = condition()
+    #expect(satisfied,
+            comment ?? "waitUntil: condition not satisfied within \(timeout)s",
+            sourceLocation: sourceLocation)
+    return satisfied
+}
 
 // MARK: - TestScheduler
 

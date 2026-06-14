@@ -13,6 +13,7 @@ import CoreBluetooth
 @testable import GrowGuard
 
 @MainActor
+@Suite(.serialized)
 struct BackgroundHistorySyncTests {
 
     final class Recorder {
@@ -58,9 +59,7 @@ struct BackgroundHistorySyncTests {
     }
 
     private func pump() async {
-        for _ in 0..<10 {
-            await Task.yield()
-        }
+        await drainMainActor()
     }
 
     @Test("Syncs all history entries of a device, then completes and disconnects")

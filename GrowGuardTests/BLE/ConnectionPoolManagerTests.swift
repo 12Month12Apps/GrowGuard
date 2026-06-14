@@ -14,6 +14,7 @@ import CoreBluetooth
 @testable import GrowGuard
 
 @MainActor
+@Suite(.serialized)
 struct ConnectionPoolManagerTests {
 
     let scheduler = TestScheduler()
@@ -36,11 +37,10 @@ struct ConnectionPoolManagerTests {
         return sensor
     }
 
-    /// Lets the pool's Task-hopped delegate callbacks run
+    /// Lets the pool's Task-hopped delegate callbacks run. Drains the main
+    /// actor deterministically instead of yielding a fixed number of times.
     private func pump() async {
-        for _ in 0..<10 {
-            await Task.yield()
-        }
+        await drainMainActor()
     }
 
     // MARK: - Tests
