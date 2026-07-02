@@ -1,8 +1,17 @@
 # BLE Testing Strategy — Path to Production Confidence
 
-Status: Proposal (2026-06-11)
+Status: Executed (all 5 phases landed 2026-06-11 … 2026-06-12; kept as the
+rationale record for the BLE test architecture)
 Goal: Ship GrowGuard with high confidence that BLE communication with Xiaomi FlowerCare
 sensors works reliably — without destabilizing the current, working implementation.
+
+> **Post-execution note:** The analysis below describes the codebase as of
+> 2026-06-11 and is intentionally left unchanged. Since then: the unit/hardware
+> test plans, decoder fixtures, transport seams, fake sensor, scenario suite and
+> hardware checklist all landed; the legacy `FlowerCareManager` stack was
+> removed entirely (2026-06-12). Current reliability and record/replay
+> documentation lives in `BLE-Reliability.md`; the release checklist in
+> `BLE-Hardware-Checklist.md`.
 
 ---
 
