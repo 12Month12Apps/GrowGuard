@@ -1,0 +1,38 @@
+{
+  "configurations" : [
+    {
+      "id" : "8B5D1C44-1F4A-4E2B-9C3D-6E7F8A9B0C1D",
+      "name" : "Hardware Test Configuration",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "environmentVariableEntries" : [
+      {
+        "key" : "TEST_FLOWERCARE_UUID",
+        "value" : "$(TEST_FLOWERCARE_UUID)"
+      }
+    ],
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:GrowGuard.xcodeproj",
+      "identifier" : "56AF11142BDED05900887073",
+      "name" : "GrowGuard"
+    }
+  },
+  "testTargets" : [
+    {
+      "selectedTests" : [
+        "DeviceConnectionHistoryTests"
+      ],
+      "target" : {
+        "containerPath" : "container:GrowGuard.xcodeproj",
+        "identifier" : "56AF11272BDED05B00887073",
+        "name" : "GrowGuardTests"
+      }
+    }
+  ],
+  "version" : 1
+}

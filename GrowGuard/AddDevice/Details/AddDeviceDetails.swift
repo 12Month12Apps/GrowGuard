@@ -13,9 +13,10 @@ import SwiftUI
 import CoreBluetooth
 import CoreData
 
+
 // Defines all possible navigation destinations in the app
 enum NavigationDestination: Hashable {
-    case deviceDetails(CBPeripheral, suggestedName: String?)
+    case deviceDetails(DiscoveredDevice, suggestedName: String?)
     case deviceDetailsSpecies(VMSpecies)
     case deviceList
     case addDeviceWithoutSensor
@@ -32,18 +33,18 @@ enum NavigationDestination: Hashable {
     private init() {}
     
     // Navigation destination methods
-    func navigateToDeviceDetails(device: CBPeripheral) {
+    func navigateToDeviceDetails(device: DiscoveredDevice) {
         path.append(NavigationDestination.deviceDetails(device, suggestedName: nil))
     }
-    
+
     func navigateToDeviceDetailsWithSuggestedName(
-        device: CBPeripheral,
+        device: DiscoveredDevice,
         suggestedName: String
     ) {
         path.append(NavigationDestination.deviceDetails(device, suggestedName: suggestedName))
     }
-    
-    func navigateToDeviceDetails(device: CBPeripheral, suggestedName: String) {
+
+    func navigateToDeviceDetails(device: DiscoveredDevice, suggestedName: String) {
         path.append(NavigationDestination.deviceDetails(device, suggestedName: suggestedName))
     }
     
@@ -73,7 +74,7 @@ enum NavigationDestination: Hashable {
 }
 
 @Observable class AddDeviceDetailsViewModel {
-    var device:  CBPeripheral?
+    var device:  DiscoveredDevice?
     var allSavedDevices: [FlowerDeviceDTO] = []
     var alertView: Alert = .empty
     var showAlert = false
@@ -109,12 +110,12 @@ enum NavigationDestination: Hashable {
         }
     }
 
-    init(device: CBPeripheral) {
+    init(device: DiscoveredDevice) {
         self.device = device
         self.flower = FlowerDeviceDTO(
             name: device.name ?? L10n.Device.unknownDevice,
-            uuid: device.identifier.uuidString,
-            peripheralID: device.identifier,
+            uuid: device.id.uuidString,
+            peripheralID: device.id,
             isSensor: true,
             added: Date(),
             lastUpdate: Date()
@@ -124,13 +125,13 @@ enum NavigationDestination: Hashable {
             await fetchSavedDevices()
         }
     }
-    
-    init(device: CBPeripheral, suggestedName: String) {
+
+    init(device: DiscoveredDevice, suggestedName: String) {
         self.device = device
         self.flower = FlowerDeviceDTO(
             name: suggestedName,
-            uuid: device.identifier.uuidString,
-            peripheralID: device.identifier,
+            uuid: device.id.uuidString,
+            peripheralID: device.id,
             isSensor: true,
             added: Date(),
             lastUpdate: Date()
@@ -163,7 +164,7 @@ enum NavigationDestination: Hashable {
     func save() async {
         // Check if device UUID already exists (avoid duplicates)
         let isSaved = allSavedDevices.contains(where: { device in
-            device.uuid == self.device?.identifier.uuidString
+            device.uuid == self.device?.id.uuidString
         })
         if isSaved {
             self.alertView = Alert(title: Text(L10n.Alert.info),
@@ -171,7 +172,7 @@ enum NavigationDestination: Hashable {
             self.showAlert = true
         } else {
             // Check for name collision among existing devices (not including the one being saved)
-            let existingDevicesExcludingSelf = allSavedDevices.filter { $0.uuid != self.device?.identifier.uuidString }
+            let existingDevicesExcludingSelf = allSavedDevices.filter { $0.uuid != self.device?.id.uuidString }
             if existingDevicesExcludingSelf.contains(where: { device in
                 device.name == self.flower.name
             }) {

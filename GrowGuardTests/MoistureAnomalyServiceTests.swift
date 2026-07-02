@@ -54,139 +54,158 @@ final class MoistureAnomalyServiceTests: XCTestCase {
     }
     
     // MARK: - Rapid Drying Detection Tests
-    
+    //
+    // Note on test data: the service analyzes consecutive readings within
+    // 0.5–2 day windows and requires >= 10 valid drying intervals for a
+    // reliable baseline, so all detection tests use one chronological daily
+    // series (a normal phase long enough for the baseline, then the anomaly).
+
     func testDetectRapidDryingEvents() throws {
-        // Given: Normal pattern followed by rapid drying
-        let normalData = createNormalDryingPattern(startMoisture: 80, endMoisture: 60, days: 5, dryingRate: 4.0)
-        let rapidData = createRapidDryingPattern(startMoisture: 60, endMoisture: 30, days: 2, dryingRate: 15.0)
-        let testData = normalData + rapidData
-        
+        // Given: 12 days of normal drying (4%/day), then 2 days at 15%/day
+        let testData = makeDailySeries(
+            [90, 86, 82, 78, 74, 70, 66, 62, 58, 54, 50, 46, 42] + [27, 12]
+        )
+
         // When
         let anomalies = service.detectAnomalies(from: testData)
-        
+
         // Then
         let rapidDryingAnomalies = anomalies.filter {
             if case .rapidDrying(_) = $0.type { return true }
             return false
         }
-        
+
         XCTAssertGreaterThan(rapidDryingAnomalies.count, 0, "Should detect rapid drying anomaly")
-        
-        let firstAnomaly = rapidDryingAnomalies.first!
+
+        let firstAnomaly = try XCTUnwrap(rapidDryingAnomalies.first)
         XCTAssertGreaterThan(firstAnomaly.severity, 0.5, "Should have high severity for rapid drying")
         XCTAssertGreaterThan(firstAnomaly.impactOnDrying, 1.0, "Should increase drying rate prediction")
     }
-    
+
     // MARK: - Slow Drying Detection Tests
-    
+
     func testDetectSlowDryingEvents() throws {
-        // Given: Normal pattern followed by very slow drying
-        let normalData = createNormalDryingPattern(startMoisture: 80, endMoisture: 60, days: 5, dryingRate: 4.0)
-        let slowData = createSlowDryingPattern(startMoisture: 60, endMoisture: 55, days: 5, dryingRate: 1.0)
-        let testData = normalData + slowData
-        
+        // Given: 12 days of normal drying (5%/day), 4 days at 1%/day,
+        // then one normal day to close the slow period
+        let testData = makeDailySeries(
+            [90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30] + [29, 28, 27, 26] + [21]
+        )
+
         // When
         let anomalies = service.detectAnomalies(from: testData)
-        
+
         // Then
         let slowDryingAnomalies = anomalies.filter {
             if case .slowDrying(_) = $0.type { return true }
             return false
         }
-        
+
         XCTAssertGreaterThan(slowDryingAnomalies.count, 0, "Should detect slow drying anomaly")
-        
-        let firstAnomaly = slowDryingAnomalies.first!
+
+        let firstAnomaly = try XCTUnwrap(slowDryingAnomalies.first)
         XCTAssertGreaterThan(firstAnomaly.severity, 0.3, "Should have meaningful severity for slow drying")
         XCTAssertLessThan(firstAnomaly.impactOnDrying, 1.0, "Should decrease drying rate prediction")
     }
-    
+
     // MARK: - Plateau Detection Tests
-    
+
     func testDetectPlateauPeriods() throws {
-        // Given: Normal drying followed by extended plateau
-        let normalData = createNormalDryingPattern(startMoisture: 80, endMoisture: 50, days: 5, dryingRate: 6.0)
-        let plateauData = createPlateauPattern(moisture: 50, days: 5)
-        let testData = normalData + plateauData
-        
+        // Given: normal drying with a short 2-day plateau (sets the baseline
+        // plateau duration), then a 5-day plateau that is anomalously long,
+        // closed by a normal drying day
+        let testData = makeDailySeries(
+            [90, 86, 82, 78, 74, 70]        // 5 days normal
+            + [70, 70]                       // short baseline plateau
+            + [66, 62, 58, 54, 50, 46, 42]   // 7 days normal
+            + [42, 42, 42, 42, 42]           // extended plateau
+            + [38]                           // closing drying day
+        )
+
         // When
         let anomalies = service.detectAnomalies(from: testData)
-        
+
         // Then
         let plateauAnomalies = anomalies.filter {
             if case .plateauPeriod(_) = $0.type { return true }
             return false
         }
-        
+
         XCTAssertGreaterThan(plateauAnomalies.count, 0, "Should detect plateau anomaly")
-        
-        let firstAnomaly = plateauAnomalies.first!
+
+        let firstAnomaly = try XCTUnwrap(plateauAnomalies.first)
         XCTAssertLessThan(firstAnomaly.impactOnDrying, 1.0, "Plateau should reduce future drying predictions")
     }
-    
+
     // MARK: - Unexpected Moisture Change Tests
-    
+
     func testDetectUnexpectedMoistureIncrease() throws {
-        // Given: Normal drying with sudden moisture increase (rain event)
-        let normalData = createNormalDryingPattern(startMoisture: 80, endMoisture: 40, days: 8, dryingRate: 5.0)
-        let rainData = createRainEvent(fromMoisture: 40, toMoisture: 55, hours: 6)
-        let testData = normalData + rainData
-        
+        // Given: 12 days of normal drying, then +10% within 6 hours (rain)
+        let rainDate = Date()
+        var testData = makeDailySeries(
+            [90, 86, 82, 78, 74, 70, 66, 62, 58, 54, 50, 46, 42],
+            endingAt: rainDate.addingTimeInterval(-6 * 3600)
+        )
+        testData.append(createSensorData(moisture: 52, date: rainDate))
+
         // When
         let anomalies = service.detectAnomalies(from: testData)
-        
+
         // Then
         let unexpectedIncreaseAnomalies = anomalies.filter {
             if case .unexpectedIncrease(_) = $0.type { return true }
             return false
         }
-        
+
         XCTAssertGreaterThan(unexpectedIncreaseAnomalies.count, 0, "Should detect unexpected moisture increase")
-        
-        let rainAnomaly = unexpectedIncreaseAnomalies.first!
+
+        let rainAnomaly = try XCTUnwrap(unexpectedIncreaseAnomalies.first)
         XCTAssertLessThan(rainAnomaly.impactOnDrying, 1.0, "Rain should reduce drying rate temporarily")
     }
-    
+
     func testDetectDramaticMoistureDrop() throws {
-        // Given: Sudden dramatic moisture loss
-        let baseData = createTestData(moistureValues: [80, 79, 78], intervalHours: 24)
-        let dropData = createTestData(moistureValues: [78, 60], intervalHours: 12) // 18% drop in 12 hours
-        let testData = baseData + Array(dropData.dropFirst()) // Avoid duplicate
-        
+        // Given: 12 days of normal drying, then a 15% drop within 12 hours
+        let dropDate = Date()
+        var testData = makeDailySeries(
+            [90, 86, 82, 78, 74, 70, 66, 62, 58, 54, 50, 46, 42],
+            endingAt: dropDate.addingTimeInterval(-12 * 3600)
+        )
+        testData.append(createSensorData(moisture: 27, date: dropDate))
+
         // When
         let anomalies = service.detectAnomalies(from: testData)
-        
+
         // Then
         let dramaticDropAnomalies = anomalies.filter {
             if case .dramaticDrop(_) = $0.type { return true }
             return false
         }
-        
+
         XCTAssertGreaterThan(dramaticDropAnomalies.count, 0, "Should detect dramatic moisture drop")
-        
-        let dropAnomaly = dramaticDropAnomalies.first!
+
+        let dropAnomaly = try XCTUnwrap(dramaticDropAnomalies.first)
         XCTAssertGreaterThan(dropAnomaly.impactOnDrying, 1.0, "Dramatic drop should increase drying rate prediction")
     }
-    
+
     // MARK: - Irregular Pattern Detection Tests
-    
+
     func testDetectIrregularPatterns() throws {
-        // Given: Highly variable moisture pattern
-        let irregularData = createIrregularPattern(
-            baseMoisture: 60,
-            days: 7,
-            variance: 10 // High variance
+        // Given: a long stable drying phase (keeps the baseline variability
+        // low), then chaotic readings with large up-swings and small drying
+        // steps so the windowed variance exceeds the baseline by far
+        let testData = makeDailySeries(
+            [95, 91, 87, 83, 79, 75, 71, 67, 63, 59, 55, 51, 47, 43, 39, 35, 31, 27, 23, 19, 15]
+            + [35, 33, 58, 57, 87, 84]
         )
-        
+
         // When
-        let anomalies = service.detectAnomalies(from: irregularData)
-        
+        let anomalies = service.detectAnomalies(from: testData)
+
         // Then
         let irregularAnomalies = anomalies.filter {
             if case .irregularPattern(_) = $0.type { return true }
             return false
         }
-        
+
         XCTAssertGreaterThan(irregularAnomalies.count, 0, "Should detect irregular patterns")
     }
     
@@ -367,69 +386,16 @@ final class MoistureAnomalyServiceTests: XCTestCase {
         return data
     }
     
-    private func createRapidDryingPattern(startMoisture: Int16, endMoisture: Int16, days: Int, dryingRate: Double) -> [SensorDataDTO] {
-        return createNormalDryingPattern(
-            startMoisture: startMoisture,
-            endMoisture: endMoisture,
-            days: days,
-            dryingRate: dryingRate,
-            intervalHours: 6 // More frequent readings for rapid drying
-        )
-    }
-    
-    private func createSlowDryingPattern(startMoisture: Int16, endMoisture: Int16, days: Int, dryingRate: Double) -> [SensorDataDTO] {
-        return createNormalDryingPattern(
-            startMoisture: startMoisture,
-            endMoisture: endMoisture,
-            days: days,
-            dryingRate: dryingRate,
-            intervalHours: 24
-        )
-    }
-    
-    private func createPlateauPattern(moisture: Int16, days: Int) -> [SensorDataDTO] {
-        var data: [SensorDataDTO] = []
-        let startDate = Date()
-        
-        for i in 0..<(days * 24) { // Hourly readings
-            let date = startDate.addingTimeInterval(Double(i) * 3600)
-            // Add small random variation (±1%) to simulate real sensor readings
-            let variation = Int16.random(in: -1...1)
-            data.append(createSensorData(moisture: moisture + variation, date: date))
+    /// Builds one chronological series with daily readings, ending at `endingAt`.
+    /// All detection tests use this so consecutive readings stay within the
+    /// service's 0.5–2 day analysis windows.
+    private func makeDailySeries(_ moistureValues: [Int16], endingAt end: Date = Date()) -> [SensorDataDTO] {
+        moistureValues.enumerated().map { index, moisture in
+            let daysBack = Double(moistureValues.count - 1 - index)
+            return createSensorData(moisture: moisture, date: end.addingTimeInterval(-daysBack * 24 * 3600))
         }
-        
-        return data
     }
-    
-    private func createRainEvent(fromMoisture: Int16, toMoisture: Int16, hours: Int) -> [SensorDataDTO] {
-        var data: [SensorDataDTO] = []
-        let startDate = Date()
-        let moistureIncrease = toMoisture - fromMoisture
-        
-        for i in 0...hours {
-            let date = startDate.addingTimeInterval(Double(i) * 3600)
-            let progress = Double(i) / Double(hours)
-            let currentMoisture = fromMoisture + Int16(Double(moistureIncrease) * progress)
-            data.append(createSensorData(moisture: currentMoisture, date: date))
-        }
-        
-        return data
-    }
-    
-    private func createIrregularPattern(baseMoisture: Int16, days: Int, variance: Int16) -> [SensorDataDTO] {
-        var data: [SensorDataDTO] = []
-        let startDate = Date().addingTimeInterval(-Double(days) * 24 * 3600)
-        
-        for i in 0..<(days * 6) { // Every 4 hours
-            let date = startDate.addingTimeInterval(Double(i) * 4 * 3600)
-            let randomVariation = Int16.random(in: -variance...variance)
-            let moisture = max(Int16(10), min(Int16(100), baseMoisture + randomVariation))
-            data.append(createSensorData(moisture: moisture, date: date))
-        }
-        
-        return data
-    }
-    
+
     private func createSensorData(moisture: Int16, date: Date) -> SensorDataDTO {
         return SensorDataDTO(
             temperature: 22.0,

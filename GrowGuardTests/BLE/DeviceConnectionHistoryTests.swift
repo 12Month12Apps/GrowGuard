@@ -2,7 +2,15 @@
 //  DeviceConnectionHistoryTests.swift
 //  GrowGuardTests
 //
-//  Tests for DeviceConnection History Loading
+//  Hardware-in-the-loop tests for DeviceConnection History Loading.
+//
+//  These tests require a real FlowerCare sensor in range. They are skipped
+//  unless the TEST_FLOWERCARE_UUID environment variable is set to the
+//  CoreBluetooth peripheral identifier of the sensor, e.g. in the
+//  HardwareTests test plan or via:
+//
+//      xcodebuild test ... -only-testing:GrowGuardTests/DeviceConnectionHistoryTests \
+//          TEST_FLOWERCARE_UUID=<peripheral-uuid>
 //
 
 import XCTest
@@ -16,20 +24,32 @@ final class DeviceConnectionHistoryTests: XCTestCase {
     var deviceConnection: DeviceConnection!
     var cancellables: Set<AnyCancellable>!
 
-    // Test device UUID (replace with real device for actual testing)
-    let testDeviceUUID = "C4:7C:8D:6A:3E:7B" // Replace with your FlowerCare UUID
+    // Set via the TEST_FLOWERCARE_UUID environment variable; populated in setUp
+    var testDeviceUUID: String!
 
     override func setUp() async throws {
         try await super.setUp()
+
+        guard let configuredUUID = ProcessInfo.processInfo.environment["TEST_FLOWERCARE_UUID"],
+              UUID(uuidString: configuredUUID) != nil else {
+            throw XCTSkip("Hardware test skipped: set TEST_FLOWERCARE_UUID to a FlowerCare peripheral UUID to run against a real sensor")
+        }
+        testDeviceUUID = configuredUUID
 
         connectionPool = ConnectionPoolManager.shared
         cancellables = Set<AnyCancellable>()
     }
 
     override func tearDown() async throws {
-        cancellables.removeAll()
+        cancellables?.removeAll()
         if let connection = deviceConnection {
-            connectionPool.disconnect(from: connection.deviceUUID)
+            // Fully stop any running history flow BEFORE disconnecting:
+            // an active flow makes shouldAutoReconnect true, so a plain
+            // disconnect triggers auto-reconnect and the abandoned flow
+            // resumes during the NEXT test (cross-test contamination)
+            connection.setAutoStartHistoryFlowEnabled(false)
+            connection.cleanupHistoryFlow()
+            connectionPool?.disconnect(from: connection.deviceUUID)
         }
         deviceConnection = nil
 
@@ -79,11 +99,14 @@ final class DeviceConnectionHistoryTests: XCTestCase {
             .store(in: &cancellables)
 
         // Listen for completion
+        // object: nil + manual filter — NotificationCenter matches object by
+        // identity, so a posted String never matches another String instance
         NotificationCenter.default.addObserver(
             forName: NSNotification.Name("HistoricalDataLoadingCompleted"),
-            object: testDeviceUUID,
+            object: nil,
             queue: .main
-        ) { _ in
+        ) { [testDeviceUUID] notification in
+            guard let uuid = notification.object as? String, uuid == testDeviceUUID else { return }
             print("✅ History loading completed notification received")
             expectation.fulfill()
         }
@@ -272,9 +295,10 @@ final class DeviceConnectionHistoryTests: XCTestCase {
 
         NotificationCenter.default.addObserver(
             forName: NSNotification.Name("HistoricalDataLoadingCompleted"),
-            object: testDeviceUUID,
+            object: nil,
             queue: .main
-        ) { _ in
+        ) { [testDeviceUUID] notification in
+            guard let uuid = notification.object as? String, uuid == testDeviceUUID else { return }
             expectation.fulfill()
         }
 
@@ -298,7 +322,9 @@ final class DeviceConnectionHistoryTests: XCTestCase {
         print("Speed: \(String(format: "%.1f", entriesPerSecond)) entries/sec")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
-        XCTAssertLessThan(firstEntryDelay, 10.0, "Should receive first entry within 10 seconds")
+        // Budget: BLE connect (variable, up to ~10s) + 4s auth timeout for
+        // sensors with a silent auth characteristic + history-mode handshake
+        XCTAssertLessThan(firstEntryDelay, 30.0, "Should receive first entry within 30 seconds")
         XCTAssertGreaterThan(entriesPerSecond, 1.0, "Should download at least 1 entry/sec")
 
         print("✅ Performance test passed!\n")

@@ -7,6 +7,14 @@
 
 import Foundation
 
+/// Result of a background sensor read (today: one device per BLE wake)
+struct BackgroundFetchResult {
+    let successfulDevices: [String]
+    let failedDevices: [String]
+    let totalDataPoints: Int
+    let duration: TimeInterval
+}
+
 /// Tracks background task execution history for debugging purposes
 class BackgroundTaskTracker {
 
@@ -28,6 +36,10 @@ class BackgroundTaskTracker {
     private let refreshScheduleCountKey = "background_refresh_schedule_count"
     private let processingScheduleCountKey = "background_processing_schedule_count"
     private let scheduleFailureCountKey = "background_schedule_failure_count"
+
+    // Silent push tracking keys (phase 2: hourly server push)
+    private let pushReceivedCountKey = "background_push_received_count"
+    private let lastPushReceivedKey = "background_last_push_received"
 
     private init() {}
 
@@ -96,6 +108,27 @@ class BackgroundTaskTracker {
             return []
         }
         return history
+    }
+
+    // MARK: - Silent Push Tracking (phase 2)
+
+    /// Records a received silent push — verifies the hourly server cadence
+    /// actually reaches the device
+    func recordPushReceived() {
+        let count = pushReceivedCount + 1
+        defaults.set(count, forKey: pushReceivedCountKey)
+        defaults.set(Date(), forKey: lastPushReceivedKey)
+        print("📬 BackgroundTaskTracker: Silent push #\(count) received")
+    }
+
+    /// Total silent pushes received
+    var pushReceivedCount: Int {
+        defaults.integer(forKey: pushReceivedCountKey)
+    }
+
+    /// Last silent push receipt date
+    var lastPushReceivedDate: Date? {
+        defaults.object(forKey: lastPushReceivedKey) as? Date
     }
 
     // MARK: - Scheduling Tracking
@@ -178,6 +211,8 @@ class BackgroundTaskTracker {
         defaults.removeObject(forKey: refreshScheduleCountKey)
         defaults.removeObject(forKey: processingScheduleCountKey)
         defaults.removeObject(forKey: scheduleFailureCountKey)
+        defaults.removeObject(forKey: pushReceivedCountKey)
+        defaults.removeObject(forKey: lastPushReceivedKey)
         print("📊 BackgroundTaskTracker: All tracking data reset")
     }
 
@@ -199,6 +234,9 @@ class BackgroundTaskTracker {
         Refresh Tasks: \(refreshTaskCount) (Last: \(refreshDate))
         Processing Tasks: \(processingTaskCount) (Last: \(processingDate))
         Total Executions: \(refreshTaskCount + processingTaskCount)
+
+        SILENT PUSH:
+        Pushes Received: \(pushReceivedCount) (Last: \(lastPushReceivedDate.map { formatDate($0) } ?? "Never"))
         ==============================
         """
     }

@@ -1,10 +1,5 @@
 import Foundation
 
-enum ConnectionMode: String {
-    case flowercare
-    case connectionPool
-}
-
 extension Notification.Name {
     static let settingsDidChange = Notification.Name("SettingsStore.settingsDidChange")
 }
@@ -12,7 +7,6 @@ extension Notification.Name {
 /// Central store for user-configurable app settings backed by UserDefaults
 final class SettingsStore {
     enum ChangeKey: String {
-        case connectionMode
         case reminderTime
         case serverURL
     }
@@ -23,7 +17,6 @@ final class SettingsStore {
     private let defaults: UserDefaults
     private let reminderHourKey = "notification.dailyReminderHour"
     private let reminderMinuteKey = "notification.dailyReminderMinute"
-    private let connectionModeKey = "ble.connectionMode"
     private let serverURLKey = "server.url"
     private let deviceTokenKey = "server.deviceToken"
     private let fallbackHour = 9
@@ -34,26 +27,9 @@ final class SettingsStore {
 
     private init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-    }
-
-    // MARK: - Connection Mode
-
-    var connectionMode: ConnectionMode {
-        get {
-            if let storedValue = defaults.string(forKey: connectionModeKey),
-               let mode = ConnectionMode(rawValue: storedValue) {
-                return mode
-            }
-            return .connectionPool
-        }
-        set {
-            defaults.set(newValue.rawValue, forKey: connectionModeKey)
-            notifyChange(.connectionMode)
-        }
-    }
-
-    var useConnectionPool: Bool {
-        connectionMode == .connectionPool
+        // The legacy FlowerCareManager stack and its connection-mode toggle
+        // were removed; clean up the stale preference
+        defaults.removeObject(forKey: "ble.connectionMode")
     }
 
     // MARK: - Reminder Time

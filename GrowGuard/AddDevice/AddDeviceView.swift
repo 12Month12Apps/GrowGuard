@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import CoreBluetooth
 
+
 struct AddDeviceView: View {
     @State var viewModel: AddDeviceViewModel
 
@@ -96,8 +97,8 @@ struct AddDeviceView: View {
                         .cornerRadius(16)
                         .padding(.horizontal)
                     } else if viewModel.bluetoothState == .poweredOn {
-                        ForEach(viewModel.devices, id: \.identifier.uuidString) { device in
-                            let isAdded = viewModel.allSavedDevices.contains(where: { $0.uuid == device.identifier.uuidString })
+                        ForEach(viewModel.devices, id: \.id) { device in
+                            let isAdded = viewModel.allSavedDevices.contains(where: { $0.uuid == device.id.uuidString })
                             SensorDeviceCard(
                                 device: device,
                                 isAlreadyAdded: isAdded,
@@ -138,7 +139,7 @@ struct AddDeviceView: View {
 // MARK: - Supporting Views
 
 struct SensorDeviceCard: View {
-    let device: CBPeripheral
+    let device: DiscoveredDevice
     let isAlreadyAdded: Bool
     var suggestedName: String?
     let action: () -> Void

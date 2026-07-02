@@ -319,6 +319,10 @@ internal enum L10n {
     internal static let cleaning = L10n.tr("Localizable", "settings.cleaning", fallback: "Cleaning...")
     /// Clean Invalid Data
     internal static let cleanInvalidData = L10n.tr("Localizable", "settings.cleanInvalidData", fallback: "Clean Invalid Data")
+    /// Choose when daily watering reminders should arrive.
+    internal static let dailyReminderDescription = L10n.tr("Localizable", "settings.dailyReminderDescription", fallback: "Choose when daily watering reminders should arrive.")
+    /// Daily Reminder Time
+    internal static let dailyReminderTime = L10n.tr("Localizable", "settings.dailyReminderTime", fallback: "Daily Reminder Time")
     /// Settings
     internal static let databaseMaintenance = L10n.tr("Localizable", "settings.databaseMaintenance", fallback: "Database Maintenance")
     /// Invalid entries: %d
@@ -329,16 +333,6 @@ internal enum L10n {
     internal static let loading = L10n.tr("Localizable", "settings.loading", fallback: "Loading...")
     /// Notifications
     internal static let notificationSection = L10n.tr("Localizable", "settings.notificationSection", fallback: "Notifications")
-    /// Daily Reminder Time
-    internal static let dailyReminderTime = L10n.tr("Localizable", "settings.dailyReminderTime", fallback: "Daily Reminder Time")
-    /// Choose when daily watering reminders should arrive.
-    internal static let dailyReminderDescription = L10n.tr("Localizable", "settings.dailyReminderDescription", fallback: "Choose when daily watering reminders should arrive.")
-    /// BLE Connection
-    internal static let connectionModeSection = L10n.tr("Localizable", "settings.connectionModeSection", fallback: "BLE Connection")
-    /// Use Connection Pool
-    internal static let connectionModeToggle = L10n.tr("Localizable", "settings.connectionModeToggle", fallback: "Use Connection Pool")
-    /// Switch between the new multi-device ConnectionPool manager and the legacy FlowerCare Manager.
-    internal static let connectionModeDescription = L10n.tr("Localizable", "settings.connectionModeDescription", fallback: "Switch between the new multi-device ConnectionPool manager and the legacy FlowerCare Manager.")
     /// Saving...
     internal static let saving = L10n.tr("Localizable", "settings.saving", fallback: "Saving...")
     /// Total entries: %d

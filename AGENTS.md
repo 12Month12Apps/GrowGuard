@@ -22,13 +22,13 @@ UI (SwiftUI Views)
   ↓
 ViewModels (@Observable classes)
   ↓
-Services (singletons: BackgroundSensorDataService, PlantMonitorService, etc.)
+Services (singletons: BackgroundBLEWakeService, PlantMonitorService, etc.)
   ↓
 Repositories (interface-based, backed by Core Data or SQLite)
   ↓
 DTOs (plain structs: FlowerDeviceDTO, SensorDataDTO, OptimalRangeDTO, PotSizeDTO)
   ↓
-Hardware (BLE via FlowerCareManager / ConnectionPoolManager)
+Hardware (BLE via ConnectionPoolManager + DeviceConnection)
 ```
 
 - **RepositoryManager** (`Database/RepositoryManager.swift`) is the singleton DI hub — all ViewModels get repos through it.
@@ -39,7 +39,7 @@ Hardware (BLE via FlowerCareManager / ConnectionPoolManager)
 
 | Folder | Purpose |
 |--------|---------|
-| `GrowGuard/BLE/` | BLE logic — `FlowerCareManager` (legacy singleton), `ConnectionPoolManager` (multi-device), `DeviceConnection` (per-device), `SensorDataDecoder` |
+| `GrowGuard/BLE/` | BLE logic — `ConnectionPoolManager` (multi-device orchestration), `DeviceConnection` (per-device session), `BLETransport`/`CoreBluetoothTransport` (protocol seam), `ReconnectPolicy`/`DisconnectLoopGuard` (reliability), `BLESessionRecorder`/`RecordingBLETransport` (opt-in traffic recording), `SensorDataDecoder` |
 | `GrowGuard/Database/` | Core Data models, repository interfaces + implementations, DTOs, SQLite flower search, SwiftData service |
 | `GrowGuard/Services/` | Background fetch, weekly updates, history loading, API client |
 | `GrowGuard/OverviewList/` | Main device list view + ViewModel |
@@ -57,7 +57,15 @@ Hardware (BLE via FlowerCareManager / ConnectionPoolManager)
 - **Repositories:** Define protocol in `Database/Repositories/`, implement as `CoreData*` classes. Inject via `RepositoryManager.shared.*`.
 - **Singletons:** Services use `static let shared`. ViewModels are created per-view (not singletons).
 - **Combine:** BLE services emit via `PassthroughSubject` → `AnyPublisher`. ViewModels subscribe and store in `cancellables: Set<AnyCancellable>`.
-- **Background tasks:** `BackgroundSensorDataService` handles periodic sensor reads within iOS time limits (~25s).
+- **Background tasks:** arm-don't-fetch (spec `docs/superpowers/specs/2026-06-12-background-ble-design.md`): triggers (BGAppRefreshTask, silent push, enter-background) only arm pending connects via `ConnectionPoolManager.armBackgroundConnect`; `BackgroundBLEWakeService` does the live read + dry-plant check on the BLE wake. `BackgroundHistorySyncService` runs history sync inside BGProcessingTask windows.
+
+## BLE Testing & Record/Replay
+
+- **One BLE stack:** `ConnectionPoolManager` + `DeviceConnection` on the `BLETransport` protocol seam. The legacy `FlowerCareManager` was deleted (2026-06); there is no feature flag anymore.
+- **Deterministic tests:** `GrowGuardTests/BLE/` has `FakeBLETransport` (TestScheduler with virtual time + scriptable `FakeFlowerCarePeripheral`). No real waits in unit tests.
+- **Record/replay:** Beta testers enable "Record BLE Sessions" in the debug menu (`LogExportView`); traffic is captured at the transport seam and exported as `*.ble-session.json` via share sheet. To turn a recording into a regression test: drop the file into `GrowGuardTests/BLE/Recordings/` (bundled automatically — folder reference) and add one entry to `ReplayFixtures.all` in `ReplaySessionTests.swift` with the expected outcome. The generic runner matches the app's outbound traffic against the recording; divergence fails the test.
+- **Reliability invariants** (see `BLE-Reliability.md`): reason-aware reconnect backoff (`ReconnectPolicy`), disconnect-loop guard (5 no-progress drops / 120s → abort), per-entry response timeout 2s with ≤2 retries then skip (budget `max(20, total/20)`), history sync resumes at the exact entry index after reconnects.
+- **Performance budgets:** `BLEPerformanceTests` asserts traffic counts and virtual-time budgets derived from the protocol constants (0.02s inter-entry delay, 0.05s batch pause per 150 entries). If you change those constants, update the budgets deliberately.
 
 ## Goals — Ship to Production
 
@@ -67,16 +75,18 @@ Any new feature or refactor should respect the existing architecture (MVVM + Rep
 ## Common Commands
 
 - **Build (CI/agent):** `xcodebuild -project GrowGuard.xcodeproj -scheme GrowGuard -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' build`
+- **Unit tests (CI/agent):** `xcodebuild test -project GrowGuard.xcodeproj -scheme GrowGuard -testPlan GrowGuard -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' -test-timeouts-enabled YES -default-test-execution-time-allowance 60` — runs the unit suite; hardware-dependent BLE tests are excluded. Keep the timeout flags: some legacy tests can hang indefinitely on publisher waits without them.
+- **Hardware BLE tests:** `xcodebuild test -project GrowGuard.xcodeproj -scheme GrowGuard -testPlan HardwareTests -destination 'platform=iOS,name=<your iPhone>' TEST_FLOWERCARE_UUID=<peripheral-uuid>` — requires a real FlowerCare sensor in range; tests skip themselves if the env var is missing.
 - **Quick build (quiet):** add `-quiet` flag — only errors/warnings shown
 - **Clean build:** add `clean` before `build`
 - **Regenerate strings:** `swiftgen` (runs `swiftgen.yml` config)
 - **Migrate flower DB to Supabase:** `python Scripts/migrate_flower_db_to_supabase.py --sqlite-path GrowGuard/flower.db --recreate`
 
 ### Build Notes
-- **No `.xcscheme` file** in the project — schemes are user-level. Always use `-scheme GrowGuard`.
+- **Shared scheme** at `GrowGuard.xcodeproj/xcshareddata/xcschemes/GrowGuard.xcscheme` references the test plans (`GrowGuard.xctestplan` = unit tests, `HardwareTests.xctestplan` = real-sensor tests). Always use `-scheme GrowGuard`.
 - **No iPhone 16 simulator.** Available simulators on this machine (as of 2026-05-15): iPhone 17, iPhone 17 Pro, iPhone 17 Pro Max, iPhone 17e, iPhone Air, iPad Air 11-inch (M4), iPad Air 13-inch (M4), iPad Pro 11-inch (M5), iPad Pro 13-inch (M5), iPad mini (A17 Pro), iPad (A16). Use iPhone 17 as default.
 - Run `xcrun simctl list devices available 2>/dev/null` if simulator lineup changes.
-- **Known non-blocking warnings:** (1) Widget `CFBundleVersion` mismatch, (2) `InitialSensorDataService.swift` duplicate in Compile Sources, (3) "Update Build Number" script runs every build. Do not treat these as build failures.
+- **Known non-blocking warnings:** (1) Widget `CFBundleVersion` mismatch, (2) "Update Build Number" script runs every build. Do not treat these as build failures.
 - **Tool:** Use `xcodebuild` directly. No MCP xcode tool is available.
 
 ## 🛠 Subagent Usage Patterns
@@ -132,7 +142,7 @@ Use `chain` when tasks have **sequential dependencies** where later steps need o
     },
     {
       "agent": "planner",
-      "task": "Create implementation plan for migration from FlowerCareManager based on {previous}. Output to Handoff/connection-pool-plan.md"
+      "task": "Create implementation plan for the BLE change based on {previous}. Output to Handoff/connection-pool-plan.md"
     },
     {
       "agent": "worker",

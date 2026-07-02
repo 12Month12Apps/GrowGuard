@@ -18,6 +18,9 @@
   },
   "testTargets" : [
     {
+      "skippedTests" : [
+        "DeviceConnectionHistoryTests"
+      ],
       "target" : {
         "containerPath" : "container:GrowGuard.xcodeproj",
         "identifier" : "56AF11272BDED05B00887073",

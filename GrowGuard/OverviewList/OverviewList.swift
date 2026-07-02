@@ -17,7 +17,6 @@ struct OverviewList: View {
     @State private var showDeleteError = false
     @State private var hasRequestedDashboardLiveRefresh = false
 
-    private let settingsStore = SettingsStore.shared
     private let initialSensorDataService = InitialSensorDataService.shared
 
     init() {
@@ -202,10 +201,6 @@ struct OverviewList: View {
 
     @MainActor
     private func triggerDashboardLiveRefreshIfNeeded() async {
-        guard settingsStore.useConnectionPool else {
-            AppLogger.ble.info("📡 OverviewList: Skipping live refresh - ConnectionPool mode disabled")
-            return
-        }
         guard !hasRequestedDashboardLiveRefresh else {
             AppLogger.ble.info("📡 OverviewList: Live refresh already triggered for this appearance")
             return

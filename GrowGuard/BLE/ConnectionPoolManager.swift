@@ -4,6 +4,11 @@
 //
 //  Created by Claude Code
 //
+//  Phase 3 (BLE-Testing-Strategy.md): spricht mit dem BLECentral-Seam statt
+//  direkt mit CBCentralManager und nutzt einen injizierbaren BLEScheduler.
+//  Produktion verhält sich identisch (Default-Argumente erzeugen den
+//  CoreBluetooth-Stack), Tests injizieren Fakes.
+//
 
 import Foundation
 import CoreBluetooth
@@ -14,6 +19,8 @@ enum ConnectionError: Error {
     case timeout
     case bluetoothUnavailable
     case peripheralNotFound
+    case disconnectLoopDetected
+    case tooManyCorruptEntries
 
     var localizedDescription: String {
         switch self {
@@ -25,12 +32,16 @@ enum ConnectionError: Error {
             return "Bluetooth is not available"
         case .peripheralNotFound:
             return "Device not found"
+        case .disconnectLoopDetected:
+            return "Connection keeps dropping without progress"
+        case .tooManyCorruptEntries:
+            return "Too many unreadable history entries"
         }
     }
 }
 
 @MainActor
-class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
+class ConnectionPoolManager: NSObject, BLECentralDelegate {
 
     // MARK: - Singleton
 
@@ -38,7 +49,8 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
 
     // MARK: - Properties
 
-    private var centralManager: CBCentralManager!
+    private let central: BLECentral
+    private let scheduler: BLEScheduler
     private var connections: [String: DeviceConnection] = [:]
     private var devicesToScan: Set<String> = []
     private var pendingConnections: [String: Bool] = [:]
@@ -47,22 +59,78 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
 
     // Connection retry management
     private var connectionRetryCount: [String: Int] = [:]
-    private var connectionTimeouts: [String: Timer] = [:]
-    private let maxRetries = 3
+    /// Kumulative Fehlversuche/Reconnects seit dem letzten resetRetryCounter
+    /// (Diagnose für Benchmark/UI; connectionRetryCount resettet bei Erfolg)
+    private var cumulativeRetryCount: [String: Int] = [:]
+    private var connectionTimeouts: [String: BLEScheduledTask] = [:]
+    private let reconnectPolicy = ReconnectPolicy()
+    private var loopGuards: [String: DisconnectLoopGuard] = [:]
+    /// Monotone Uhr für den DisconnectLoopGuard (Tests injizieren die
+    /// virtuelle Zeit des TestSchedulers)
+    private let now: () -> TimeInterval
+    private var maxRetries: Int { reconnectPolicy.maxAttempts }
     private let connectionTimeout: TimeInterval = 10.0 // 10 seconds - schnellerer Timeout
+
+    /// iOS Connection Options für stabilere Verbindung
+    private static let connectOptions: [String: Any] = [
+        CBConnectPeripheralOptionNotifyOnConnectionKey: true,
+        CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
+        CBConnectPeripheralOptionNotifyOnNotificationKey: true,
+        CBConnectPeripheralOptionStartDelayKey: 0 // Sofort verbinden
+    ]
+
+    // MARK: - Background Arm (pending connects, spec 2026-06-12)
+
+    /// Geräte mit aktivem Background-Pending-Connect. Persistiert, damit ein
+    /// State-Restoration-Relaunch armed-Geräte wiedererkennt.
+    private var backgroundArmedDevices: Set<String> = []
+    private let armedDevicesDefaultsKey = "ble_background_armed_devices"
+    private let defaults: UserDefaults
+
+    /// Meldet Geräte, deren Background-Pending-Connect zustande kam —
+    /// BackgroundBLEWakeService liest dann live aus und disarmt
+    private let armedConnectionSubject = PassthroughSubject<String, Never>()
+    var armedConnectionPublisher: AnyPublisher<String, Never> {
+        armedConnectionSubject.eraseToAnyPublisher()
+    }
 
     // MARK: - Initialization
 
-    private override init() {
+    /// Produktion nutzt `shared` (CoreBluetooth-Transport mit State Restoration).
+    /// Tests injizieren ein Fake-Central und einen TestScheduler.
+    init(central: BLECentral? = nil,
+         scheduler: BLEScheduler = MainRunLoopScheduler(),
+         now: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
+         defaults: UserDefaults = .standard) {
+        self.central = central ?? Self.makeDefaultCentral()
+        self.scheduler = scheduler
+        self.now = now
+        self.defaults = defaults
+        self.backgroundArmedDevices = Set(defaults.stringArray(forKey: armedDevicesDefaultsKey) ?? [])
+
         super.init()
 
+        self.central.centralDelegate = self
+    }
+
+    /// Builds the production central. In DEBUG, when `GROWGUARD_BLE_BRIDGE` is
+    /// set, returns the localhost bridge transport (single-machine testing
+    /// against FlowerCareSim) instead of CoreBluetooth. Otherwise the
+    /// recording-decorated CoreBluetooth central (recording is opt-in via
+    /// BLESessionRecorder.isEnabled).
+    private static func makeDefaultCentral() -> BLECentral {
+        #if DEBUG
+        if let endpoint = BLEBridgeConfig.endpoint {
+            AppLogger.ble.info("🔌 BLE bridge active → \(endpoint.host):\(endpoint.port) (no radio)")
+            return BridgeBLECentral(channel: NWBridgeChannel(host: endpoint.host, port: endpoint.port))
+        }
+        #endif
         // Initialize with options for better connection stability
         let options: [String: Any] = [
             CBCentralManagerOptionRestoreIdentifierKey: "pro.veit.GrowGuard.centralManager",
             CBCentralManagerOptionShowPowerAlertKey: true
         ]
-
-        centralManager = CBCentralManager(delegate: self, queue: nil, options: options)
+        return RecordingBLECentral(wrapping: CoreBluetoothCentral(options: options))
     }
 
     // MARK: - Public API
@@ -76,7 +144,7 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
 
         // Erstelle neue Connection
         AppLogger.ble.bleConnection("Creating new connection for device: \(deviceUUID)")
-        let newConnection = DeviceConnection(deviceUUID: deviceUUID)
+        let newConnection = DeviceConnection(deviceUUID: deviceUUID, scheduler: scheduler)
         connections[deviceUUID] = newConnection
         return newConnection
     }
@@ -89,7 +157,7 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
         connection.setAutoStartHistoryFlowEnabled(autoStartHistoryFlow)
 
         // Stelle sicher, dass Bluetooth bereit ist
-        guard centralManager.state == .poweredOn else {
+        guard central.state == .poweredOn else {
             AppLogger.ble.bleWarning("Bluetooth not powered on yet. Queuing connection request for \(deviceUUID)")
             pendingConnections[deviceUUID] = autoStartHistoryFlow
             return
@@ -122,22 +190,13 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
         startConnectionTimeout(for: deviceUUID)
 
         // Versuche bekanntes Peripheral abzurufen
-        let peripherals = centralManager.retrievePeripherals(withIdentifiers: [uuid])
+        let peripherals = central.retrievePeripherals(withIdentifiers: [uuid])
 
         if let peripheral = peripherals.first {
             // Peripheral gefunden - direkt verbinden
             AppLogger.ble.bleConnection("Found known peripheral for device: \(deviceUUID)")
             connection.setPeripheral(peripheral)
-
-            // iOS Connection Options für stabilere Verbindung
-            let options: [String: Any] = [
-                CBConnectPeripheralOptionNotifyOnConnectionKey: true,
-                CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
-                CBConnectPeripheralOptionNotifyOnNotificationKey: true,
-                CBConnectPeripheralOptionStartDelayKey: 0 // Sofort verbinden
-            ]
-
-            centralManager.connect(peripheral, options: options)
+            central.connect(peripheral, options: Self.connectOptions)
         } else {
             // Peripheral nicht gefunden - Scan starten
             AppLogger.ble.bleConnection("Known device not found, starting scan for: \(deviceUUID)")
@@ -148,10 +207,10 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
 
     private func startConnectionTimeout(for deviceUUID: String) {
         // Cancel existing timeout
-        connectionTimeouts[deviceUUID]?.invalidate()
+        connectionTimeouts[deviceUUID]?.cancel()
 
         // Create new timeout
-        let timer = Timer.scheduledTimer(withTimeInterval: connectionTimeout, repeats: false) { [weak self] _ in
+        let task = scheduler.schedule(after: connectionTimeout) { [weak self] in
             guard let self = self else { return }
             Task { @MainActor in
                 AppLogger.ble.bleWarning("⏰ Connection timeout for device \(deviceUUID)")
@@ -159,12 +218,12 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
             }
         }
 
-        connectionTimeouts[deviceUUID] = timer
+        connectionTimeouts[deviceUUID] = task
         AppLogger.ble.bleConnection("⏱ Connection timeout started for device \(deviceUUID) (\(connectionTimeout)s)")
     }
 
     private func cancelConnectionTimeout(for deviceUUID: String) {
-        connectionTimeouts[deviceUUID]?.invalidate()
+        connectionTimeouts[deviceUUID]?.cancel()
         connectionTimeouts[deviceUUID] = nil
         AppLogger.ble.bleConnection("⏱ Connection timeout cancelled for device \(deviceUUID)")
     }
@@ -175,26 +234,39 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
         // Cancel the connection attempt
         if let connection = connections[deviceUUID],
            let peripheral = connection.peripheral {
-            centralManager.cancelPeripheralConnection(peripheral)
+            central.cancelConnection(peripheral)
         }
 
-        // Increment retry counter
-        let retryCount = (connectionRetryCount[deviceUUID] ?? 0) + 1
-        connectionRetryCount[deviceUUID] = retryCount
+        handleAttemptFailure(for: deviceUUID, reason: .appTimeout, underlyingError: nil)
+    }
 
-        if retryCount < maxRetries {
-            // Calculate shorter exponential backoff delay
-            let delay = min(Double(retryCount), 3.0) // 1s, 2s, 3s
-            AppLogger.ble.bleConnection("🔄 Retrying connection in \(delay)s (attempt \(retryCount + 1)/\(maxRetries))")
+    /// Gemeinsame Backoff-Behandlung für fehlgeschlagene Verbindungsversuche
+    /// (Watchdog-Timeout und didFailToConnect)
+    private func handleAttemptFailure(for deviceUUID: String, reason: DisconnectReason, underlyingError: Error?) {
+        let attempt = (connectionRetryCount[deviceUUID] ?? 0) + 1
+        connectionRetryCount[deviceUUID] = attempt
+        cumulativeRetryCount[deviceUUID, default: 0] += 1
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-                self?.connect(to: deviceUUID)
+        // Retry/Queue dürfen die Session-Konfiguration nicht überschreiben —
+        // eine Live-only-Session (Dashboard/Background) bleibt Live-only
+        let historyFlag = connections[deviceUUID]?.autoStartHistoryFlowEnabled ?? true
+
+        switch reconnectPolicy.decision(attempt: attempt, reason: reason) {
+        case .retry(let delay):
+            AppLogger.ble.bleConnection("🔄 Retrying connection in \(delay)s (attempt \(attempt + 1)/\(maxRetries), reason: \(reason))")
+            scheduler.schedule(after: delay) { [weak self] in
+                Task { @MainActor in
+                    self?.connect(to: deviceUUID, autoStartHistoryFlow: historyFlag)
+                }
             }
-        } else {
+        case .giveUp:
             AppLogger.ble.bleError("⛔️ Max retries reached for device \(deviceUUID)")
             if let connection = connections[deviceUUID] {
-                connection.handleConnectionFailed(error: ConnectionError.maxRetriesExceeded)
+                connection.handleConnectionFailed(error: underlyingError ?? ConnectionError.maxRetriesExceeded)
             }
+        case .waitForBluetooth:
+            AppLogger.ble.bleWarning("📴 Bluetooth unavailable, queuing connection for \(deviceUUID)")
+            pendingConnections[deviceUUID] = historyFlag
         }
     }
 
@@ -217,73 +289,117 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
         }
 
         // Verbindung trennen
-        centralManager.cancelPeripheralConnection(peripheral)
+        central.cancelConnection(peripheral)
         AppLogger.ble.bleConnection("Cancelled connection for device: \(deviceUUID)")
     }
 
-    /// Option A: Fast reconnect by trying retrievePeripherals multiple times before scanning
-    /// This is much faster than scanning (instant vs 3-10 seconds)
-    private func attemptFastReconnect(for deviceUUID: String, connection: DeviceConnection) async {
+    /// Fast reconnect: retrievePeripherals mehrfach probieren bevor gescannt
+    /// wird (Cache-Treffer ist sofort, Scan dauert 3-10 Sekunden).
+    /// Läuft komplett über den Scheduler — in Tests deterministisch.
+    private func attemptFastReconnect(for deviceUUID: String, connection: DeviceConnection, attempt: Int = 1) {
         guard let uuid = UUID(uuidString: deviceUUID) else {
             AppLogger.ble.bleError("Invalid device UUID: \(deviceUUID)")
             return
         }
 
-        AppLogger.ble.info("🚀 Attempting fast reconnect with multiple retrieve attempts for device: \(deviceUUID)")
+        AppLogger.ble.bleConnection("🔍 Fast-reconnect retrieve attempt \(attempt)/3 for device: \(deviceUUID)")
 
-        var foundPeripheral: CBPeripheral?
-
-        // Try retrievePeripherals 3 times with 300ms delay between attempts
-        for attempt in 1...3 {
-            AppLogger.ble.bleConnection("🔍 Retrieve attempt \(attempt)/3 for device: \(deviceUUID)")
-
-            let peripherals = await MainActor.run {
-                return self.centralManager.retrievePeripherals(withIdentifiers: [uuid])
+        if let peripheral = central.retrievePeripherals(withIdentifiers: [uuid]).first {
+            AppLogger.ble.info("✅ Fast reconnect found peripheral in cache for device: \(deviceUUID)")
+            connection.setPeripheral(peripheral)
+            startConnectionTimeout(for: deviceUUID)
+            central.connect(peripheral, options: Self.connectOptions)
+        } else if attempt < 3 {
+            scheduler.schedule(after: 0.3) { [weak self] in
+                Task { @MainActor in
+                    self?.attemptFastReconnect(for: deviceUUID, connection: connection, attempt: attempt + 1)
+                }
             }
-
-            if let peripheral = peripherals.first {
-                AppLogger.ble.info("✅ Fast reconnect SUCCESS on attempt \(attempt)! Found peripheral in cache for device: \(deviceUUID)")
-                foundPeripheral = peripheral
-                break
-            } else {
-                AppLogger.ble.bleConnection("❌ Retrieve attempt \(attempt) failed - peripheral not in cache")
-            }
-
-            // Wait 300ms before next attempt (unless it's the last attempt)
-            if attempt < 3 {
-                try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
-            }
-        }
-
-        // Process result on MainActor
-        await MainActor.run {
-            if let peripheral = foundPeripheral {
-                // Success - connect immediately
-                connection.setPeripheral(peripheral)
-
-                let options: [String: Any] = [
-                    CBConnectPeripheralOptionNotifyOnConnectionKey: true,
-                    CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
-                    CBConnectPeripheralOptionNotifyOnNotificationKey: true,
-                    CBConnectPeripheralOptionStartDelayKey: 0
-                ]
-
-                self.startConnectionTimeout(for: deviceUUID)
-                self.centralManager.connect(peripheral, options: options)
-            } else {
-                // All retrieve attempts failed - fall back to scanning
-                AppLogger.ble.info("📡 All fast reconnect attempts failed, falling back to scanning for device: \(deviceUUID)")
-                self.devicesToScan.insert(deviceUUID)
-                self.startScanning()
-            }
+        } else {
+            AppLogger.ble.info("📡 All fast reconnect attempts failed, falling back to scanning for device: \(deviceUUID)")
+            devicesToScan.insert(deviceUUID)
+            startScanning()
         }
     }
 
-    /// Setzt den Retry Counter für ein Gerät zurück
-    /// Nützlich wenn User manuell eine neue Verbindung startet
+    /// Setzt den Retry Counter und den Disconnect-Loop-Guard für ein Gerät
+    /// zurück. Nützlich wenn User manuell eine neue Verbindung startet.
     func resetRetryCounter(for deviceUUID: String) {
         connectionRetryCount[deviceUUID] = 0
+        cumulativeRetryCount[deviceUUID] = 0
+        loopGuards[deviceUUID]?.reset()
         AppLogger.ble.bleConnection("Reset retry counter for device: \(deviceUUID)")
+    }
+
+    /// Fehlversuche + Auto-Reconnects seit dem letzten resetRetryCounter
+    /// (read-only Diagnose für Benchmark/UI)
+    func retryCount(for deviceUUID: String) -> Int {
+        cumulativeRetryCount[deviceUUID] ?? 0
+    }
+
+    // MARK: - Background Arm API
+
+    /// Pending-Connect ohne Watchdog/Retry-Budget: iOS verbindet, sobald der
+    /// Sensor advertised — Minuten oder Stunden später. Der Connect überlebt
+    /// App-Suspension und (mit State Restoration) System-Termination.
+    func armBackgroundConnect(for deviceUUID: String) {
+        guard let uuid = UUID(uuidString: deviceUUID) else {
+            AppLogger.ble.bleError("armBackgroundConnect: invalid UUID \(deviceUUID)")
+            return
+        }
+
+        let connection = getConnection(for: deviceUUID)
+
+        // Laufenden History-Sync nicht kapern (Auto-Reconnect hält ihn am Leben)
+        guard !connection.isHistoryFlowActive else {
+            AppLogger.ble.bleConnection("armBackgroundConnect: history flow active for \(deviceUUID), skipping")
+            return
+        }
+
+        connection.setAutoStartHistoryFlowEnabled(false)
+        backgroundArmedDevices.insert(deviceUUID)
+        persistArmedDevices()
+
+        guard central.state == .poweredOn else {
+            // Bleibt armed; der poweredOn-Handler re-armt aus dem Set
+            AppLogger.ble.bleWarning("armBackgroundConnect: Bluetooth not ready, \(deviceUUID) stays armed")
+            return
+        }
+
+        if connection.connectionState == .connected || connection.connectionState == .authenticated {
+            AppLogger.ble.bleConnection("armBackgroundConnect: \(deviceUUID) already connected, emitting wake")
+            armedConnectionSubject.send(deviceUUID)
+            return
+        }
+
+        guard let peripheral = central.retrievePeripherals(withIdentifiers: [uuid]).first else {
+            // Kein Scan-Fallback: Background-Scans sind langsam; das Gerät war
+            // schon mal verbunden, der nächste Trigger versucht es erneut
+            AppLogger.ble.bleWarning("armBackgroundConnect: \(deviceUUID) not in retrieve cache, stays armed")
+            return
+        }
+
+        connection.setPeripheral(peripheral)
+        central.connect(peripheral, options: Self.connectOptions)
+        AppLogger.ble.bleConnection("🛡 Armed background pending connect for \(deviceUUID)")
+    }
+
+    func disarmBackgroundConnect(for deviceUUID: String) {
+        backgroundArmedDevices.remove(deviceUUID)
+        persistArmedDevices()
+    }
+
+    func disarmAllBackgroundConnects() {
+        backgroundArmedDevices.removeAll()
+        persistArmedDevices()
+    }
+
+    func isBackgroundArmed(_ deviceUUID: String) -> Bool {
+        backgroundArmedDevices.contains(deviceUUID)
+    }
+
+    private func persistArmedDevices() {
+        defaults.set(Array(backgroundArmedDevices), forKey: armedDevicesDefaultsKey)
     }
 
     func connectToMultiple(deviceUUIDs: [String]) {
@@ -313,8 +429,8 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
         }
 
         // Prüfe Bluetooth State
-        guard centralManager.state == .poweredOn else {
-            AppLogger.ble.bleWarning("Cannot start scanning - Bluetooth state: \(centralManager.state.rawValue)")
+        guard central.state == .poweredOn else {
+            AppLogger.ble.bleWarning("Cannot start scanning - Bluetooth state: \(central.state.rawValue)")
             return
         }
 
@@ -323,7 +439,7 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
             CBCentralManagerScanOptionAllowDuplicatesKey: false
         ]
 
-        centralManager.scanForPeripherals(
+        central.scanForPeripherals(
             withServices: [flowerCareServiceUUID],
             options: options
         )
@@ -341,20 +457,20 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
             return
         }
 
-        centralManager.stopScan()
+        central.stopScan()
         isScanning = false
         scanningStateSubject.send(false)
 
         AppLogger.ble.bleConnection("Stopped scanning")
     }
 
-    // MARK: - CBCentralManagerDelegate
+    // MARK: - BLECentralDelegate
 
-    nonisolated func centralManagerDidUpdateState(_ central: CBCentralManager) {
+    nonisolated func central(_ central: BLECentral, didUpdateState state: CBManagerState) {
         Task { @MainActor in
-            AppLogger.ble.bleConnection("Bluetooth state changed: \(central.state.rawValue)")
+            AppLogger.ble.bleConnection("Bluetooth state changed: \(state.rawValue)")
 
-            switch central.state {
+            switch state {
             case .poweredOn:
                 AppLogger.ble.bleConnection("Bluetooth is powered on")
                 // Falls wir Geräte zum Scannen haben, starte Scan
@@ -370,6 +486,12 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
                         connect(to: uuid, autoStartHistoryFlow: historyFlag)
                     }
                 }
+                // Re-issue pending connects für armed Geräte (Restoration-
+                // Relaunch oder BT-Toggle); für bereits pendende Peripherals
+                // ein No-Op
+                for deviceUUID in Array(backgroundArmedDevices) {
+                    armBackgroundConnect(for: deviceUUID)
+                }
             case .poweredOff:
                 AppLogger.ble.bleError("Bluetooth is powered off")
             case .unsupported:
@@ -381,16 +503,17 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
             case .unknown:
                 AppLogger.ble.bleWarning("Bluetooth state is unknown")
             @unknown default:
-                AppLogger.ble.bleWarning("Bluetooth state is unknown: \(central.state.rawValue)")
+                AppLogger.ble.bleWarning("Bluetooth state is unknown: \(state.rawValue)")
             }
         }
     }
 
-    nonisolated func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        Task { @MainActor in
-            let peripheralUUID = peripheral.identifier.uuidString
+    nonisolated func central(_ central: BLECentral, didDiscover peripheral: BLEPeripheralLink, advertisementData: [String: Any], rssi: NSNumber) {
+        let peripheralUUID = peripheral.identifier.uuidString
+        let peripheralName = peripheral.name
 
-            AppLogger.ble.bleConnection("Discovered peripheral: \(peripheral.name ?? "Unknown") (\(peripheralUUID)) RSSI: \(RSSI)")
+        Task { @MainActor in
+            AppLogger.ble.bleConnection("Discovered peripheral: \(peripheralName ?? "Unknown") (\(peripheralUUID)) RSSI: \(rssi)")
 
             // Prüfe ob wir nach diesem Gerät suchen
             guard devicesToScan.contains(peripheralUUID) else {
@@ -406,16 +529,8 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
             // Setze Peripheral
             connection.setPeripheral(peripheral)
 
-            // iOS Connection Options für stabilere Verbindung
-            let options: [String: Any] = [
-                CBConnectPeripheralOptionNotifyOnConnectionKey: true,
-                CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
-                CBConnectPeripheralOptionNotifyOnNotificationKey: true,
-                CBConnectPeripheralOptionStartDelayKey: 0 // Sofort verbinden
-            ]
-
             // Verbinde
-            central.connect(peripheral, options: options)
+            self.central.connect(peripheral, options: Self.connectOptions)
             AppLogger.ble.bleConnection("Connecting to peripheral: \(peripheralUUID)")
 
             // Entferne aus Scan-Liste
@@ -430,10 +545,10 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
         }
     }
 
-    nonisolated func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        Task { @MainActor in
-            let peripheralUUID = peripheral.identifier.uuidString
+    nonisolated func central(_ central: BLECentral, didConnect peripheral: BLEPeripheralLink) {
+        let peripheralUUID = peripheral.identifier.uuidString
 
+        Task { @MainActor in
             AppLogger.ble.bleConnection("✅ Successfully connected to device: \(peripheralUUID)")
 
             // Cancel connection timeout
@@ -450,13 +565,18 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
 
             // Informiere Connection über erfolgreiche Verbindung
             connection.handleConnected()
+
+            if backgroundArmedDevices.contains(peripheralUUID) {
+                AppLogger.ble.info("🛡 Background-armed connect completed for \(peripheralUUID)")
+                armedConnectionSubject.send(peripheralUUID)
+            }
         }
     }
 
-    nonisolated func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        Task { @MainActor in
-            let peripheralUUID = peripheral.identifier.uuidString
+    nonisolated func central(_ central: BLECentral, didDisconnect peripheral: BLEPeripheralLink, error: Error?) {
+        let peripheralUUID = peripheral.identifier.uuidString
 
+        Task { @MainActor in
             // Cancel timeout if active
             self.cancelConnectionTimeout(for: peripheralUUID)
 
@@ -473,88 +593,90 @@ class ConnectionPoolManager: NSObject, CBCentralManagerDelegate {
                 return
             }
 
+            // Fortschritt VOR handleDisconnected festhalten — der Loop-Guard
+            // braucht den Index zum Zeitpunkt des Disconnects
+            let historyIndex = connection.currentHistoryProgress.current
+
             // Informiere Connection über Disconnection
             connection.handleDisconnected(error: error)
 
             // Prüfe ob automatischer Reconnect gewünscht ist (z.B. während History Flow)
             if connection.shouldAutoReconnect {
-                AppLogger.ble.info("🔄 Auto-reconnect requested for device \(peripheralUUID) - reconnecting in 1.0 seconds...")
+                // Loop-Guard: viele Disconnects ohne Sync-Fortschritt sind
+                // eine Schleife — abbrechen statt endlos reconnecten
+                let timestamp = self.now()
+                var loopGuard = loopGuards[peripheralUUID] ?? DisconnectLoopGuard()
+                loopGuard.recordDisconnect(at: timestamp, historyIndex: historyIndex)
+                loopGuards[peripheralUUID] = loopGuard
 
-                // Längere Verzögerung für stabileren Reconnect (wie FlowerManager)
-                Task { [weak self] in
-                    guard let self = self else { return }
-                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1.0s
+                if loopGuard.isLooping(at: timestamp) {
+                    AppLogger.ble.bleError("🔁 Disconnect loop detected for device \(peripheralUUID) - stopping reconnect attempts")
+                    connection.cleanupHistoryFlow()
+                    connection.handleConnectionFailed(error: ConnectionError.disconnectLoopDetected)
+                    return
+                }
 
-                    await MainActor.run {
+                let reason = DisconnectReason(error: error)
+                let delay = reconnectPolicy.reconnectDelay(reason: reason)
+                cumulativeRetryCount[peripheralUUID, default: 0] += 1
+                AppLogger.ble.info("🔄 Auto-reconnect for device \(peripheralUUID) in \(delay)s (reason: \(String(describing: reason)))")
+
+                scheduler.schedule(after: delay) { [weak self] in
+                    Task { @MainActor in
+                        guard let self = self else { return }
                         AppLogger.ble.info("🔄 Starting auto-reconnect for device \(peripheralUUID)")
+                        self.attemptFastReconnect(for: peripheralUUID, connection: connection)
                     }
-
-                    // Option A: Try fast reconnect with multiple retrievePeripherals attempts
-                    await self.attemptFastReconnect(for: peripheralUUID, connection: connection)
                 }
             }
         }
     }
 
-    nonisolated func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        Task { @MainActor in
-            let peripheralUUID = peripheral.identifier.uuidString
+    nonisolated func central(_ central: BLECentral, didFailToConnect peripheral: BLEPeripheralLink, error: Error?) {
+        let peripheralUUID = peripheral.identifier.uuidString
 
+        Task { @MainActor in
             AppLogger.ble.bleError("❌ Failed to connect to device: \(peripheralUUID), error: \(error?.localizedDescription ?? "unknown")")
 
             // Cancel timeout
             self.cancelConnectionTimeout(for: peripheralUUID)
 
-            // Increment retry counter
-            let retryCount = (self.connectionRetryCount[peripheralUUID] ?? 0) + 1
-            self.connectionRetryCount[peripheralUUID] = retryCount
-
-            if retryCount < self.maxRetries {
-                // Calculate shorter exponential backoff delay
-                let delay = min(Double(retryCount), 3.0) // 1s, 2s, 3s
-                AppLogger.ble.bleConnection("🔄 Retrying connection in \(delay)s (attempt \(retryCount + 1)/\(self.maxRetries))")
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-                    self?.connect(to: peripheralUUID)
-                }
-            } else {
-                AppLogger.ble.bleError("⛔️ Max retries reached for device \(peripheralUUID)")
-                if let connection = self.connections[peripheralUUID] {
-                    connection.handleConnectionFailed(error: error ?? ConnectionError.maxRetriesExceeded)
-                }
+            if self.backgroundArmedDevices.contains(peripheralUUID) {
+                // Armed Connects haben kein Retry-Budget: bleiben armed, der
+                // nächste Trigger oder poweredOn re-issued den Pending-Connect
+                AppLogger.ble.bleWarning("Armed connect failed for \(peripheralUUID) — staying armed, no retry burn")
+                return
             }
+
+            self.handleAttemptFailure(for: peripheralUUID, reason: .failedToConnect, underlyingError: error)
         }
     }
 
     // MARK: - State Restoration
 
     /// Wird aufgerufen wenn iOS den CentralManager nach einem App-Kill wiederherstellt
-    nonisolated func centralManager(_ central: CBCentralManager, willRestoreState dict: [String : Any]) {
+    nonisolated func central(_ central: BLECentral, willRestoreState peripherals: [BLEPeripheralLink]) {
         Task { @MainActor in
             AppLogger.ble.bleConnection("🔄 Restoring Central Manager state")
+            AppLogger.ble.bleConnection("📱 Restoring \(peripherals.count) peripherals")
 
-            // Restore connected peripherals
-            if let peripherals = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral] {
-                AppLogger.ble.bleConnection("📱 Restoring \(peripherals.count) peripherals")
+            for peripheral in peripherals {
+                let peripheralUUID = peripheral.identifier.uuidString
+                AppLogger.ble.bleConnection("🔄 Restoring connection for device: \(peripheralUUID)")
 
-                for peripheral in peripherals {
-                    let peripheralUUID = peripheral.identifier.uuidString
-                    AppLogger.ble.bleConnection("🔄 Restoring connection for device: \(peripheralUUID)")
+                let connection = self.getConnection(for: peripheralUUID)
+                connection.setPeripheral(peripheral)
 
-                    let connection = self.getConnection(for: peripheralUUID)
-                    connection.setPeripheral(peripheral)
+                // If peripheral is already connected, trigger handleConnected
+                if peripheral.state == .connected {
+                    AppLogger.ble.bleConnection("✅ Device \(peripheralUUID) already connected after restore")
+                    connection.handleConnected()
 
-                    // If peripheral is already connected, trigger handleConnected
-                    if peripheral.state == .connected {
-                        AppLogger.ble.bleConnection("✅ Device \(peripheralUUID) already connected after restore")
-                        connection.handleConnected()
+                    if backgroundArmedDevices.contains(peripheralUUID) {
+                        AppLogger.ble.info("🛡 Restored armed connection for \(peripheralUUID), emitting wake")
+                        armedConnectionSubject.send(peripheralUUID)
                     }
                 }
-            }
-
-            // Restore scan state if needed
-            if let scanServices = dict[CBCentralManagerRestoredStateScanServicesKey] as? [CBUUID] {
-                AppLogger.ble.bleConnection("🔍 Restoring scan for \(scanServices.count) services")
             }
         }
     }
