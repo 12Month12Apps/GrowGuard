@@ -327,80 +327,87 @@ struct ConnectionPoolManagerTests {
         #expect(!connection.isHistoryLoading, "Live-only session must not start the history flow after a retry")
     }
 
-    @Test("Dashboard refresh leaves an active history sync untouched")
-    func dashboardRefreshDoesNotBreakActiveHistorySync() async {
-        let pool = makePool()
-        let sensor = makeSensor(entries: 10)
+    /// One mid-flight history sync plus everything a test needs to poke at it.
+    /// Holding this keeps the pool — and therefore its connections — alive.
+    private final class MidFlightSync {
+        let pool: ConnectionPoolManager
+        let sensor: FakeFlowerCarePeripheral
+        let connection: DeviceConnection
+        private(set) var entries: [HistoricalSensorData] = []
+        private var cancellable: AnyCancellable?
 
+        init(pool: ConnectionPoolManager, sensor: FakeFlowerCarePeripheral, connection: DeviceConnection) {
+            self.pool = pool
+            self.sensor = sensor
+            self.connection = connection
+            cancellable = connection.historicalDataPublisher.sink { [weak self] entry in
+                self?.entries.append(entry)
+            }
+        }
+    }
+
+    /// Drives a fresh pool + sensor until the history sync is mid-flight, i.e.
+    /// at least `minEntries` entries have arrived. Models what the app is
+    /// really doing when the user comes back to the overview during a sync.
+    private func startSyncMidFlight(entryCount: Int = 10, minEntries: Int = 3) async -> MidFlightSync {
+        let pool = makePool()
+        let sensor = makeSensor(entries: entryCount)
         let connection = pool.getConnection(for: sensor.identifier.uuidString)
-        var entries: [HistoricalSensorData] = []
-        let cancellable = connection.historicalDataPublisher.sink { entries.append($0) }
-        defer { cancellable.cancel() }
+        let sync = MidFlightSync(pool: pool, sensor: sensor, connection: connection)
 
         pool.connect(to: sensor.identifier.uuidString)
         await pump()
         scheduler.advance(by: 0.7) // discovery + auth + history start delay
 
         var safety = 0
-        while entries.count < 3 && safety < 200 {
+        while sync.entries.count < minEntries && safety < 200 {
             scheduler.advance(by: 0.05)
             safety += 1
         }
-        #expect(entries.count >= 3, "Sync should be mid-flight before the dashboard appears")
+        return sync
+    }
 
-        // User navigates back to the overview: dashboard triggers its
-        // one-time live refresh for all sensors — including the syncing one
-        let service = InitialSensorDataService(pool: pool)
-        await service.requestLiveData(for: [sensor.identifier.uuidString])
-        await pump()
-
-        // Mid-sync disconnect afterwards (FlowerCare does this constantly)
-        central.simulateDisconnect(of: sensor.identifier)
+    /// Mid-sync disconnect plus the reconnect the FlowerCare forces on us
+    /// constantly, then enough time for the resumed sync to drain.
+    private func reconnectAndDrain(_ sync: MidFlightSync) async {
+        central.simulateDisconnect(of: sync.sensor.identifier)
         await pump()
         scheduler.advance(by: 1.0) // auto-reconnect delay (clean disconnect)
         await pump()
         scheduler.advance(by: 1.0) // re-discovery + auth + resume delay
         await pump()
         scheduler.advance(by: 10.0) // drain remaining entries
+    }
 
-        #expect(entries.count == 10, "History sync must resume and complete despite the dashboard refresh")
-        #expect(!connection.isHistoryLoading)
+    @Test("Dashboard refresh leaves an active history sync untouched")
+    func dashboardRefreshDoesNotBreakActiveHistorySync() async {
+        let sync = await startSyncMidFlight()
+        #expect(sync.entries.count >= 3, "Sync should be mid-flight before the dashboard appears")
+
+        // User navigates back to the overview: dashboard triggers its
+        // one-time live refresh for all sensors — including the syncing one
+        let service = InitialSensorDataService(pool: sync.pool)
+        await service.requestLiveData(for: [sync.sensor.identifier.uuidString])
+        await pump()
+
+        await reconnectAndDrain(sync)
+
+        #expect(sync.entries.count == 10, "History sync must resume and complete despite the dashboard refresh")
+        #expect(!sync.connection.isHistoryLoading)
     }
 
     @Test("Disabling auto-start is ignored while a history flow is active")
     func autoStartDisableIgnoredDuringActiveFlow() async {
-        let pool = makePool()
-        let sensor = makeSensor(entries: 10)
-
-        let connection = pool.getConnection(for: sensor.identifier.uuidString)
-        var entries: [HistoricalSensorData] = []
-        let cancellable = connection.historicalDataPublisher.sink { entries.append($0) }
-        defer { cancellable.cancel() }
-
-        pool.connect(to: sensor.identifier.uuidString)
-        await pump()
-        scheduler.advance(by: 0.7)
-
-        var safety = 0
-        while entries.count < 3 && safety < 200 {
-            scheduler.advance(by: 0.05)
-            safety += 1
-        }
-        #expect(entries.count >= 3)
+        let sync = await startSyncMidFlight()
+        #expect(sync.entries.count >= 3)
 
         // Live-only callers (background fetch) must not flip a running session
-        connection.setAutoStartHistoryFlowEnabled(false)
-        #expect(connection.autoStartHistoryFlowEnabled, "Disable is deferred while the flow is active")
+        sync.connection.setAutoStartHistoryFlowEnabled(false)
+        #expect(sync.connection.autoStartHistoryFlowEnabled, "Disable is deferred while the flow is active")
 
-        central.simulateDisconnect(of: sensor.identifier)
-        await pump()
-        scheduler.advance(by: 1.0)
-        await pump()
-        scheduler.advance(by: 1.0)
-        await pump()
-        scheduler.advance(by: 10.0)
+        await reconnectAndDrain(sync)
 
-        #expect(entries.count == 10, "Sync resumes after reconnect even though a caller tried to disable auto-start")
+        #expect(sync.entries.count == 10, "Sync resumes after reconnect even though a caller tried to disable auto-start")
     }
 
     @Test("Two devices get isolated connections and data streams")
