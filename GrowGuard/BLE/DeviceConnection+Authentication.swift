@@ -13,6 +13,32 @@ import CoreBluetooth
 
 extension DeviceConnection {
 
+    /// Wie lange nach dem bestätigten Auth-Write auf die Challenge-Antwort
+    /// gewartet wird. FlowerCare 3.3.6 antwortet nie (die App abonniert keine
+    /// Notifications und liest die Auth-Characteristic auch nicht), früher
+    /// kostete das 4 s von JEDEM Connect — bei einem Sensor, der die
+    /// Verbindung nach wenigen Sekunden fallen lässt, blieb keine Zeit für
+    /// History-Entries. Eine echte Notification käme innerhalb von ein bis
+    /// zwei Connection-Intervallen, also deutlich unter 0,4 s.
+    static let authGracePeriod: TimeInterval = 0.4
+
+    /// Der Auth-Write wurde bestätigt: ab hier ist nur noch die Antwort offen.
+    /// Statt die vollen 4 s Timeout abzuwarten (der Sensor sendet sie nie)
+    /// reicht eine kurze Gnadenfrist — das rettet die kurze Verbindungszeit
+    /// schwacher Links für den History-Sync.
+    func handleAuthenticationWriteConfirmed() {
+        guard authenticationStep == 1, !isAuthenticated else { return }
+
+        scheduler.schedule(after: Self.authGracePeriod) { [weak self] in
+            guard let self = self,
+                  self.authenticationStep == 1,
+                  !self.isAuthenticated,
+                  self.peripheral?.state == .connected else { return }
+            AppLogger.ble.info("🔐 No auth response for device \(self.deviceUUID) after \(Self.authGracePeriod)s, proceeding without auth")
+            self.completeAuthentication()
+        }
+    }
+
     /// Startet den Authentication-Prozess mit dem FlowerCare Sensor
     /// Verwendet den 2-Schritt Authentication Flow
     func startAuthentication() {
@@ -34,8 +60,9 @@ extension DeviceConnection {
         // Set expected response for validation
         expectedResponse = Data([0x23, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00])
 
-        // Set a timeout for authentication. Sensors with a silent auth
-        // characteristic hit this branch on EVERY connect.
+        // Safety net for sensors that do not even acknowledge the write.
+        // Der Normalfall (Ack, aber nie eine Antwort) wird viel schneller in
+        // handleAuthenticationWriteConfirmed() aufgelöst.
         scheduler.schedule(after: 4.0) { [weak self] in
             guard let self = self else { return }
             if self.authenticationStep > 0 && !self.isAuthenticated {

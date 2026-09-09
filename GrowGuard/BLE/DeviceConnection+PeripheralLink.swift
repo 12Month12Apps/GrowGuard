@@ -160,6 +160,11 @@ extension DeviceConnection: BLEPeripheralLinkDelegate {
             return
         }
 
+        // Auth-Write bestätigt → kurze Gnadenfrist statt 4 s Timeout
+        if characteristicUUID == authenticationCharacteristicUUID {
+            handleAuthenticationWriteConfirmed()
+        }
+
         // Nach bestätigtem Mode Change (0xA01F) den Realtime-Wert lesen —
         // FlowerCare liefert Live-Daten nur per Read (wie FlowerCareManager:
         // kurze Pause, damit der Sensor die Messung aktualisiert)

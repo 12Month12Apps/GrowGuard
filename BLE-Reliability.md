@@ -96,6 +96,35 @@ connect+read against the ~30 s window:
   recordPushReceived`, visible in Settings → Task Scheduling debug) to
   verify the server cadence reaches the device.
 
+## Connection-window budget: setup must not eat the link
+
+A FlowerCare on a weak link (RSSI < -80 dBm, tired coin cell) holds a
+connection only a few seconds. Everything between `didConnect` and the first
+history entry is subtracted from that window, so setup cost is a reliability
+parameter, not a detail.
+
+- **The auth challenge never gets an answer.** FlowerCare 3.3.6 exposes the
+  auth characteristic but only *acks the write*; a response could only arrive
+  as a notification, and nothing in the stack subscribes to notifications
+  (`setNotifyValue` does not exist on the `BLEPeripheralLink` seam) or reads
+  that characteristic. `handleAuthenticationResponse` is unreachable on this
+  firmware — every connect ends in the "proceed without auth" branch.
+- **Cost of waiting for it:** the 4 s auth timeout used to run on EVERY
+  connect, pushing the first entry request to ~4.9 s after connect. On a
+  sensor whose link dies at ~5 s that means **zero entries per reconnect** —
+  the entry index freezes and after 5 stalled drops the `DisconnectLoopGuard`
+  aborts the sync ("stuck at entry N").
+- **Now:** the confirmed auth write starts a short grace period
+  (`DeviceConnection.authGracePeriod`, 0.4 s — a real notification arrives
+  within one or two connection intervals). The 4 s timeout remains only for
+  sensors that never ack at all. First entry request: ~1.3 s after connect.
+- **Regression tests:** `HistoryResumeWindowTests` pins both halves — the
+  setup budget (first entry ≤ 1.5 s after connect with a silent auth
+  characteristic) and the end-to-end case (a 300-entry sync completes while
+  the sensor drops the link every 5 s). Note that
+  `FakeFlowerCarePeripheral.hasAuthCharacteristic` defaults to `false`, so
+  tests that do not set it never exercise the auth path at all.
+
 ## Per-entry retry/skip (DeviceConnection)
 
 - **Response timeout: 2 s per entry.** A silent sensor no longer freezes the

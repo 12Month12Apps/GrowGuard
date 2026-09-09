@@ -123,6 +123,7 @@
 		B27894E2B06444D4AF2D50CA /* BLESessionRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3A0417191C8495FA72F14E0 /* BLESessionRecording.swift */; };
 		BCC00C56EBF746EEAAD64298 /* Recordings in Resources */ = {isa = PBXBuildFile; fileRef = DC03DBA5E52147B48284AC39 /* Recordings */; };
 		C891C1B6A0FB8421DBB103B7 /* BridgeChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77C656AC7A38A8B8D25F5F5D /* BridgeChannel.swift */; };
+		56FA2DED0DE4F1B500000102 /* HistoryResumeWindowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DED0DE4F1B500000101 /* HistoryResumeWindowTests.swift */; };
 		E74116E2F3304A11BD446D55 /* BLEPerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59E679C227EE418A9C585478 /* BLEPerformanceTests.swift */; };
 		EB52DDE7C8ED465F9D7A4F37 /* RecordingBLETransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 151A0CCD48234A048293F85A /* RecordingBLETransport.swift */; };
 		EB70D5C99D1B4DB2A3030B57 /* BLESessionRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FD4C68830544BCC861334C6 /* BLESessionRecorder.swift */; };
@@ -288,6 +289,7 @@
 		56FD6C852E34194C00905984 /* SensorDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataManager.swift; sourceTree = "<group>"; };
 		56HLA0012EC8000000000001 /* HistoryLoadingAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryLoadingAttributes.swift; sourceTree = "<group>"; };
 		56HLAS012EC8000000000002 /* HistoryLoadingActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryLoadingActivityService.swift; sourceTree = "<group>"; };
+		56FA2DED0DE4F1B500000101 /* HistoryResumeWindowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryResumeWindowTests.swift; sourceTree = "<group>"; };
 		59E679C227EE418A9C585478 /* BLEPerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEPerformanceTests.swift; sourceTree = "<group>"; };
 		5FD4C68830544BCC861334C6 /* BLESessionRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLESessionRecorder.swift; sourceTree = "<group>"; };
 		77C656AC7A38A8B8D25F5F5D /* BridgeChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BridgeChannel.swift; path = Bridge/BridgeChannel.swift; sourceTree = "<group>"; };
@@ -498,6 +500,7 @@
 				56BWKT002EC7000000000001 /* BackgroundWakeServiceTests.swift */,
 				56BARM002EC7000000000001 /* BackgroundArmTests.swift */,
 				59E679C227EE418A9C585478 /* BLEPerformanceTests.swift */,
+				56FA2DED0DE4F1B500000101 /* HistoryResumeWindowTests.swift */,
 				C8F10F04E3674D099816889E /* ReliabilityPolicyTests.swift */,
 				DC03DBA5E52147B48284AC39 /* Recordings */,
 				CEE5968580C64DA890C5A581 /* ReplaySessionTests.swift */,
@@ -1071,6 +1074,7 @@
 				56BWKT012EC7000000000001 /* BackgroundWakeServiceTests.swift in Sources */,
 				56BARM012EC7000000000001 /* BackgroundArmTests.swift in Sources */,
 				E74116E2F3304A11BD446D55 /* BLEPerformanceTests.swift in Sources */,
+				56FA2DED0DE4F1B500000102 /* HistoryResumeWindowTests.swift in Sources */,
 				F59A2B14028549EBAAD0673A /* ReliabilityPolicyTests.swift in Sources */,
 				10F70A0DB6B34BF6AFFF6504 /* ReplaySessionTests.swift in Sources */,
 				F8A3B6561F3C42D8ADF1E790 /* ReplayBLETransport.swift in Sources */,
