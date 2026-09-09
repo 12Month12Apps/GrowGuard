@@ -261,8 +261,20 @@ class DeviceConnection: NSObject {
         AppLogger.ble.bleConnection("DeviceConnection initialized for device: \(deviceUUID)")
     }
 
-    /// Konfiguriert, ob der History Flow automatisch nach der Authentifizierung starten soll
+    /// Konfiguriert, ob der History Flow automatisch nach der Authentifizierung starten soll.
+    ///
+    /// Achtung: Ein `false` während eines aktiven Flows wird bewusst ignoriert
+    /// (siehe unten). Aufrufer, die den Flow wirklich beenden wollen, müssen
+    /// vorher `cleanupHistoryFlow()` rufen — das setzt `isHistoryFlowActive`
+    /// zurück, wodurch der Disable anschließend greift.
     func setAutoStartHistoryFlowEnabled(_ enabled: Bool) {
+        // Ein laufender (oder suspendierter) Sync braucht das Flag für den
+        // Resume nach Reconnect — Live-only-Caller (Dashboard/Background)
+        // dürfen ihn nicht stranden lassen
+        if !enabled && isHistoryFlowActive {
+            AppLogger.ble.bleWarning("Ignoring auto-start disable for device \(self.deviceUUID) — history flow is active and needs it to resume")
+            return
+        }
         autoStartHistoryFlowEnabled = enabled
         if !enabled {
             waitingForCharacteristicsForHistoryResume = false

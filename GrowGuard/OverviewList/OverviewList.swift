@@ -314,9 +314,13 @@ struct DeviceCard: View {
 
     @ObservedObject private var activityService = HistoryLoadingActivityService.shared
     @State private var connectionState: DeviceConnection.ConnectionState = .disconnected
+    /// History-Sync-Status direkt vom ConnectionPool — die Live Activity ist
+    /// nur ein Fallback, sie existiert nicht ohne ActivityKit-Berechtigung
+    /// (Mac "Designed for iPhone", deaktivierte Live Activities)
+    @State private var poolHistoryLoading = false
 
     private var isLoadingHistory: Bool {
-        activityService.hasActivity(for: device.uuid)
+        poolHistoryLoading || activityService.hasActivity(for: device.uuid)
     }
 
     private var latestSensorData: SensorDataDTO? {
@@ -429,8 +433,20 @@ struct DeviceCard: View {
         .task {
             let connection = ConnectionPoolManager.shared.getConnection(for: device.uuid)
             connectionState = connection.connectionState
+            poolHistoryLoading = connection.isHistoryLoading
             for await state in connection.connectionStatePublisher.values {
                 connectionState = state
+                if case .error = state {
+                    // Abgebrochener Sync (Loop-Guard, Skip-Budget) emittiert
+                    // keinen finalen Progress — Indikator hier zurücksetzen
+                    poolHistoryLoading = false
+                }
+            }
+        }
+        .task {
+            let connection = ConnectionPoolManager.shared.getConnection(for: device.uuid)
+            for await (current, total) in connection.historyProgressPublisher.values {
+                poolHistoryLoading = total > 0 && current < total
             }
         }
     }

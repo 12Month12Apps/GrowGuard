@@ -591,9 +591,10 @@ import ActivityKit
 
         // Stop the history flow
         if let connection = deviceConnection {
-            // Disable auto-start to prevent unwanted resumption
-            connection.setAutoStartHistoryFlowEnabled(false)
+            // Cleanup first: while the flow is active, the connection defers
+            // auto-start disables (they would strand a resumable sync)
             connection.cleanupHistoryFlow()
+            connection.setAutoStartHistoryFlowEnabled(false)
         }
     }
     
