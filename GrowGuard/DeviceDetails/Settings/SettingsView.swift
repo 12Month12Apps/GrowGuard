@@ -167,12 +167,6 @@ class SettingsViewModel {
     func saveSettings() async throws {
         print("💾 SettingsViewModel: Saving settings for device \(deviceUUID)")
         
-        // Get current device first
-        guard try await repositoryManager.flowerDeviceRepository.getDevice(by: deviceUUID) != nil else {
-            print("❌ SettingsViewModel.saveSettings: Device not found")
-            throw RepositoryError.deviceNotFound
-        }
-        
         // Save potSize and optimalRange separately first (these have their own entities)
         try await repositoryManager.potSizeRepository.savePotSize(potSize)
         print("  Saved PotSize - Width/Height/Volume: \(potSize.width)/\(potSize.height)/\(potSize.volume)")
@@ -180,10 +174,14 @@ class SettingsViewModel {
         try await repositoryManager.optimalRangeRepository.saveOptimalRange(optimalRange)
         print("  Saved OptimalRange - Min/Max Temp: \(optimalRange.minTemperature)/\(optimalRange.maxTemperature)")
         
-        // Only the fields this form owns; everything else stays as stored
-        try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: deviceUUID) { fresh in
+        // Only the fields this form owns; everything else stays as stored.
+        // The nil result is the not-found check — no separate pre-fetch needed.
+        guard try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: deviceUUID, { fresh in
             fresh.name = deviceName
             fresh.selectedFlower = selectedFlower
+        }) != nil else {
+            print("❌ SettingsViewModel.saveSettings: Device not found")
+            throw RepositoryError.deviceNotFound
         }
         print("🔧 Saved device name: \(deviceName), flower: \(selectedFlower?.name ?? "nil") (ID: \(selectedFlower?.id ?? 0))")
         

@@ -432,24 +432,18 @@ import ActivityKit
     @MainActor
     private func updateDeviceInfo(battery: Int, firmware: String) async {
         do {
-            let updatedDevice = FlowerDeviceDTO(
-                id: device.id,
-                name: device.name,
-                uuid: device.uuid,
-                peripheralID: device.peripheralID,
-                battery: Int16(battery),
-                firmware: firmware,
-                isSensor: device.isSensor,
-                added: device.added,
-                lastUpdate: device.lastUpdate,
-                optimalRange: device.optimalRange,
-                potSize: device.potSize,
-                selectedFlower: device.selectedFlower,
-                sensorData: device.sensorData
-            )
-            try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
-            self.device = updatedDevice
-            AppLogger.ble.info("🔋 Updated battery to \(battery)% / firmware \(firmware) for device \(self.device.uuid)")
+            // Fetch-mutate-save: only the fields a battery read owns. Location,
+            // contact counters and lastUpdate stay as another writer left them.
+            if let updated = try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: device.uuid, { fresh in
+                fresh.battery = Int16(clamping: battery)
+                fresh.firmware = firmware
+                fresh.batteryUpdatedAt = Date()
+            }) {
+                self.device = updated
+                AppLogger.ble.info("🔋 Updated battery to \(battery)% / firmware \(firmware) for device \(self.device.uuid)")
+            } else {
+                print("⚠️ DeviceDetailsViewModel: device \(device.uuid) not found while updating battery")
+            }
         } catch {
             print("Error updating device battery: \(error.localizedDescription)")
         }
@@ -471,6 +465,8 @@ import ActivityKit
         do {
             if let updated = try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: device.uuid, { $0.lastUpdate = Date() }) {
                 self.device = updated
+            } else {
+                print("⚠️ DeviceDetailsViewModel: device \(device.uuid) not found while updating lastUpdate")
             }
         } catch {
             print("Error updating device: \(error.localizedDescription)")
