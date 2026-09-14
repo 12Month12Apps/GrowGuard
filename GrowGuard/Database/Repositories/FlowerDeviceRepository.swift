@@ -9,9 +9,12 @@ protocol FlowerDeviceRepository {
 }
 
 extension FlowerDeviceRepository {
-    /// Fetch → mutate → save. Callers change only the fields they own, so a
-    /// stale full copy never overwrites what another writer (for example
-    /// SensorHealthMonitor) just persisted. Returns nil for unknown devices.
+    /// Fetch → mutate → save. Callers change only the fields they own on a
+    /// freshly loaded copy, so a long-lived stale DTO (e.g. a view model's
+    /// `device`) never writes old values back over fields another writer
+    /// owns. NOT atomic: two concurrent calls on the same uuid still race
+    /// across the awaits; all current writers run on the main actor, which
+    /// keeps that window small but not zero. Returns nil for unknown devices.
     @discardableResult
     func modifyDevice(uuid: String, _ mutate: (inout FlowerDeviceDTO) -> Void) async throws -> FlowerDeviceDTO? {
         guard var device = try await getDevice(by: uuid) else { return nil }

@@ -74,21 +74,32 @@ struct FlowerDeviceRepositoryModifyTests {
         let repo = RepositoryManager.shared.flowerDeviceRepository
         let uuid = "MODIFY-\(UUID().uuidString)"
         let lastUpdate = Date(timeIntervalSince1970: 1_700_000_000)
+        // Two distinct stamps so a swapped mapping in updateFromDTO fails here.
+        let batteryUpdatedAt = Date(timeIntervalSince1970: 1_700_000_100)
+        let lastFailedContactAt = Date(timeIntervalSince1970: 1_700_000_200)
         var seed = FlowerDeviceDTO(name: "Rose", uuid: uuid, battery: 25, lastUpdate: lastUpdate)
         seed.location = "  Balcony "
         seed.failedContactAttempts = 2
+        seed.batteryUpdatedAt = batteryUpdatedAt
+        seed.lastFailedContactAt = lastFailedContactAt
         try await repo.saveDevice(seed)
 
-        let returned = try await repo.modifyDevice(uuid: uuid) { $0.name = "Renamed" }
-        let reloaded = try await repo.getDevice(by: uuid)
+        do {
+            let returned = try await repo.modifyDevice(uuid: uuid) { $0.name = "Renamed" }
+            let reloaded = try await repo.getDevice(by: uuid)
 
-        #expect(returned?.name == "Renamed")
-        #expect(reloaded?.name == "Renamed")
-        #expect(reloaded?.battery == 25)
-        #expect(reloaded?.location == "Balcony", "location is stored trimmed")
-        #expect(reloaded?.failedContactAttempts == 2)
-        #expect(reloaded?.lastUpdate == lastUpdate)
-        #expect(reloaded?.batteryUpdatedAt == nil)
+            #expect(returned?.name == "Renamed")
+            #expect(reloaded?.name == "Renamed")
+            #expect(reloaded?.battery == 25)
+            #expect(reloaded?.location == "Balcony", "location is stored trimmed")
+            #expect(reloaded?.failedContactAttempts == 2)
+            #expect(reloaded?.lastUpdate == lastUpdate)
+            #expect(reloaded?.batteryUpdatedAt == batteryUpdatedAt)
+            #expect(reloaded?.lastFailedContactAt == lastFailedContactAt)
+        } catch {
+            try? await repo.deleteDevice(uuid: uuid)
+            throw error
+        }
 
         try await repo.deleteDevice(uuid: uuid)
     }
@@ -96,7 +107,9 @@ struct FlowerDeviceRepositoryModifyTests {
     @Test("modifyDevice returns nil for an unknown device and writes nothing")
     func modifyDeviceUnknown() async throws {
         let repo = RepositoryManager.shared.flowerDeviceRepository
-        let result = try await repo.modifyDevice(uuid: "MODIFY-UNKNOWN-\(UUID().uuidString)") { $0.name = "x" }
+        let uuid = "MODIFY-UNKNOWN-\(UUID().uuidString)"
+        let result = try await repo.modifyDevice(uuid: uuid) { $0.name = "x" }
         #expect(result == nil)
+        #expect(try await repo.getDevice(by: uuid) == nil)
     }
 }
