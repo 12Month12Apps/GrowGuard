@@ -37,11 +37,33 @@ persistence and contact bookkeeping move to a service that observes the
 screen. A pure verdict type turns the stored facts into one of a handful of
 states the UI and the notification path both consume.
 
-**"Silent" means time *and* failed attempts.** Pure "48 h without a reading"
-also fires when the user takes the phone on a trip. A sensor is declared
+**"Silent" means time *and* failed attempts.** A sensor is declared
 unreachable only when at least 48 h passed since the last reading **and** at
-least 3 contact attempts since then failed. Holidays trigger nothing; a dead
-sensor in the same room does within a day of trigger cadence.
+least 3 contact attempts since then failed. The attempt gate proves the *app
+tried* — it guards against "Background App Refresh off, phone in a drawer",
+where the app never had a chance and silence means nothing.
+
+**The app cannot tell "dead" from "out of range".** BLE gives the same
+signal for both: nothing. Silent pushes and BGAppRefresh fire wherever the
+phone has network, so on a trip the attempt budget fills within hours and the
+48 h gate alone decides. The design handles this with two tools instead of
+pretending to detect holidays:
+
+- **Peer witness.** If *another* sensor delivered a reading inside the 48 h
+  window, the phone was demonstrably at home while this one stayed silent —
+  the verdict is `confirmed`. With a single sensor, or when every sensor is
+  silent, the verdict is `unconfirmed`. All-silent is ambiguous on purpose:
+  it is most likely a trip, but cells bought as a pack die as a pack (the
+  reported case was an IKEA 20-pack), so it still warns.
+- **Hedged copy.** An unconfirmed verdict says "not responding for 3 days —
+  if you are at home, check the battery", not "the battery is empty". The
+  cost of a false positive is one notification per trip; the cost of a false
+  negative was days of missing data. The state clears itself on the first
+  reading after the user returns.
+
+Location-based home detection (geofence) was considered and rejected: it
+needs a permission, a setup step and a location stack to suppress one
+notification per trip.
 
 Rejected alternatives:
 
@@ -87,7 +109,7 @@ ConnectionPoolManager ──deviceEventsPublisher──► SensorHealthMonitor �
                                                      │
 BackgroundBLEWakeService ──recordFailedContact──────┘
 
-FlowerDeviceDTO ──► SensorHealth.evaluate(device:now:) ──► OverviewList / DeviceDetailsView
+FlowerDeviceDTO ──► SensorHealth.evaluate(device:peers:now:) ──► OverviewList / DeviceDetailsView
 ```
 
 ### `ConnectionPoolManager.deviceEventsPublisher` (new seam)
@@ -132,8 +154,12 @@ Responsibilities:
      ignored. Background triggers (push, BGAppRefresh, enter-background) can
      fire minutes apart; without the limit one evening would exhaust the
      3-attempt budget and the time gate would be the only real gate.
-3. **Notify on state change.** After every write, run `SensorHealth.evaluate`
-   and hand the result to the notifier (below).
+3. **Notify on state change.** After every write, load all sensor devices,
+   run `SensorHealth.evaluate` for the changed device with the others as
+   peers, and hand the result to the notifier (below). A successful contact
+   also re-evaluates every *other* silent sensor: the newly responding device
+   is the witness that can upgrade their verdict from unconfirmed to
+   confirmed.
 
 Failed-contact call sites in `BackgroundBLEWakeService`:
 
@@ -159,11 +185,17 @@ enum SensorHealth: Equatable {
     case batteryUnknown                     // never read
     case batteryLow(percent: Int)           // ≤ 30 %
     case batteryCritical(percent: Int)      // ≤ 15 %
-    case unreachable(since: Date, lastKnownBattery: Int?)
+    case unreachable(since: Date, lastKnownBattery: Int?, confirmedByPeer: Bool)
 
-    static func evaluate(_ device: FlowerDeviceDTO, now: Date) -> SensorHealth
+    /// `peers` are the *other* sensor devices; they act as witnesses.
+    static func evaluate(_ device: FlowerDeviceDTO,
+                         peers: [FlowerDeviceDTO],
+                         now: Date) -> SensorHealth
 }
 ```
+
+`confirmedByPeer` is true when at least one peer has a last reading younger
+than 48 h. Non-sensor peers are ignored.
 
 Evaluation order (first match wins):
 
@@ -196,14 +228,24 @@ following the existing `notification.lastImmediate.<uuid>` pattern:
 
 | Trigger | Marker | Cleared when |
 |---|---|---|
-| Health becomes `.unreachable` | `sensorHealth.unreachableNotified.<uuid>` | next successful contact |
+| Health becomes `.unreachable` | `sensorHealth.unreachableNotified.<uuid>` stores the flavour (`unconfirmed` / `confirmed`) | next successful contact |
 | Health becomes `.batteryLow` or `.batteryCritical` | `sensorHealth.lowBatteryNotified.<uuid>` | battery read back above 40 % (new cell) |
+
+The unreachable marker allows exactly one upgrade: an episode that was
+notified as `unconfirmed` may notify once more when it becomes `confirmed`
+(the user came home, another sensor answered, this one still did not). A
+`confirmed` episode never notifies again. It never downgrades — a peer going
+silent later does not turn a confirmed verdict back into an unconfirmed one
+for notification purposes.
 
 Copy (via `L10n`, English strings in `Localizable.strings`):
 
-- Unreachable: title "🔋 {name} is not responding", body "No readings for
-  {n} days. The battery is probably empty — last known level {p} %." When
-  `lastKnownBattery` is nil the body drops the last clause.
+- Unreachable, unconfirmed: title "🔋 {name} is not responding", body "No
+  readings for {n} days. If you are at home, check the battery — last known
+  level {p} %." When `lastKnownBattery` is nil the body drops the last clause.
+- Unreachable, confirmed: title "🔋 {name} needs a new battery", body "Your
+  other sensors respond, this one has been silent for {n} days. Last known
+  level {p} %." Same rule for a nil level.
 - Low battery: title "🔋 Replace the battery in {name}", body "Battery is at
   {p} %. Cheap coin cells drop out without warning at this level."
 
@@ -228,10 +270,14 @@ Symbol by level: > 87 → 100, > 62 → 75, > 37 → 50, > 12 → 25, else 0. Wh
 reads "read {relative}".
 
 **Unreachable banner.** In the overview row the connection-status line
-("Disconnected · Active …") is replaced by a red line "Not reachable for 3
-days · check battery". In the details header a full-width red banner below the
-last-update line carries the same text plus "Last known battery 25 %" when
-available. The banner has no button; the fix is physical.
+("Disconnected · Active …") is replaced by a red line: "Not responding for 3
+days" (unconfirmed) or "Silent for 3 days · replace battery" (confirmed). In
+the details header a full-width red banner below the last-update line carries
+the same headline plus one explanatory sentence: unconfirmed — "If you are at
+home, check the battery."; confirmed — "Your other sensors respond, this one
+does not." — followed by "Last known battery 25 %" when available. The banner
+has no button; the fix is physical. The views obtain peers from the device
+list they already hold (overview) or a repository fetch on load (details).
 
 All strings are `L10n` keys; regenerate `Strings+Generated.swift` with
 `swiftgen`. The overview's existing English literals in `connectionLabel` are
@@ -251,6 +297,9 @@ and one per persisted battery read. No new log categories.
 - 5 days without reading and 2 failed attempts → not unreachable (attempt gate)
 - 48 h and 3 attempts → unreachable, `lastKnownBattery` populated iff
   `batteryUpdatedAt` set
+- no peers → `confirmedByPeer == false`; one peer with a reading 1 h old →
+  true; only peers that are themselves 3 days silent → false; a non-sensor
+  peer with a fresh `lastUpdate` → false (ignored)
 - battery 30 → low, 31 → ok, 15 → critical, 16 → low (boundaries)
 - battery never read → unknown even when value is 0
 - non-sensor device → always ok
@@ -264,6 +313,11 @@ clock and a `PassthroughSubject<DeviceEvent, Never>`:
 - two failures 10 min apart count once; 61 min apart count twice
 - crossing into unreachable notifies once; a second evaluation does not; a
   success then another crossing notifies again
+- an unconfirmed episode upgrades to confirmed exactly once: sensor A silent
+  3 days, sensor B silent 3 days → A notified unconfirmed; B delivers a
+  reading → A re-evaluated, notified confirmed; B delivers again → no third
+  notification for A
+- B going silent again after A was confirmed does not notify A again
 - low-battery notification fires once at 30 %, not again at 28 %, again after
   a 95 % read followed by 29 %
 
