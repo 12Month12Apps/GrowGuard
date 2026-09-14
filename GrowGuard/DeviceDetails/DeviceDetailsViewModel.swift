@@ -469,23 +469,9 @@ import ActivityKit
     @MainActor
     private func updateDeviceLastUpdate() async {
         do {
-            let updatedDevice = FlowerDeviceDTO(
-                id: device.id,
-                name: device.name,
-                uuid: device.uuid,
-                peripheralID: device.peripheralID,
-                battery: device.battery,
-                firmware: device.firmware,
-                isSensor: device.isSensor,
-                added: device.added,
-                lastUpdate: Date(),
-                optimalRange: device.optimalRange,
-                potSize: device.potSize,
-                selectedFlower: device.selectedFlower,
-                sensorData: device.sensorData
-            )
-            try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
-            self.device = updatedDevice
+            if let updated = try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: device.uuid, { $0.lastUpdate = Date() }) {
+                self.device = updated
+            }
         } catch {
             print("Error updating device: \(error.localizedDescription)")
         }
@@ -622,38 +608,22 @@ import ActivityKit
         }
 
         do {
-            // Create updated device with new settings
-            let updatedDevice = FlowerDeviceDTO(
-                id: device.id,
-                name: deviceName, // Use the updated name
-                uuid: device.uuid,
-                peripheralID: device.peripheralID,
-                battery: device.battery,
-                firmware: device.firmware,
-                isSensor: device.isSensor,
-                added: device.added,
-                lastUpdate: Date(), // Update timestamp
-                optimalRange: optimalRange,
-                potSize: potSize,
-                selectedFlower: device.selectedFlower,
-                sensorData: device.sensorData
-            )
-
-            print("🗃️ DeviceDetailsViewModel: Calling repository.updateDevice...")
-            // Save to database
-            try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
-            print("✅ DeviceDetailsViewModel: Repository.updateDevice completed successfully")
+            // Fetch-mutate-save: keeps battery, contact counters and location
+            // that other writers own. lastUpdate is a measurement timestamp
+            // and is deliberately NOT bumped here.
+            guard let updatedDevice = try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: device.uuid, { fresh in
+                fresh.name = deviceName
+                fresh.optimalRange = optimalRange
+                fresh.potSize = potSize
+            }) else {
+                throw RepositoryError.deviceNotFound
+            }
 
             // Update local device only after successful database save
             self.device = updatedDevice
-            print("📱 DeviceDetailsViewModel: Local device updated with name '\(self.device.name)'")
-
-            print("✅ DeviceDetailsViewModel: Settings saved successfully")
-
+            print("✅ DeviceDetailsViewModel: Settings saved successfully (name '\(self.device.name)')")
         } catch {
             print("❌ DeviceDetailsViewModel: Failed to save settings: \(error.localizedDescription)")
-            print("❌ Error details: \(error)")
-            // Don't update local device if database save fails
             throw error
         }
     }

@@ -32,31 +32,14 @@ import CoreData
     @MainActor
     private func syncLastUpdateTimestamps() async {
         for device in allSavedDevices {
-            guard let latestSensorDate = device.sensorData.first?.date else { continue }
-
-            // Only update if sensor data is newer than current lastUpdate
-            if latestSensorDate > device.lastUpdate {
-                let updatedDevice = FlowerDeviceDTO(
-                    name: device.name,
-                    uuid: device.uuid,
-                    peripheralID: device.peripheralID,
-                    battery: device.battery,
-                    firmware: device.firmware,
-                    isSensor: device.isSensor,
-                    added: device.added,
-                    lastUpdate: latestSensorDate,
-                    lastHistoryIndex: device.lastHistoryIndex,
-                    optimalRange: device.optimalRange,
-                    potSize: device.potSize,
-                    selectedFlower: device.selectedFlower,
-                    sensorData: device.sensorData
-                )
-
-                do {
-                    try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
-                } catch {
-                    print("Error updating lastUpdate for \(device.name ?? "Unknown"): \(error.localizedDescription)")
+            guard let latestSensorDate = device.sensorData.first?.date,
+                  latestSensorDate > device.lastUpdate else { continue }
+            do {
+                try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: device.uuid) {
+                    $0.lastUpdate = latestSensorDate
                 }
+            } catch {
+                print("Error updating lastUpdate for \(device.name): \(error.localizedDescription)")
             }
         }
 

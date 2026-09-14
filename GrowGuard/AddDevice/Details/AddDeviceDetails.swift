@@ -92,21 +92,9 @@ enum NavigationDestination: Hashable {
             )
             
             // Update flower with new data
-            flower = FlowerDeviceDTO(
-                id: flower.id,
-                name: searched.name,
-                uuid: flower.uuid,
-                peripheralID: flower.peripheralID,
-                battery: flower.battery,
-                firmware: flower.firmware,
-                isSensor: flower.isSensor,
-                added: flower.added,
-                lastUpdate: flower.lastUpdate,
-                optimalRange: optimalRange,
-                potSize: flower.potSize,
-                selectedFlower: searched, // Set the searched flower as selectedFlower
-                sensorData: flower.sensorData
-            )
+            flower.name = searched.name
+            flower.optimalRange = optimalRange
+            flower.selectedFlower = searched
         }
     }
 

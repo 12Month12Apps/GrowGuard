@@ -168,7 +168,7 @@ class SettingsViewModel {
         print("💾 SettingsViewModel: Saving settings for device \(deviceUUID)")
         
         // Get current device first
-        guard let device = try await repositoryManager.flowerDeviceRepository.getDevice(by: deviceUUID) else {
+        guard try await repositoryManager.flowerDeviceRepository.getDevice(by: deviceUUID) != nil else {
             print("❌ SettingsViewModel.saveSettings: Device not found")
             throw RepositoryError.deviceNotFound
         }
@@ -180,25 +180,12 @@ class SettingsViewModel {
         try await repositoryManager.optimalRangeRepository.saveOptimalRange(optimalRange)
         print("  Saved OptimalRange - Min/Max Temp: \(optimalRange.minTemperature)/\(optimalRange.maxTemperature)")
         
-        // Now update the device with the selectedFlower and name in a single operation
-        let updatedDevice = FlowerDeviceDTO(
-            id: device.id,
-            name: deviceName, // Use the updated name
-            uuid: device.uuid,
-            peripheralID: device.peripheralID,
-            battery: device.battery,
-            firmware: device.firmware,
-            isSensor: device.isSensor,
-            added: device.added,
-            lastUpdate: device.lastUpdate,
-            optimalRange: device.optimalRange, // Keep existing relationships
-            potSize: device.potSize, // Keep existing relationships
-            selectedFlower: selectedFlower, // Only update the flower
-            sensorData: device.sensorData
-        )
-
-        print("🔧 Saving device with name: \(deviceName) and flower: \(selectedFlower?.name ?? "nil") (ID: \(selectedFlower?.id ?? 0))")
-        try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
+        // Only the fields this form owns; everything else stays as stored
+        try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: deviceUUID) { fresh in
+            fresh.name = deviceName
+            fresh.selectedFlower = selectedFlower
+        }
+        print("🔧 Saved device name: \(deviceName), flower: \(selectedFlower?.name ?? "nil") (ID: \(selectedFlower?.id ?? 0))")
         
         if let flower = selectedFlower {
             print("✅  Saved SelectedFlower: \(flower.name) (ID: \(flower.id))")
