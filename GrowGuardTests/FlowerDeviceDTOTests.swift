@@ -8,6 +8,7 @@
 
 import Testing
 import Foundation
+import CoreData
 @testable import GrowGuard
 
 struct FlowerDeviceDTOTests {
@@ -64,14 +65,34 @@ struct FlowerDeviceDTOTests {
     }
 }
 
-/// Runs against the shared Core Data store like OverviewListViewModelTests,
-/// hence serialized and with its own UUID so leftovers cannot collide.
+/// Each test builds its own in-memory store, so nothing here touches the shared
+/// Core Data store that other suites read and wipe.
 @Suite(.serialized)
 struct FlowerDeviceRepositoryModifyTests {
 
+    /// Isolated in-memory store so parallel suites that wipe the shared store
+    /// (OverviewListViewModelTests.deleteAllDevices) cannot race this one.
+    private func makeIsolatedRepository() throws -> FlowerDeviceRepository {
+        guard let model = NSManagedObjectModel.mergedModel(from: [Bundle(for: FlowerDevice.self)]) else {
+            throw NSError(domain: "FlowerDeviceRepositoryModifyTests",
+                          code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: "model not found"])
+        }
+        let container = NSPersistentContainer(name: "CoreDataModelsTest", managedObjectModel: model)
+        let description = NSPersistentStoreDescription()
+        description.type = NSInMemoryStoreType
+        container.persistentStoreDescriptions = [description]
+        var loadError: Error?
+        container.loadPersistentStores { _, error in loadError = error }
+        if let loadError { throw loadError }
+        let context = container.newBackgroundContext()
+        context.automaticallyMergesChangesFromParent = true
+        return CoreDataFlowerDeviceRepository(context: context)
+    }
+
     @Test("modifyDevice fetches, mutates and saves only what the closure touches")
     func modifyDevicePreservesOtherFields() async throws {
-        let repo = RepositoryManager.shared.flowerDeviceRepository
+        let repo = try makeIsolatedRepository()
         let uuid = "MODIFY-\(UUID().uuidString)"
         let lastUpdate = Date(timeIntervalSince1970: 1_700_000_000)
         // Two distinct stamps so a swapped mapping in updateFromDTO fails here.
@@ -84,29 +105,22 @@ struct FlowerDeviceRepositoryModifyTests {
         seed.lastFailedContactAt = lastFailedContactAt
         try await repo.saveDevice(seed)
 
-        do {
-            let returned = try await repo.modifyDevice(uuid: uuid) { $0.name = "Renamed" }
-            let reloaded = try await repo.getDevice(by: uuid)
+        let returned = try await repo.modifyDevice(uuid: uuid) { $0.name = "Renamed" }
+        let reloaded = try await repo.getDevice(by: uuid)
 
-            #expect(returned?.name == "Renamed")
-            #expect(reloaded?.name == "Renamed")
-            #expect(reloaded?.battery == 25)
-            #expect(reloaded?.location == "Balcony", "location is stored trimmed")
-            #expect(reloaded?.failedContactAttempts == 2)
-            #expect(reloaded?.lastUpdate == lastUpdate)
-            #expect(reloaded?.batteryUpdatedAt == batteryUpdatedAt)
-            #expect(reloaded?.lastFailedContactAt == lastFailedContactAt)
-        } catch {
-            try? await repo.deleteDevice(uuid: uuid)
-            throw error
-        }
-
-        try await repo.deleteDevice(uuid: uuid)
+        #expect(returned?.name == "Renamed")
+        #expect(reloaded?.name == "Renamed")
+        #expect(reloaded?.battery == 25)
+        #expect(reloaded?.location == "Balcony", "location is stored trimmed")
+        #expect(reloaded?.failedContactAttempts == 2)
+        #expect(reloaded?.lastUpdate == lastUpdate)
+        #expect(reloaded?.batteryUpdatedAt == batteryUpdatedAt)
+        #expect(reloaded?.lastFailedContactAt == lastFailedContactAt)
     }
 
     @Test("modifyDevice returns nil for an unknown device and writes nothing")
     func modifyDeviceUnknown() async throws {
-        let repo = RepositoryManager.shared.flowerDeviceRepository
+        let repo = try makeIsolatedRepository()
         let uuid = "MODIFY-UNKNOWN-\(UUID().uuidString)"
         let result = try await repo.modifyDevice(uuid: uuid) { $0.name = "x" }
         #expect(result == nil)
