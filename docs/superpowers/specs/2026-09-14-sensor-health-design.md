@@ -109,6 +109,20 @@ existing six call sites that reconstruct the whole DTO to change one field
 switch to `var copy = device; copy.x = …`. Fields that describe identity
 (`id`, `uuid`, `added`, …) stay `let`.
 
+## Existing devices
+
+Devices stored before this change come out of the migration with all four
+new fields empty. No fix-up pass runs at launch; each field has a defined
+meaning when empty:
+
+| Field after migration | Effect |
+|---|---|
+| `batteryUpdatedAt = nil`, `battery > 0` | Value is shown; `batteryReadAt` falls back to `lastUpdate` (see verdict). Replaced by a real timestamp at the next connection. |
+| `batteryUpdatedAt = nil`, `battery = 0` | `batteryUnknown`, chip shows "–". The old code never read this sensor's battery. |
+| `failedContactAttempts = 0` | Counting starts with the first trigger after the update. A sensor that was already dead for days passes the 48 h gate immediately and the attempt gate within a few trigger cycles — the reported case would have been flagged the evening of the update. |
+| `location = nil` | All legacy sensors form the nil group and witness each other, which is exactly the assumption the app makes today. Nobody is forced through a setup step; the unconfirmed banner offers the location field when it would have helped. |
+| Notification markers absent | Nothing is wrongly treated as already notified. |
+
 ## Architecture
 
 ```
@@ -215,10 +229,17 @@ Evaluation order (first match wins):
 syncs it lazily in `syncLastUpdateTimestamps`), and the monitor evaluates in
 the background where that sync has not run.
 
+"Battery read at" is `batteryUpdatedAt`, or — for devices stored before this
+change — `lastUpdate` when `batteryUpdatedAt` is nil and `battery > 0`. The
+old code wrote the battery only from an open detail screen with a live
+connection, and that same connection bumped `lastUpdate`, so the estimate is
+close and is replaced by a real timestamp at the next connection. Exposed as
+`FlowerDeviceDTO.batteryReadAt` so views and verdict use the same rule.
+
 1. `!device.isSensor` → `.ok`
 2. `now - lastReading ≥ 48 h && failedContactAttempts ≥ 3` → `.unreachable`.
-   `lastKnownBattery` is `battery` if `batteryUpdatedAt != nil`, else `nil`.
-3. `batteryUpdatedAt == nil` → `.batteryUnknown`
+   `lastKnownBattery` is `battery` if `batteryReadAt != nil`, else `nil`.
+3. `batteryReadAt == nil` → `.batteryUnknown`
 4. `battery ≤ 15` → `.batteryCritical`
 5. `battery ≤ 30` → `.batteryLow`
 6. otherwise `.ok`
@@ -230,7 +251,7 @@ community reports that FlowerCare units stop responding in the 20–30 % band
 with weak cells. Revisit if field data says otherwise; they live in one place.
 
 Staleness is a display concern, not a health state: the views show
-`batteryUpdatedAt` relative ("read 9 days ago") when it is older than 7 days.
+`batteryReadAt` relative ("read 9 days ago") when it is older than 7 days.
 
 ### Notifications (`NotificationService`)
 
@@ -280,7 +301,7 @@ symbol:
 | batteryUnknown | `battery.0percent` | secondary | "–" |
 
 Symbol by level: > 87 → 100, > 62 → 75, > 37 → 50, > 12 → 25, else 0. When
-`batteryUpdatedAt` is older than 7 days a secondary caption below the chip
+`batteryReadAt` is older than 7 days a secondary caption below the chip
 reads "read {relative}".
 
 **Unreachable banner.** In the overview row the connection-status line
@@ -295,6 +316,12 @@ list they already hold (overview) or a repository fetch on load (details).
 With a location set, the confirmed sentence reads "Your other sensors at
 {location} respond, this one does not." and the unconfirmed one "Were you
 near {location}? If so, check the battery."
+
+When the banner is unconfirmed, the device has no location, and at least one
+other sensor exists, a final line "Tell the app where this sensor is" links
+to the device settings. This is the only place the location feature
+introduces itself; it appears exactly when it would have made the verdict
+sharper.
 
 **Location field.** A new "Location" section directly below "Device Name" in
 both the device settings form (`SettingsView`) and the add-device form
@@ -322,7 +349,7 @@ and one per persisted battery read. No new log categories.
 - 47 h without reading and 10 failed attempts → not unreachable (time gate)
 - 5 days without reading and 2 failed attempts → not unreachable (attempt gate)
 - 48 h and 3 attempts → unreachable, `lastKnownBattery` populated iff
-  `batteryUpdatedAt` set
+  `batteryReadAt` is non-nil (so a legacy 25 % device reports 25)
 - no peers → `confirmedByPeer == false`; one peer with a reading 1 h old →
   true; only peers that are themselves 3 days silent → false; a non-sensor
   peer with a fresh `lastUpdate` → false (ignored)
@@ -331,6 +358,8 @@ and one per persisted battery read. No new log categories.
   false; " Balcony " and "Balcony" match (trimmed on save)
 - battery 30 → low, 31 → ok, 15 → critical, 16 → low (boundaries)
 - battery never read → unknown even when value is 0
+- legacy device (`batteryUpdatedAt == nil`, `battery == 25`) → low, and
+  `batteryReadAt == lastUpdate`; with `battery == 0` → unknown
 - non-sensor device → always ok
 
 `SensorHealthMonitorTests` with a fake repository, fake notifier, injected
