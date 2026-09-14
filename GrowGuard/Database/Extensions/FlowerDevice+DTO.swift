@@ -72,10 +72,14 @@ extension FlowerDevice {
             uuid: deviceUUID,
             peripheralID: self.peripheralID,
             battery: self.battery,
+            batteryUpdatedAt: self.batteryUpdatedAt,
             firmware: self.firmware ?? "Unknown",
             isSensor: self.isSensor,
             added: self.added ?? Date(),
             lastUpdate: self.lastUpdate ?? Date(),
+            failedContactAttempts: self.failedContactAttempts,
+            lastFailedContactAt: self.lastFailedContactAt,
+            location: FlowerDeviceDTO.normalizeLocation(self.location),
             optimalRange: optimalRangeDTO,
             potSize: potSizeDTO,
             selectedFlower: selectedFlowerDTO,
@@ -96,6 +100,10 @@ extension FlowerDevice {
         isSensor = dto.isSensor
         added = dto.added
         lastUpdate = dto.lastUpdate
+        batteryUpdatedAt = dto.batteryUpdatedAt
+        failedContactAttempts = dto.failedContactAttempts
+        lastFailedContactAt = dto.lastFailedContactAt
+        location = FlowerDeviceDTO.normalizeLocation(dto.location)
         
         // Update selected flower fields - use key-value approach for safety
         if let selectedFlower = dto.selectedFlower {
