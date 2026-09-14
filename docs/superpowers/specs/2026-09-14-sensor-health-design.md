@@ -49,12 +49,15 @@ phone has network, so on a trip the attempt budget fills within hours and the
 48 h gate alone decides. The design handles this with two tools instead of
 pretending to detect holidays:
 
-- **Peer witness.** If *another* sensor delivered a reading inside the 48 h
-  window, the phone was demonstrably at home while this one stayed silent —
-  the verdict is `confirmed`. With a single sensor, or when every sensor is
-  silent, the verdict is `unconfirmed`. All-silent is ambiguous on purpose:
-  it is most likely a trip, but cells bought as a pack die as a pack (the
-  reported case was an IKEA 20-pack), so it still warns.
+- **Peer witness.** If *another* sensor **at the same location** delivered a
+  reading inside the 48 h window, the phone was demonstrably in range while
+  this one stayed silent — the verdict is `confirmed`. A sensor in the
+  living room says nothing about one in the garden shed, which is why the
+  user assigns each sensor a location (below). With a single sensor, a
+  sensor alone at its location, or when every sensor there is silent, the
+  verdict is `unconfirmed`. All-silent is ambiguous on purpose: it is most
+  likely a trip, but cells bought as a pack die as a pack (the reported case
+  was an IKEA 20-pack), so it still warns.
 - **Hedged copy.** An unconfirmed verdict says "not responding for 3 days —
   if you are at home, check the battery", not "the battery is empty". The
   cost of a false positive is one notification per trip; the cost of a false
@@ -75,13 +78,18 @@ Rejected alternatives:
 
 ## Data model
 
-Three new attributes on `FlowerDevice`, all lightweight-migration compatible:
+Four new attributes on `FlowerDevice`, all lightweight-migration compatible:
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `batteryUpdatedAt` | Date, optional | nil | When the battery value was last read from the sensor |
 | `failedContactAttempts` | Integer 16 | 0 | Failed contact attempts since the last successful reading |
 | `lastFailedContactAt` | Date, optional | nil | When the last failed attempt was recorded (rate limiting + UI) |
+| `location` | String, optional | nil | User-named place ("Living room", "Balcony"); sensors sharing a location are within Bluetooth range of each other |
+
+`location` is stored trimmed; an empty string is saved as nil. Matching is
+exact after trimming — the suggestion UI (below) is what keeps "Balcony" and
+"balcony" from becoming two places, not a fuzzy comparison.
 
 **A new model version is required.** `CoreDataModels.xcdatamodeld` currently
 holds a single unversioned `CoreDataModels.xcdatamodel`. Lightweight migration
@@ -92,8 +100,9 @@ it current in `.xccurrentversion`, and add the attributes there.
 `NSPersistentContainer` enables automatic + inferred migration by default; no
 code change in `DataService` is needed.
 
-`FlowerDeviceDTO` gets the three fields. `battery`, `batteryUpdatedAt`,
-`lastUpdate`, `failedContactAttempts` and `lastFailedContactAt` become `var`
+`FlowerDeviceDTO` gets the four fields. `battery`, `batteryUpdatedAt`,
+`lastUpdate`, `failedContactAttempts`, `lastFailedContactAt` and `location`
+become `var`
 so callers mutate a copy instead of rebuilding the 14-argument init. The
 existing six call sites that reconstruct the whole DTO to change one field
 (`updateDeviceInfo`, `updateDeviceLastUpdate`, `syncLastUpdateTimestamps`, …)
@@ -194,8 +203,10 @@ enum SensorHealth: Equatable {
 }
 ```
 
-`confirmedByPeer` is true when at least one peer has a last reading younger
-than 48 h. Non-sensor peers are ignored.
+`confirmedByPeer` is true when at least one peer **with the same `location`**
+has a last reading younger than 48 h. `nil` matches only `nil`: sensors
+without a location form their own group, and tagging one sensor deliberately
+takes it out of that group. Non-sensor peers are ignored.
 
 Evaluation order (first match wins):
 
@@ -241,11 +252,14 @@ for notification purposes.
 Copy (via `L10n`, English strings in `Localizable.strings`):
 
 - Unreachable, unconfirmed: title "🔋 {name} is not responding", body "No
-  readings for {n} days. If you are at home, check the battery — last known
-  level {p} %." When `lastKnownBattery` is nil the body drops the last clause.
+  readings for {n} days. Were you near it? If so, check the battery — last
+  known level {p} %." With a location set the body starts with "No readings
+  from {location} for {n} days." When `lastKnownBattery` is nil the body
+  drops the last clause.
 - Unreachable, confirmed: title "🔋 {name} needs a new battery", body "Your
-  other sensors respond, this one has been silent for {n} days. Last known
-  level {p} %." Same rule for a nil level.
+  other sensors at {location} respond, this one has been silent for {n}
+  days. Last known level {p} %." Without a location: "Your other sensors
+  respond, …". Same rule for a nil level.
 - Low battery: title "🔋 Replace the battery in {name}", body "Battery is at
   {p} %. Cheap coin cells drop out without warning at this level."
 
@@ -278,6 +292,18 @@ home, check the battery."; confirmed — "Your other sensors respond, this one
 does not." — followed by "Last known battery 25 %" when available. The banner
 has no button; the fix is physical. The views obtain peers from the device
 list they already hold (overview) or a repository fetch on load (details).
+With a location set, the confirmed sentence reads "Your other sensors at
+{location} respond, this one does not." and the unconfirmed one "Were you
+near {location}? If so, check the battery."
+
+**Location field.** A new "Location" section directly below "Device Name" in
+both the device settings form (`SettingsView`) and the add-device form
+(`AddDeviceDetails`): one `TextField` with the footer "Sensors at the same
+location are within Bluetooth range of each other. Two floors are two
+locations." Below the field, the distinct locations already used by other
+devices appear as tappable chips; tapping one fills the field. That is the
+whole de-duplication mechanism. The overview row shows the location as a
+secondary caption after the name when set ("Rose · Balcony").
 
 All strings are `L10n` keys; regenerate `Strings+Generated.swift` with
 `swiftgen`. The overview's existing English literals in `connectionLabel` are
@@ -300,6 +326,9 @@ and one per persisted battery read. No new log categories.
 - no peers → `confirmedByPeer == false`; one peer with a reading 1 h old →
   true; only peers that are themselves 3 days silent → false; a non-sensor
   peer with a fresh `lastUpdate` → false (ignored)
+- location: fresh peer at the same location → true; fresh peer at a
+  different location → false; both nil → true; device nil, peer "Balcony" →
+  false; " Balcony " and "Balcony" match (trimmed on save)
 - battery 30 → low, 31 → ok, 15 → critical, 16 → low (boundaries)
 - battery never read → unknown even when value is 0
 - non-sensor device → always ok
@@ -348,6 +377,10 @@ Views stay untested, consistent with the rest of the app.
   there is a separate change.
 - **Battery history and prediction.** See rejected alternatives.
 - **Localising the existing hardcoded overview status labels.**
+- **Grouping or filtering the overview by location.** The field is stored
+  and shown; sorting the list around it is a separate feature.
+- **Detecting the phone's location.** No geofence, no CoreLocation. The
+  user tells the app where the sensor is, not where the phone is.
 - **Changing the BLE protocol** (e.g. reading the battery characteristic more
   often). One read per authenticated connection is enough; the problem was
   that the read was thrown away.
