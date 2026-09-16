@@ -58,6 +58,7 @@ struct AddWithoutSensor: View {
             }
         }
         .navigationTitle(L10n.Plant.addFlower)
+        .accessibilityIdentifier("addFlowerScreen")
         .onAppear {
 //                Task {
 //                    let instructions = """

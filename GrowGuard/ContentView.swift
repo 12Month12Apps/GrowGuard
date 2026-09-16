@@ -24,11 +24,11 @@ struct ContentView: View {
             } else {
                 TabView(selection: $navigationService.selectedTab) {
                     Tab(L10n.Navigation.menu, systemImage: "leaf", value: .overview) {
-                        OverviewList()
+                        OverviewTab()
                     }
-                    
+
                     Tab(L10n.Navigation.add, systemImage: "plus.app", value: .addDevice) {
-                        AddDeviceView()
+                        AddDeviceTab()
                     }
 
                     Tab(L10n.Navigation.settings, systemImage: "gear", value: .settings) {
@@ -45,37 +45,51 @@ struct ContentView: View {
     }
 }
 
-import SwiftUI
-
-struct MainNavigationView: View {
+/// Overview tab — owns its own navigation stack so pushes are scoped to this tab
+/// and never have to fight the surrounding `TabView`.
+private struct OverviewTab: View {
     @State private var navigationService = NavigationService.shared
-    @State private var flower: VMSpecies? = nil
-    
+
     var body: some View {
-        NavigationStack(path: $navigationService.path) {
-            // Your main/home view here
-            ContentView()
-                .navigationDestination(for: NavigationDestination.self) { destination in
-                    switch destination {
-                    case .deviceDetails(let device, suggestedName: let name):
-                        // Use suggested sequential name if available, fallback to BLE name
-                        let displayName = name ?? device.name ?? L10n.Device.unknownDevice
-                        let viewModel = AddDeviceDetailsViewModel(device: device, suggestedName: displayName)
-                        AddDeviceDetails(viewModel: viewModel)
-                    case .deviceList:
-                        OverviewList()
-                    case .home:
-                        ContentView()
-                    case .deviceView(let device):
+        NavigationStack(path: $navigationService.overviewPath) {
+            OverviewList()
+                .navigationDestination(for: OverviewRoute.self) { route in
+                    switch route {
+                    case .deviceDetail(let device):
                         DeviceDetailsView(device: device)
-                    case .addDeviceWithoutSensor:
-                        AddWithoutSensor(flower: $flower)
-                    case .deviceDetailsSpecies(let flower):
-                        let viewModel = AddDeviceDetailsViewModel(flower: flower)
-                        AddDeviceDetails(viewModel: viewModel)
                     }
                 }
         }
+    }
+}
+
+/// Add Device tab — owns its own navigation stack for the onboarding flow.
+private struct AddDeviceTab: View {
+    @State private var navigationService = NavigationService.shared
+    @State private var pendingSpecies: VMSpecies? = nil
+
+    var body: some View {
+        NavigationStack(path: $navigationService.addDevicePath) {
+            AddDeviceView()
+                .navigationDestination(for: AddDeviceRoute.self) { route in
+                    switch route {
+                    case .sensorDetails(let device, let name):
+                        // Prefer the suggested sequential name, fallback to BLE name.
+                        let displayName = name ?? device.name ?? L10n.Device.unknownDevice
+                        AddDeviceDetails(viewModel: AddDeviceDetailsViewModel(device: device, suggestedName: displayName))
+                    case .speciesDetails(let flower):
+                        AddDeviceDetails(viewModel: AddDeviceDetailsViewModel(flower: flower))
+                    case .withoutSensor:
+                        AddWithoutSensor(flower: $pendingSpecies)
+                    }
+                }
+        }
+    }
+}
+
+struct MainNavigationView: View {
+    var body: some View {
+        ContentView()
     }
 }
 

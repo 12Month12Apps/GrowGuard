@@ -14,62 +14,88 @@ import CoreBluetooth
 import CoreData
 
 
-// Defines all possible navigation destinations in the app
-enum NavigationDestination: Hashable {
-    case deviceDetails(DiscoveredDevice, suggestedName: String?)
-    case deviceDetailsSpecies(VMSpecies)
-    case deviceList
-    case addDeviceWithoutSensor
-    case home
-    case deviceView(FlowerDeviceDTO)
+// MARK: - Navigation Routes
+
+/// Routes pushable within the Overview tab's own navigation stack.
+///
+/// Identity is keyed on the device UUID only. Auto-synthesised `Hashable` would
+/// fold every field — including the `sensorData` array that grows while history
+/// loads — into the navigation key, so a push made mid-load could be silently
+/// dropped the moment the underlying data changed. Keying on UUID keeps the
+/// destination stable for the lifetime of the device.
+enum OverviewRoute: Hashable {
+    case deviceDetail(FlowerDeviceDTO)
+
+    static func == (lhs: OverviewRoute, rhs: OverviewRoute) -> Bool {
+        switch (lhs, rhs) {
+        case let (.deviceDetail(lhsDevice), .deviceDetail(rhsDevice)):
+            return lhsDevice.uuid == rhsDevice.uuid
+        }
+    }
+
+    func hash(into hasher: inout Hasher) {
+        switch self {
+        case let .deviceDetail(device):
+            hasher.combine(device.uuid)
+        }
+    }
 }
 
+/// Routes pushable within the Add Device tab's own navigation stack.
+enum AddDeviceRoute: Hashable {
+    case sensorDetails(DiscoveredDevice, suggestedName: String?)
+    case speciesDetails(VMSpecies)
+    case withoutSensor
+}
+
+/// Owns navigation state. Each tab drives its own `NavigationStack` via a
+/// dedicated path, so a push in one tab never disturbs another and never has to
+/// fight the surrounding `TabView`. Mutations are single, atomic appends or
+/// assignments — never a reset-then-append on one shared path.
 @Observable class NavigationService {
     static let shared = NavigationService()
-    
-    var path = NavigationPath()
+
+    var overviewPath: [OverviewRoute] = []
+    var addDevicePath: [AddDeviceRoute] = []
     var selectedTab: NavigationTabs = .overview
-    
+
     private init() {}
-    
-    // Navigation destination methods
-    func navigateToDeviceDetails(device: DiscoveredDevice) {
-        path.append(NavigationDestination.deviceDetails(device, suggestedName: nil))
+
+    // MARK: Overview tab
+
+    func showDeviceDetail(_ device: FlowerDeviceDTO) {
+        overviewPath.append(.deviceDetail(device))
     }
 
-    func navigateToDeviceDetailsWithSuggestedName(
-        device: DiscoveredDevice,
-        suggestedName: String
-    ) {
-        path.append(NavigationDestination.deviceDetails(device, suggestedName: suggestedName))
+    // MARK: Add Device tab
+
+    func showSensorDetails(device: DiscoveredDevice, suggestedName: String? = nil) {
+        addDevicePath.append(.sensorDetails(device, suggestedName: suggestedName))
     }
 
-    func navigateToDeviceDetails(device: DiscoveredDevice, suggestedName: String) {
-        path.append(NavigationDestination.deviceDetails(device, suggestedName: suggestedName))
+    func showSpeciesDetails(_ flower: VMSpecies) {
+        addDevicePath.append(.speciesDetails(flower))
     }
-    
-    func navigateToDeviceDetails(flower: VMSpecies) {
-        path.append(NavigationDestination.deviceDetailsSpecies(flower))
+
+    func showAddWithoutSensor() {
+        addDevicePath.append(.withoutSensor)
     }
-    
-    func navigateToAddDeviceWithoutSensor() {
-        path.append(NavigationDestination.addDeviceWithoutSensor)
+
+    // MARK: Cross-tab
+
+    /// Called after a new device is saved: clears the Add Device flow, switches
+    /// to the Overview tab and shows the freshly added device's detail. Each
+    /// assignment targets independent state bound to a different stack, so there
+    /// is no reset-then-append race and no tab-switch-versus-push contention.
+    func finishAddingDevice(_ device: FlowerDeviceDTO) {
+        addDevicePath = []
+        overviewPath = [.deviceDetail(device)]
+        selectedTab = .overview
     }
-    
+
     func popToRoot() {
-        path = NavigationPath()
-    }
-    
-    func navigateToDeviceView(flowerDevice: FlowerDeviceDTO) {
-        // Ensure we start from a clean stack so we don't push multiple detail views at once
-        popToRoot()
-        path.append(NavigationDestination.deviceView(flowerDevice))
-    }
-    
-    // Tab selection methods
-    func switchToTab(_ tab: NavigationTabs) {
-        popToRoot()
-        selectedTab = tab
+        overviewPath = []
+        addDevicePath = []
     }
 }
 
@@ -196,9 +222,7 @@ enum NavigationDestination: Hashable {
                 return
             }
         }
-        NavigationService.shared.switchToTab(.overview)
-        
-        NavigationService.shared.navigateToDeviceView(flowerDevice: flower)
+        NavigationService.shared.finishAddingDevice(flower)
     }
     
     @MainActor

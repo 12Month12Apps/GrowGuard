@@ -505,6 +505,7 @@ struct DeviceDetailsView: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationBarTitleDisplayMode(.inline)
+        .accessibilityIdentifier("deviceDetailScreen")
         .onAppear {
             self.viewModel.loadDetails()
             

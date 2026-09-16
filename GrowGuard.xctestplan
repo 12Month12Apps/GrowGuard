@@ -26,6 +26,17 @@
         "identifier" : "56AF11272BDED05B00887073",
         "name" : "GrowGuardTests"
       }
+    },
+    {
+      "skippedTests" : [
+        "GrowGuardUITests",
+        "GrowGuardUITestsLaunchTests"
+      ],
+      "target" : {
+        "containerPath" : "container:GrowGuard.xcodeproj",
+        "identifier" : "56AF11312BDED05B00887073",
+        "name" : "GrowGuardUITests"
+      }
     }
   ],
   "version" : 1
