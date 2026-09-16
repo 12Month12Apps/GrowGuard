@@ -72,13 +72,18 @@ struct FlowerDeviceRepositoryModifyTests {
 
     /// Isolated in-memory store so parallel suites that wipe the shared store
     /// (OverviewListViewModelTests.deleteAllDevices) cannot race this one.
+    ///
+    /// The container reuses `DataService.shared`'s already-loaded
+    /// `NSManagedObjectModel` instance rather than loading a second copy of the
+    /// same model: two live model instances would both claim the `FlowerDevice`
+    /// class, so `+[FlowerDevice entity]` can no longer find a unique match and
+    /// `FlowerDevice(context:)` resolves its entity nondeterministically. Only
+    /// the *store* needs to be isolated here, not the model.
     private func makeIsolatedRepository() throws -> FlowerDeviceRepository {
-        guard let model = NSManagedObjectModel.mergedModel(from: [Bundle(for: FlowerDevice.self)]) else {
-            throw NSError(domain: "FlowerDeviceRepositoryModifyTests",
-                          code: 1,
-                          userInfo: [NSLocalizedDescriptionKey: "model not found"])
-        }
-        let container = NSPersistentContainer(name: "CoreDataModelsTest", managedObjectModel: model)
+        let container = NSPersistentContainer(
+            name: "CoreDataModelsTest",
+            managedObjectModel: DataService.shared.persistentContainer.managedObjectModel
+        )
         let description = NSPersistentStoreDescription()
         description.type = NSInMemoryStoreType
         container.persistentStoreDescriptions = [description]
@@ -87,6 +92,7 @@ struct FlowerDeviceRepositoryModifyTests {
         if let loadError { throw loadError }
         let context = container.newBackgroundContext()
         context.automaticallyMergesChangesFromParent = true
+        context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
         return CoreDataFlowerDeviceRepository(context: context)
     }
 

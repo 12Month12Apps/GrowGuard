@@ -167,15 +167,10 @@ class SettingsViewModel {
     func saveSettings() async throws {
         print("💾 SettingsViewModel: Saving settings for device \(deviceUUID)")
         
-        // Save potSize and optimalRange separately first (these have their own entities)
-        try await repositoryManager.potSizeRepository.savePotSize(potSize)
-        print("  Saved PotSize - Width/Height/Volume: \(potSize.width)/\(potSize.height)/\(potSize.volume)")
-        
-        try await repositoryManager.optimalRangeRepository.saveOptimalRange(optimalRange)
-        print("  Saved OptimalRange - Min/Max Temp: \(optimalRange.minTemperature)/\(optimalRange.maxTemperature)")
-        
         // Only the fields this form owns; everything else stays as stored.
         // The nil result is the not-found check — no separate pre-fetch needed.
+        // Runs first so a missing device aborts before PotSize/OptimalRange rows
+        // are committed for a device that does not exist.
         guard try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: deviceUUID, { fresh in
             fresh.name = deviceName
             fresh.selectedFlower = selectedFlower
@@ -184,7 +179,14 @@ class SettingsViewModel {
             throw RepositoryError.deviceNotFound
         }
         print("🔧 Saved device name: \(deviceName), flower: \(selectedFlower?.name ?? "nil") (ID: \(selectedFlower?.id ?? 0))")
-        
+
+        // Save potSize and optimalRange separately (these have their own entities)
+        try await repositoryManager.potSizeRepository.savePotSize(potSize)
+        print("  Saved PotSize - Width/Height/Volume: \(potSize.width)/\(potSize.height)/\(potSize.volume)")
+
+        try await repositoryManager.optimalRangeRepository.saveOptimalRange(optimalRange)
+        print("  Saved OptimalRange - Min/Max Temp: \(optimalRange.minTemperature)/\(optimalRange.maxTemperature)")
+
         if let flower = selectedFlower {
             print("✅  Saved SelectedFlower: \(flower.name) (ID: \(flower.id))")
         } else {
