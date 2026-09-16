@@ -33,6 +33,11 @@ final class AppSettingsViewModel {
     var pushReceivedCount: Int = 0
     var lastPushReceivedDate: Date?
 
+    // Background Task Debug Info - BLE wake reads
+    var wakeReadSuccessCount: Int = 0
+    var wakeReadFailureCount: Int = 0
+    var lastWakeReadDate: Date?
+
     init(
         settingsStore: SettingsStore = .shared,
         calendar: Calendar = .current,
@@ -88,6 +93,11 @@ final class AppSettingsViewModel {
         // Silent push stats
         pushReceivedCount = tracker.pushReceivedCount
         lastPushReceivedDate = tracker.lastPushReceivedDate
+
+        // BLE wake read stats
+        wakeReadSuccessCount = tracker.wakeReadSuccessCount
+        wakeReadFailureCount = tracker.wakeReadFailureCount
+        lastWakeReadDate = tracker.lastWakeReadDate
     }
 
     func resetBackgroundTaskStats() {
@@ -135,6 +145,7 @@ final class AppSettingsViewModel {
 
 struct AppSettingsView: View {
     @State private var viewModel = AppSettingsViewModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Form {
@@ -219,22 +230,6 @@ struct AppSettingsView: View {
                     }
                 }
 
-                HStack {
-                    Label("Silent Pushes Received", systemImage: "envelope.badge")
-                    Spacer()
-                    Text("\(viewModel.pushReceivedCount)x")
-                        .foregroundStyle(.secondary)
-                }
-
-                if let lastPush = viewModel.lastPushReceivedDate {
-                    HStack {
-                        Label("Last Push", systemImage: "envelope.open")
-                        Spacer()
-                        Text(lastPush, style: .relative)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
                 // Last scheduled times
                 if let lastScheduled = viewModel.lastRefreshScheduledDate {
                     HStack {
@@ -314,6 +309,22 @@ struct AppSettingsView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                HStack {
+                    Label("Silent Pushes Received", systemImage: "envelope.badge")
+                    Spacer()
+                    Text("\(viewModel.pushReceivedCount)x")
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack {
+                    Label("BLE Wake Reads", systemImage: "antenna.radiowaves.left.and.right")
+                    Spacer()
+                    Text("\(viewModel.wakeReadSuccessCount) ok")
+                        .foregroundStyle(.green)
+                    Text("\(viewModel.wakeReadFailureCount) failed")
+                        .foregroundStyle(viewModel.wakeReadFailureCount > 0 ? .red : .secondary)
+                }
+
                 // Conversion rate (scheduled vs executed)
                 if viewModel.refreshScheduleCount > 0 {
                     HStack {
@@ -344,40 +355,29 @@ struct AppSettingsView: View {
                     }
                 }
 
+                if let lastPush = viewModel.lastPushReceivedDate {
+                    HStack {
+                        Label("Last Push", systemImage: "envelope.open")
+                        Spacer()
+                        Text(lastPush, style: .relative)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let lastWakeRead = viewModel.lastWakeReadDate {
+                    HStack {
+                        Label("Last BLE Wake Read", systemImage: "antenna.radiowaves.left.and.right")
+                        Spacer()
+                        Text(lastWakeRead, style: .relative)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 // Execution history
                 if !viewModel.executionHistory.isEmpty {
                     DisclosureGroup("Execution History (\(viewModel.executionHistory.count))") {
-                        ForEach(viewModel.executionHistory.prefix(10)) { execution in
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Text(execution.type.rawValue)
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(execution.type == .refresh ? Color.blue.opacity(0.2) : Color.orange.opacity(0.2))
-                                        .cornerRadius(4)
-
-                                    Spacer()
-
-                                    Text(execution.date, style: .relative)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                HStack(spacing: 12) {
-                                    Label("\(execution.successfulDevices)", systemImage: "checkmark.circle.fill")
-                                        .foregroundStyle(.green)
-                                    Label("\(execution.failedDevices)", systemImage: "xmark.circle.fill")
-                                        .foregroundStyle(.red)
-                                    Label("\(execution.dataPoints) pts", systemImage: "chart.bar.fill")
-                                        .foregroundStyle(.blue)
-                                    Text(String(format: "%.1fs", execution.duration))
-                                        .foregroundStyle(.secondary)
-                                }
-                                .font(.caption2)
-                            }
-                            .padding(.vertical, 4)
+                        ForEach(viewModel.executionHistory) { execution in
+                            ExecutionHistoryRow(execution: execution)
                         }
                     }
                 }
@@ -397,6 +397,71 @@ struct AppSettingsView: View {
             }
         }
         .navigationTitle(L10n.Navigation.settings)
+        // Background work updates the tracker while this tab stays alive —
+        // reload instead of showing the numbers from app launch
+        .onAppear {
+            viewModel.loadBackgroundTaskStats()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                viewModel.loadBackgroundTaskStats()
+            }
+        }
+    }
+}
+
+/// One execution history entry: what ran, what triggered it, how it ended
+private struct ExecutionHistoryRow: View {
+    let execution: TaskExecution
+
+    private var typeColor: Color {
+        switch execution.type {
+        case .refresh: return .blue
+        case .processing: return .orange
+        case .silentPush: return .purple
+        case .bleWake: return .teal
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(execution.type.rawValue)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(typeColor.opacity(0.2))
+                    .cornerRadius(4)
+
+                if let success = execution.success {
+                    Image(systemName: success ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundStyle(success ? .green : .red)
+                        .font(.caption)
+                }
+
+                Spacer()
+
+                // Absolute time to line up with server push rounds
+                Text(execution.date, format: .dateTime.day().month().hour().minute().second())
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 4) {
+                Text("Trigger: \(execution.triggerLabel)")
+                if let detail = execution.detail {
+                    Text("· \(detail)")
+                        .foregroundStyle(execution.success == false ? .red : .secondary)
+                }
+                if execution.duration > 0 {
+                    Text("· " + String(format: "%.1fs", execution.duration))
+                }
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 4)
     }
 }
 

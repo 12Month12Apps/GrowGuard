@@ -53,7 +53,9 @@ final class BackgroundHistorySyncService {
 
     // MARK: - Public API
 
-    func syncAllDevices() async {
+    /// - Returns: true if the sync was cut short by `requestExpiration()`
+    @discardableResult
+    func syncAllDevices() async -> Bool {
         expirationRequested = false
         let uuids = await loadSensorDeviceUUIDs()
         AppLogger.ble.info("📚 Background history sync: \(uuids.count) sensor(s)")
@@ -62,6 +64,7 @@ final class BackgroundHistorySyncService {
             await syncDevice(uuid)
         }
         AppLogger.ble.info("📚 Background history sync finished (expired: \(self.expirationRequested))")
+        return expirationRequested
     }
 
     /// Called from the BGProcessingTask expiration handler: suspends the

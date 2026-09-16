@@ -28,6 +28,9 @@ struct BackgroundWakeServiceTests {
     let central = FakeCentral()
     let defaults = UserDefaults(suiteName: "BackgroundWakeServiceTests-\(UUID().uuidString)")!
     let recorder = Recorder()
+    let tracker = BackgroundTaskTracker(
+        defaults: UserDefaults(suiteName: "BackgroundWakeServiceTests-tracker-\(UUID().uuidString)")!
+    )
     /// Per-test center: lifecycle posts must not leak into parallel tests
     let notificationCenter = NotificationCenter()
 
@@ -40,20 +43,25 @@ struct BackgroundWakeServiceTests {
 
     private func makeService(pool: ConnectionPoolManager,
                              deviceUUIDs: [String],
-                             saveSucceeds: Bool = true) -> BackgroundBLEWakeService {
+                             saveSucceeds: Bool = true,
+                             duringSave: @escaping () async -> Void = {
+                                 // Default: nothing happens while the sample is saved
+                             }) -> BackgroundBLEWakeService {
         let recorder = self.recorder
         let service = BackgroundBLEWakeService(
             pool: pool,
             scheduler: scheduler,
             loadSensorDeviceUUIDs: { deviceUUIDs },
             saveSample: { _, uuid, source in
+                await duringSave()
                 recorder.saved.append((uuid, source))
                 return saveSucceeds
             },
             runStatusCheck: { uuid in recorder.statusChecks.append(uuid) },
             beginBackgroundTask: { recorder.began += 1; return UIBackgroundTaskIdentifier(rawValue: 7) },
             endBackgroundTask: { _ in recorder.ended += 1 },
-            notificationCenter: notificationCenter
+            notificationCenter: notificationCenter,
+            tracker: tracker
         )
         service.start()
         return service
@@ -86,8 +94,10 @@ struct BackgroundWakeServiceTests {
         let sensor = makeSensor()
         let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString])
 
-        await service.armAll(source: .backgroundPush)
+        let armed = await service.armAll(trigger: .silentPush)
         await settle(seconds: 2.0)
+
+        #expect(armed == 1)
 
         #expect(recorder.saved.map(\.uuid) == [sensor.identifier.uuidString])
         #expect(recorder.saved.map(\.source) == [.backgroundPush])
@@ -96,6 +106,12 @@ struct BackgroundWakeServiceTests {
         #expect(recorder.ended == 1)
         #expect(!pool.isBackgroundArmed(sensor.identifier.uuidString))
         #expect(sensor.state == .disconnected, "Wake handler must disconnect to save sensor battery")
+
+        let entry = tracker.executionHistory.first
+        #expect(entry?.type == .bleWake)
+        #expect(entry?.trigger == .silentPush, "The debug history must say a push caused this read")
+        #expect(entry?.success == true)
+        #expect(tracker.wakeReadSuccessCount == 1)
     }
 
     @Test("didEnterBackground notification arms pending connects (SwiftUI lifecycle: app-delegate callback is never called)")
@@ -110,6 +126,46 @@ struct BackgroundWakeServiceTests {
 
         #expect(pool.isBackgroundArmed(sensor.identifier.uuidString))
         #expect(central.connectRequests == [sensor.identifier])
+
+        await settle(seconds: 2.0)
+        #expect(recorder.saved.map(\.source) == [.backgroundTask])
+        #expect(tracker.executionHistory.first?.trigger == .enterBackground)
+    }
+
+    @Test("A disconnect while the sample is being saved does not turn a saved read into a failure")
+    func disconnectDuringSaveKeepsSavedOutcome() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        let central = self.central
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString]) {
+            // Sensor drops the link after sending data, before persistence finishes
+            central.simulateDisconnect(of: sensor.identifier, error: nil)
+            await drainMainActor()
+        }
+
+        await service.armAll(trigger: .silentPush)
+        await settle(seconds: 2.0)
+
+        #expect(recorder.saved.map(\.uuid) == [sensor.identifier.uuidString])
+        #expect(recorder.statusChecks == [sensor.identifier.uuidString])
+        #expect(recorder.ended == 1)
+        #expect(tracker.executionHistory.map(\.detail) == [WakeReadOutcome.saved.rawValue])
+        #expect(tracker.wakeReadSuccessCount == 1)
+        #expect(tracker.wakeReadFailureCount == 0)
+    }
+
+    @Test("Wake read with a rejected sample is recorded as a failure")
+    func rejectedSampleRecordedAsFailure() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString], saveSucceeds: false)
+
+        await service.armAll(trigger: .silentPush)
+        await settle(seconds: 2.0)
+
+        #expect(recorder.statusChecks.isEmpty)
+        #expect(tracker.executionHistory.first?.detail == WakeReadOutcome.sampleRejected.rawValue)
+        #expect(tracker.wakeReadFailureCount == 1)
     }
 
     @Test("Disconnect before data ends the read cleanly and disarms (no re-arm)")
@@ -119,7 +175,7 @@ struct BackgroundWakeServiceTests {
         central.connectSucceeds = false
         let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString])
 
-        await service.armAll(source: .backgroundTask)
+        await service.armAll(trigger: .refreshTask)
         await pump()
         // Pending connect completes, then the sensor drops immediately
         central.simulateConnectCompletion(of: sensor.identifier)
@@ -132,5 +188,12 @@ struct BackgroundWakeServiceTests {
         #expect(recorder.ended == 1)
         #expect(!pool.isBackgroundArmed(sensor.identifier.uuidString))
         #expect(central.connectRequests.count == 1, "Wake handler must not re-arm")
+
+        let entry = tracker.executionHistory.first
+        #expect(entry?.type == .bleWake)
+        #expect(entry?.trigger == .refreshTask)
+        #expect(entry?.success == false, "Failed wake reads must be visible, not silently dropped")
+        #expect(entry?.detail == WakeReadOutcome.disconnected.rawValue)
+        #expect(tracker.wakeReadFailureCount == 1)
     }
 }

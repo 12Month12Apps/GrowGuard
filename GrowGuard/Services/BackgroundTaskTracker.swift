@@ -7,12 +7,29 @@
 
 import Foundation
 
-/// Result of a background sensor read (today: one device per BLE wake)
-struct BackgroundFetchResult {
-    let successfulDevices: [String]
-    let failedDevices: [String]
-    let totalDataPoints: Int
-    let duration: TimeInterval
+/// What started a piece of background work. Stored with every execution
+/// history entry so a push-driven read is distinguishable from a BGTask run.
+enum BackgroundTrigger: String, Codable, CaseIterable {
+    case refreshTask = "BG Refresh Task"
+    case processingTask = "BG Processing Task"
+    case silentPush = "Silent Push"
+    case enterBackground = "Enter Background"
+
+    /// Source stored with sensor samples this trigger produced
+    var sensorDataSource: SensorDataSource {
+        self == .silentPush ? .backgroundPush : .backgroundTask
+    }
+}
+
+/// How a BLE wake read ended
+enum WakeReadOutcome: String, Codable {
+    case saved = "Saved"
+    case sampleRejected = "Sample rejected"
+    case disconnected = "Disconnected before data"
+    case connectionError = "Connection error"
+    case timedOut = "Timed out"
+
+    var isSuccess: Bool { self == .saved }
 }
 
 /// Tracks background task execution history for debugging purposes
@@ -20,7 +37,7 @@ class BackgroundTaskTracker {
 
     static let shared = BackgroundTaskTracker()
 
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
 
     // UserDefaults keys
     private let refreshTaskCountKey = "background_refresh_task_count"
@@ -41,44 +58,83 @@ class BackgroundTaskTracker {
     private let pushReceivedCountKey = "background_push_received_count"
     private let lastPushReceivedKey = "background_last_push_received"
 
-    private init() {}
+    // BLE wake read tracking keys
+    private let wakeReadSuccessCountKey = "background_wake_read_success_count"
+    private let wakeReadFailureCountKey = "background_wake_read_failure_count"
+    private let lastWakeReadKey = "background_last_wake_read"
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
 
     // MARK: - Public API
 
-    /// Records a background refresh task execution
-    func recordRefreshTaskExecution(result: BackgroundFetchResult) {
+    /// Records a BGAppRefreshTask run (it only arms pending connects).
+    /// `expired` mirrors the failure reported to setTaskCompleted.
+    func recordRefreshTaskRun(armedSensors: Int, expired: Bool) {
         let count = refreshTaskCount + 1
         defaults.set(count, forKey: refreshTaskCountKey)
         defaults.set(Date(), forKey: lastRefreshDateKey)
 
         addToHistory(TaskExecution(
             type: .refresh,
-            date: Date(),
-            successfulDevices: result.successfulDevices.count,
-            failedDevices: result.failedDevices.count,
-            dataPoints: result.totalDataPoints,
-            duration: result.duration
+            trigger: .refreshTask,
+            success: !expired,
+            detail: expired ? "Expired while arming \(armedSensors) sensor(s)" : "Armed \(armedSensors) sensor(s)"
         ))
 
-        print("📊 BackgroundTaskTracker: Refresh task #\(count) completed - \(result.successfulDevices.count) devices, \(result.totalDataPoints) data points")
+        print("📊 BackgroundTaskTracker: Refresh task #\(count) ran - armed \(armedSensors) sensor(s) (expired: \(expired))")
     }
 
-    /// Records a background processing task execution
-    func recordProcessingTaskExecution(result: BackgroundFetchResult) {
+    /// Records a BGProcessingTask run (history sync)
+    func recordProcessingTaskRun(duration: TimeInterval, expired: Bool) {
         let count = processingTaskCount + 1
         defaults.set(count, forKey: processingTaskCountKey)
         defaults.set(Date(), forKey: lastProcessingDateKey)
 
         addToHistory(TaskExecution(
             type: .processing,
-            date: Date(),
-            successfulDevices: result.successfulDevices.count,
-            failedDevices: result.failedDevices.count,
-            dataPoints: result.totalDataPoints,
-            duration: result.duration
+            trigger: .processingTask,
+            success: !expired,
+            detail: expired ? "Expired before finishing" : "History sync finished",
+            duration: duration
         ))
 
-        print("📊 BackgroundTaskTracker: Processing task #\(count) completed - \(result.successfulDevices.count) devices, \(result.totalDataPoints) data points")
+        print("📊 BackgroundTaskTracker: Processing task #\(count) ran for \(String(format: "%.1f", duration))s (expired: \(expired))")
+    }
+
+    /// Records how a BLE wake read ended. `trigger` is nil when iOS
+    /// relaunched the app for the connect and the arm source was lost.
+    func recordWakeRead(trigger: BackgroundTrigger?, outcome: WakeReadOutcome, duration: TimeInterval) {
+        let countKey = outcome.isSuccess ? wakeReadSuccessCountKey : wakeReadFailureCountKey
+        defaults.set(defaults.integer(forKey: countKey) + 1, forKey: countKey)
+        defaults.set(Date(), forKey: lastWakeReadKey)
+
+        addToHistory(TaskExecution(
+            type: .bleWake,
+            trigger: trigger,
+            success: outcome.isSuccess,
+            detail: outcome.rawValue,
+            isSensorRead: true,
+            duration: duration
+        ))
+
+        print("📊 BackgroundTaskTracker: BLE wake read (\(trigger?.rawValue ?? "relaunch")) - \(outcome.rawValue)")
+    }
+
+    /// Successful BLE wake reads
+    var wakeReadSuccessCount: Int {
+        defaults.integer(forKey: wakeReadSuccessCountKey)
+    }
+
+    /// Failed BLE wake reads (timeout, disconnect, rejected sample)
+    var wakeReadFailureCount: Int {
+        defaults.integer(forKey: wakeReadFailureCountKey)
+    }
+
+    /// Last BLE wake read, successful or not
+    var lastWakeReadDate: Date? {
+        defaults.object(forKey: lastWakeReadKey) as? Date
     }
 
     /// Total refresh task executions
@@ -112,13 +168,21 @@ class BackgroundTaskTracker {
 
     // MARK: - Silent Push Tracking (phase 2)
 
-    /// Records a received silent push — verifies the hourly server cadence
+    /// Records a received silent push — verifies the server cadence
     /// actually reaches the device
-    func recordPushReceived() {
+    func recordPushReceived(armedSensors: Int) {
         let count = pushReceivedCount + 1
         defaults.set(count, forKey: pushReceivedCountKey)
         defaults.set(Date(), forKey: lastPushReceivedKey)
-        print("📬 BackgroundTaskTracker: Silent push #\(count) received")
+
+        addToHistory(TaskExecution(
+            type: .silentPush,
+            trigger: .silentPush,
+            success: true,
+            detail: "Armed \(armedSensors) sensor(s)"
+        ))
+
+        print("📬 BackgroundTaskTracker: Silent push #\(count) received - armed \(armedSensors) sensor(s)")
     }
 
     /// Total silent pushes received
@@ -213,6 +277,9 @@ class BackgroundTaskTracker {
         defaults.removeObject(forKey: scheduleFailureCountKey)
         defaults.removeObject(forKey: pushReceivedCountKey)
         defaults.removeObject(forKey: lastPushReceivedKey)
+        defaults.removeObject(forKey: wakeReadSuccessCountKey)
+        defaults.removeObject(forKey: wakeReadFailureCountKey)
+        defaults.removeObject(forKey: lastWakeReadKey)
         print("📊 BackgroundTaskTracker: All tracking data reset")
     }
 
@@ -233,7 +300,7 @@ class BackgroundTaskTracker {
         EXECUTION:
         Refresh Tasks: \(refreshTaskCount) (Last: \(refreshDate))
         Processing Tasks: \(processingTaskCount) (Last: \(processingDate))
-        Total Executions: \(refreshTaskCount + processingTaskCount)
+        BLE Wake Reads: \(wakeReadSuccessCount) ok, \(wakeReadFailureCount) failed (Last: \(lastWakeReadDate.map { formatDate($0) } ?? "Never"))
 
         SILENT PUSH:
         Pushes Received: \(pushReceivedCount) (Last: \(lastPushReceivedDate.map { formatDate($0) } ?? "Never"))
@@ -294,20 +361,42 @@ struct TaskExecution: Codable, Identifiable {
     let failedDevices: Int
     let dataPoints: Int
     let duration: TimeInterval
+    // Optional: entries written by older builds have none of these
+    let trigger: BackgroundTrigger?
+    let success: Bool?
+    let detail: String?
 
-    init(type: TaskType, date: Date, successfulDevices: Int, failedDevices: Int, dataPoints: Int, duration: TimeInterval) {
+    /// - Parameter isSensorRead: one sensor read one sample (BLE wake);
+    ///   fills the device and data point counts from `success`
+    init(type: TaskType,
+         trigger: BackgroundTrigger?,
+         success: Bool,
+         detail: String,
+         isSensorRead: Bool = false,
+         duration: TimeInterval = 0) {
         self.id = UUID()
         self.type = type
-        self.date = date
-        self.successfulDevices = successfulDevices
-        self.failedDevices = failedDevices
-        self.dataPoints = dataPoints
+        self.trigger = trigger
+        self.success = success
+        self.detail = detail
+        self.date = Date()
+        self.successfulDevices = isSensorRead && success ? 1 : 0
+        self.failedDevices = isSensorRead && !success ? 1 : 0
+        self.dataPoints = isSensorRead && success ? 1 : 0
         self.duration = duration
+    }
+
+    /// What started this entry, including the cases without a stored trigger
+    var triggerLabel: String {
+        if let trigger { return trigger.rawValue }
+        return success == nil ? "Unknown (legacy entry)" : "Relaunch (trigger unknown)"
     }
 
     enum TaskType: String, Codable {
         case refresh = "Refresh"
         case processing = "Processing"
+        case silentPush = "Silent Push"
+        case bleWake = "BLE Wake"
     }
 }
 

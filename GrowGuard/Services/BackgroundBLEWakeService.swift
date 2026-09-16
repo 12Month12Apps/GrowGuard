@@ -31,11 +31,13 @@ final class BackgroundBLEWakeService {
     private let beginBackgroundTask: () -> UIBackgroundTaskIdentifier
     private let endBackgroundTask: (UIBackgroundTaskIdentifier) -> Void
     private let notificationCenter: NotificationCenter
+    private let tracker: BackgroundTaskTracker
 
     // MARK: - State
 
-    /// Arm source per device so saved samples carry the right SensorDataSource
-    private var armSources: [String: SensorDataSource] = [:]
+    /// Arm trigger per device so saved samples carry the right
+    /// SensorDataSource and the debug history names what caused the read
+    private var armTriggers: [String: BackgroundTrigger] = [:]
     private var activeReads: [String: WakeRead] = [:]
     private var armedConnectionSubscription: AnyCancellable?
     private var foregroundObserver: NSObjectProtocol?
@@ -49,7 +51,13 @@ final class BackgroundBLEWakeService {
         var timeoutTask: BLEScheduledTask?
         var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
         var liveDataRequested = false
+        /// Sample received and being persisted: the link is no longer
+        /// needed, so a disconnect must not turn the read into a failure
+        var saving = false
         var finished = false
+        let startedAt = Date()
+        /// nil when iOS relaunched the app for the connect (arm state lost)
+        var trigger: BackgroundTrigger?
     }
 
     init(pool: ConnectionPoolManager? = nil,
@@ -59,8 +67,10 @@ final class BackgroundBLEWakeService {
          runStatusCheck: ((String) async -> Void)? = nil,
          beginBackgroundTask: (() -> UIBackgroundTaskIdentifier)? = nil,
          endBackgroundTask: ((UIBackgroundTaskIdentifier) -> Void)? = nil,
-         notificationCenter: NotificationCenter = .default) {
+         notificationCenter: NotificationCenter = .default,
+         tracker: BackgroundTaskTracker = .shared) {
         self.notificationCenter = notificationCenter
+        self.tracker = tracker
         self.pool = pool ?? ConnectionPoolManager.shared
         self.scheduler = scheduler
         self.loadSensorDeviceUUIDs = loadSensorDeviceUUIDs ?? {
@@ -119,25 +129,28 @@ final class BackgroundBLEWakeService {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                await self?.armAll(source: .backgroundTask)
+                await self?.armAll(trigger: .enterBackground)
             }
         }
     }
 
     /// Arms pending connects for all sensors. Cheap (~1 s) — call from
     /// BGAppRefreshTask, silent push, and applicationDidEnterBackground.
-    func armAll(source: SensorDataSource) async {
+    /// - Returns: How many sensors were armed
+    @discardableResult
+    func armAll(trigger: BackgroundTrigger) async -> Int {
         let uuids = await loadSensorDeviceUUIDs()
-        AppLogger.ble.info("🛡 Background arm: \(uuids.count) sensor(s), source \(source.rawValue)")
+        AppLogger.ble.info("🛡 Background arm: \(uuids.count) sensor(s), trigger \(trigger.rawValue)")
         for uuid in uuids {
-            armSources[uuid] = source
+            armTriggers[uuid] = trigger
             pool.armBackgroundConnect(for: uuid)
         }
+        return uuids.count
     }
 
     func disarmAll() {
         pool.disarmAllBackgroundConnects()
-        armSources.removeAll()
+        armTriggers.removeAll()
     }
 
     // MARK: - Wake handling
@@ -147,6 +160,9 @@ final class BackgroundBLEWakeService {
 
         AppLogger.ble.info("🛡 BLE wake: armed connect completed for \(deviceUUID)")
         let read = WakeRead()
+        // Captured now: foregrounding disarms and clears armTriggers while
+        // this read may still be running
+        read.trigger = armTriggers[deviceUUID]
         read.backgroundTaskID = beginBackgroundTask()
         activeReads[deviceUUID] = read
 
@@ -161,8 +177,12 @@ final class BackgroundBLEWakeService {
                     guard !read.liveDataRequested else { return }
                     read.liveDataRequested = true
                     connection.requestLiveData()
-                case .error, .disconnected:
-                    self.finishRead(for: deviceUUID, success: false)
+                case .error:
+                    guard !read.saving else { return }
+                    self.finishRead(for: deviceUUID, outcome: .connectionError)
+                case .disconnected:
+                    guard !read.saving else { return }
+                    self.finishRead(for: deviceUUID, outcome: .disconnected)
                 default:
                     break
                 }
@@ -172,49 +192,47 @@ final class BackgroundBLEWakeService {
         connection.sensorDataPublisher
             .receive(on: DispatchQueue.main)
             .first()
-            .sink { [weak self] sensorData in
-                guard let self else { return }
-                let source = self.armSources[deviceUUID] ?? .backgroundTask
+            .sink { [weak self, trigger = read.trigger] sensorData in
+                guard let self, let read = self.activeReads[deviceUUID] else { return }
+                read.saving = true
+                let source = trigger?.sensorDataSource ?? .backgroundTask
                 Task { @MainActor in
                     let saved = await self.saveSample(sensorData, deviceUUID, source)
                     if saved {
                         await self.runStatusCheck(deviceUUID)
                     }
-                    self.finishRead(for: deviceUUID, success: saved)
+                    self.finishRead(for: deviceUUID, outcome: saved ? .saved : .sampleRejected)
                 }
             }
             .store(in: &read.cancellables)
 
         read.timeoutTask = scheduler.schedule(after: wakeReadTimeout) { [weak self] in
             Task { @MainActor in
-                self?.finishRead(for: deviceUUID, success: false)
+                self?.finishRead(for: deviceUUID, outcome: .timedOut)
             }
         }
     }
 
-    private func finishRead(for deviceUUID: String, success: Bool) {
+    private func finishRead(for deviceUUID: String, outcome: WakeReadOutcome) {
         guard let read = activeReads[deviceUUID], !read.finished else { return }
         read.finished = true
         read.timeoutTask?.cancel()
         read.cancellables.removeAll()
         activeReads[deviceUUID] = nil
-        armSources[deviceUUID] = nil
+        armTriggers[deviceUUID] = nil
 
         // One trigger, one chance: never re-arm from a wake (wake-loop
         // prevention — the sensor advertises continuously in range)
         pool.disarmBackgroundConnect(for: deviceUUID)
         pool.disconnect(from: deviceUUID)
 
-        if success {
-            BackgroundTaskTracker.shared.recordRefreshTaskExecution(result: BackgroundFetchResult(
-                successfulDevices: [deviceUUID],
-                failedDevices: [],
-                totalDataPoints: 1,
-                duration: 0
-            ))
-        }
+        tracker.recordWakeRead(
+            trigger: read.trigger,
+            outcome: outcome,
+            duration: Date().timeIntervalSince(read.startedAt)
+        )
 
         endBackgroundTask(read.backgroundTaskID)
-        AppLogger.ble.info("🛡 BLE wake read finished for \(deviceUUID) (success: \(success))")
+        AppLogger.ble.info("🛡 BLE wake read finished for \(deviceUUID) (\(outcome.rawValue))")
     }
 }
