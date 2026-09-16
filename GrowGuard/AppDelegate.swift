@@ -211,8 +211,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // so nothing races the ~30 s window.
         let armWork = Task { @MainActor in
             let armed = await BackgroundBLEWakeService.shared.armAll(trigger: .refreshTask)
-            BackgroundTaskTracker.shared.recordRefreshTaskRun(armedSensors: armed)
-            task.setTaskCompleted(success: !Task.isCancelled)
+            let expired = Task.isCancelled
+            BackgroundTaskTracker.shared.recordRefreshTaskRun(armedSensors: armed, expired: expired)
+            task.setTaskCompleted(success: !expired)
         }
 
         task.expirationHandler = {
@@ -256,12 +257,16 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
         let syncWork = Task { @MainActor in
             let expired = await BackgroundHistorySyncService.shared.syncAllDevices()
-            await PlantMonitorService.shared.performDailyDeviceCheck()
+            if !expired {
+                // The daily check has no cancellation guard — only start it
+                // while the task window is still open
+                await PlantMonitorService.shared.performDailyDeviceCheck()
+            }
             BackgroundTaskTracker.shared.recordProcessingTaskRun(
                 duration: Date().timeIntervalSince(startedAt),
                 expired: expired
             )
-            task.setTaskCompleted(success: true)
+            task.setTaskCompleted(success: !expired)
         }
 
         task.expirationHandler = {

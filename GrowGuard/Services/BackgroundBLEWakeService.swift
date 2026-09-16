@@ -51,6 +51,9 @@ final class BackgroundBLEWakeService {
         var timeoutTask: BLEScheduledTask?
         var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
         var liveDataRequested = false
+        /// Sample received and being persisted: the link is no longer
+        /// needed, so a disconnect must not turn the read into a failure
+        var saving = false
         var finished = false
         let startedAt = Date()
         /// nil when iOS relaunched the app for the connect (arm state lost)
@@ -175,8 +178,10 @@ final class BackgroundBLEWakeService {
                     read.liveDataRequested = true
                     connection.requestLiveData()
                 case .error:
+                    guard !read.saving else { return }
                     self.finishRead(for: deviceUUID, outcome: .connectionError)
                 case .disconnected:
+                    guard !read.saving else { return }
                     self.finishRead(for: deviceUUID, outcome: .disconnected)
                 default:
                     break
@@ -188,7 +193,8 @@ final class BackgroundBLEWakeService {
             .receive(on: DispatchQueue.main)
             .first()
             .sink { [weak self, trigger = read.trigger] sensorData in
-                guard let self else { return }
+                guard let self, let read = self.activeReads[deviceUUID] else { return }
+                read.saving = true
                 let source = trigger?.sensorDataSource ?? .backgroundTask
                 Task { @MainActor in
                     let saved = await self.saveSample(sensorData, deviceUUID, source)

@@ -67,7 +67,7 @@ struct BackgroundTaskTrackerTests {
     func taskRunsRecorded() {
         let tracker = makeTracker()
 
-        tracker.recordRefreshTaskRun(armedSensors: 1)
+        tracker.recordRefreshTaskRun(armedSensors: 1, expired: false)
         tracker.recordProcessingTaskRun(duration: 12, expired: true)
 
         #expect(tracker.refreshTaskCount == 1)
@@ -77,6 +77,18 @@ struct BackgroundTaskTrackerTests {
         #expect(history.map(\.trigger) == [.processingTask, .refreshTask])
         #expect(history.first?.success == false)
         #expect(history.first?.detail == "Expired before finishing")
+        #expect(history.last?.success == true)
+    }
+
+    @Test("A refresh task that expires while arming is recorded as failed")
+    func expiredRefreshRecordedAsFailure() {
+        let tracker = makeTracker()
+
+        tracker.recordRefreshTaskRun(armedSensors: 1, expired: true)
+
+        let entry = tracker.executionHistory.first
+        #expect(entry?.success == false, "Must match setTaskCompleted(success: false)")
+        #expect(entry?.detail == "Expired while arming 1 sensor(s)")
     }
 
     @Test("History written by older builds still decodes (no trigger/success/detail keys)")

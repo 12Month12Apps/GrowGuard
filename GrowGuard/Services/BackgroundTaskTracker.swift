@@ -69,8 +69,9 @@ class BackgroundTaskTracker {
 
     // MARK: - Public API
 
-    /// Records a BGAppRefreshTask run (it only arms pending connects)
-    func recordRefreshTaskRun(armedSensors: Int) {
+    /// Records a BGAppRefreshTask run (it only arms pending connects).
+    /// `expired` mirrors the failure reported to setTaskCompleted.
+    func recordRefreshTaskRun(armedSensors: Int, expired: Bool) {
         let count = refreshTaskCount + 1
         defaults.set(count, forKey: refreshTaskCountKey)
         defaults.set(Date(), forKey: lastRefreshDateKey)
@@ -78,11 +79,11 @@ class BackgroundTaskTracker {
         addToHistory(TaskExecution(
             type: .refresh,
             trigger: .refreshTask,
-            success: true,
-            detail: "Armed \(armedSensors) sensor(s)"
+            success: !expired,
+            detail: expired ? "Expired while arming \(armedSensors) sensor(s)" : "Armed \(armedSensors) sensor(s)"
         ))
 
-        print("📊 BackgroundTaskTracker: Refresh task #\(count) ran - armed \(armedSensors) sensor(s)")
+        print("📊 BackgroundTaskTracker: Refresh task #\(count) ran - armed \(armedSensors) sensor(s) (expired: \(expired))")
     }
 
     /// Records a BGProcessingTask run (history sync)

@@ -43,13 +43,15 @@ struct BackgroundWakeServiceTests {
 
     private func makeService(pool: ConnectionPoolManager,
                              deviceUUIDs: [String],
-                             saveSucceeds: Bool = true) -> BackgroundBLEWakeService {
+                             saveSucceeds: Bool = true,
+                             duringSave: @escaping () async -> Void = {}) -> BackgroundBLEWakeService {
         let recorder = self.recorder
         let service = BackgroundBLEWakeService(
             pool: pool,
             scheduler: scheduler,
             loadSensorDeviceUUIDs: { deviceUUIDs },
             saveSample: { _, uuid, source in
+                await duringSave()
                 recorder.saved.append((uuid, source))
                 return saveSucceeds
             },
@@ -126,6 +128,28 @@ struct BackgroundWakeServiceTests {
         await settle(seconds: 2.0)
         #expect(recorder.saved.map(\.source) == [.backgroundTask])
         #expect(tracker.executionHistory.first?.trigger == .enterBackground)
+    }
+
+    @Test("A disconnect while the sample is being saved does not turn a saved read into a failure")
+    func disconnectDuringSaveKeepsSavedOutcome() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        let central = self.central
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString]) {
+            // Sensor drops the link after sending data, before persistence finishes
+            central.simulateDisconnect(of: sensor.identifier, error: nil)
+            await drainMainActor()
+        }
+
+        await service.armAll(trigger: .silentPush)
+        await settle(seconds: 2.0)
+
+        #expect(recorder.saved.map(\.uuid) == [sensor.identifier.uuidString])
+        #expect(recorder.statusChecks == [sensor.identifier.uuidString])
+        #expect(recorder.ended == 1)
+        #expect(tracker.executionHistory.map(\.detail) == [WakeReadOutcome.saved.rawValue])
+        #expect(tracker.wakeReadSuccessCount == 1)
+        #expect(tracker.wakeReadFailureCount == 0)
     }
 
     @Test("Wake read with a rejected sample is recorded as a failure")
