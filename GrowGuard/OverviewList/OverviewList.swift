@@ -124,7 +124,8 @@ struct OverviewList: View {
                     } else {
                         List {
                             ForEach(viewModel.allSavedDevices) { device in
-                                DeviceCard(device: device) {
+                                DeviceCard(device: device,
+                                           peers: viewModel.allSavedDevices.filter { $0.uuid != device.uuid }) {
                                     NavigationService.shared.navigateToDeviceView(flowerDevice: device)
                                 }
                                 .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
@@ -134,7 +135,7 @@ struct OverviewList: View {
                             .listRowSeparator(.hidden)
                         }
                         .listStyle(.plain)
-                        .frame(height: CGFloat(viewModel.allSavedDevices.count) * 110)
+                        .frame(height: CGFloat(viewModel.allSavedDevices.count) * 124)
                         .scrollDisabled(true)
                     }
                 }
@@ -310,6 +311,7 @@ struct SummaryCard: View {
 
 struct DeviceCard: View {
     let device: FlowerDeviceDTO
+    let peers: [FlowerDeviceDTO]
     let action: () -> Void
 
     @ObservedObject private var activityService = HistoryLoadingActivityService.shared
@@ -325,6 +327,10 @@ struct DeviceCard: View {
 
     private var latestSensorData: SensorDataDTO? {
         device.sensorData.max(by: { $0.date < $1.date })
+    }
+
+    private var health: SensorHealth {
+        SensorHealth.evaluate(device, peers: peers, now: Date())
     }
 
     private var connectionColor: Color {
@@ -381,12 +387,8 @@ struct DeviceCard: View {
 
                     if device.isSensor {
                         HStack(spacing: 12) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "battery.75percent")
-                                    .font(.caption2)
-                                Text(device.battery, format: .percent)
-                                    .font(.caption)
-                            }
+                            BatteryIndicator(device: device, health: health, style: .compact)
+                                .foregroundColor(.secondary)
 
                             if isLoadingHistory {
                                 HStack(spacing: 4) {
@@ -397,6 +399,8 @@ struct DeviceCard: View {
                                         .font(.caption)
                                         .foregroundColor(.orange)
                                 }
+                            } else if health.isUnreachable {
+                                SensorHealthBanner(device: device, health: health, style: .line)
                             } else {
                                 HStack(spacing: 4) {
                                     Circle()

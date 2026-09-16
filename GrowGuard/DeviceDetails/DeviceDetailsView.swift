@@ -45,21 +45,17 @@ struct DeviceDetailsView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
+                    if viewModel.device.isSensor {
+                        SensorHealthBanner(device: viewModel.device,
+                                           health: viewModel.health,
+                                           style: .banner,
+                                           onSetLocation: viewModel.peers.isEmpty ? nil : { showSetting = true })
+                    }
+
                     // Action buttons
                     if viewModel.device.isSensor {
                         HStack(spacing: 12) {
-                            // Battery indicator
-                            HStack(spacing: 6) {
-                                Image(systemName: "battery.75percent")
-                                    .foregroundColor(.green)
-                                Text(viewModel.device.battery, format: .percent)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Color.green.opacity(0.1))
-                            .cornerRadius(10)
+                            BatteryIndicator(device: viewModel.device, health: viewModel.health, style: .chip)
 
                             Spacer()
 

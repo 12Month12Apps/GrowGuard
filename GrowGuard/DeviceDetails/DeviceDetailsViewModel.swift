@@ -454,7 +454,10 @@ import ActivityKit
     private func updateDeviceLastUpdate() async {
         do {
             if let updated = try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: device.uuid, { $0.lastUpdate = Date() }) {
-                self.device = updated
+                // Nur das selbst geschriebene Feld zurückspiegeln: `battery`,
+                // `firmware` und `batteryUpdatedAt` hält der deviceInfo-Sink
+                // als Anzeige-Kopie, der Monitor persistiert sie asynchron.
+                self.device.lastUpdate = updated.lastUpdate
             } else {
                 print("⚠️ DeviceDetailsViewModel: device \(device.uuid) not found while updating lastUpdate")
             }
