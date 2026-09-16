@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		56SHMO012EC7000000000001 /* SensorHealthMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHMO002EC7000000000001 /* SensorHealthMonitor.swift */; };
+		56SHMT012EC7000000000001 /* SensorHealthMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHMT002EC7000000000001 /* SensorHealthMonitorTests.swift */; };
 		56SHEA012EC7000000000001 /* SensorHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHEA002EC7000000000001 /* SensorHealth.swift */; };
 		56SHTS012EC7000000000001 /* SensorHealthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHTS002EC7000000000001 /* SensorHealthTests.swift */; };
 		10F70A0DB6B34BF6AFFF6504 /* ReplaySessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE5968580C64DA890C5A581 /* ReplaySessionTests.swift */; };
@@ -174,6 +176,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		56SHMO002EC7000000000001 /* SensorHealthMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorHealthMonitor.swift; sourceTree = "<group>"; };
+		56SHMT002EC7000000000001 /* SensorHealthMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorHealthMonitorTests.swift; sourceTree = "<group>"; };
 		56SHEA002EC7000000000001 /* SensorHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SensorHealth.swift; path = ../Core/SensorHealth.swift; sourceTree = "<group>"; };
 		56SHTS002EC7000000000001 /* SensorHealthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorHealthTests.swift; sourceTree = "<group>"; };
 		04F0CD25E2C043A18AB06797 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
@@ -585,6 +589,7 @@
 		568EA33D2EB625CE00F6BB25 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				56SHMO002EC7000000000001 /* SensorHealthMonitor.swift */,
 				56SHEA002EC7000000000001 /* SensorHealth.swift */,
 				56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */,
 				56BWKS002EC7000000000001 /* BackgroundBLEWakeService.swift */,
@@ -715,6 +720,7 @@
 		56AF112B2BDED05B00887073 /* GrowGuardTests */ = {
 			isa = PBXGroup;
 			children = (
+				56SHMT002EC7000000000001 /* SensorHealthMonitorTests.swift */,
 				56SHTS002EC7000000000001 /* SensorHealthTests.swift */,
 				56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */,
 				56SHDT002EC7000000000001 /* FlowerDeviceDTOTests.swift */,
@@ -975,6 +981,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				56SHMO012EC7000000000001 /* SensorHealthMonitor.swift in Sources */,
 				56SHEA012EC7000000000001 /* SensorHealth.swift in Sources */,
 				565058CB2E3F64F900CC6E2B /* LogExportView.swift in Sources */,
 				5663FEB52EB684620038209F /* ConnectionPoolManager.swift in Sources */,
@@ -1075,6 +1082,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				56SHMT012EC7000000000001 /* SensorHealthMonitorTests.swift in Sources */,
 				56SHTS012EC7000000000001 /* SensorHealthTests.swift in Sources */,
 				5654B2C12CB4739C00EED3D3 /* AddDeviceViewModelTests.swift in Sources */,
 				5654B2BB2CB45C6E00EED3D3 /* SensorDataDecoderTests.swift in Sources */,
