@@ -184,10 +184,21 @@ final class NotificationService {
     /// Removes pending and delivered notifications related to a specific device.
     func cancelNotifications(for deviceUUID: String) async {
         let pendingRequests = await center.pendingNotificationRequests()
+        let deliveredNotifications = await center.deliveredNotifications()
 
-        let identifiersToRemove = pendingRequests
-            .filter { $0.identifier.contains(deviceUUID) }
-            .map { $0.identifier }
+        // Sensor-health notifications are posted with a nil trigger, so they are only
+        // ever delivered and never pending — both lists have to be swept.
+        var identifiers = Set(
+            pendingRequests
+                .filter { $0.identifier.contains(deviceUUID) }
+                .map { $0.identifier }
+        )
+        identifiers.formUnion(
+            deliveredNotifications
+                .map { $0.request.identifier }
+                .filter { $0.contains(deviceUUID) }
+        )
+        let identifiersToRemove = Array(identifiers)
 
         center.removeDeliveredNotifications(withIdentifiers: identifiersToRemove)
         center.removePendingNotificationRequests(withIdentifiers: identifiersToRemove)
