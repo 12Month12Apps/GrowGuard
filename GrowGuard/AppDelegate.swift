@@ -23,6 +23,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // restoration), these must exist to receive the events
         _ = ConnectionPoolManager.shared
         BackgroundBLEWakeService.shared.start()
+        SensorHealthMonitor.shared.start()
 
         // SwiftUI scene lifecycle: applicationDidEnterBackground is never
         // called on the app delegate — schedule BG tasks via the

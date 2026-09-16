@@ -20,6 +20,7 @@ struct BackgroundWakeServiceTests {
     final class Recorder {
         var saved: [(uuid: String, source: SensorDataSource)] = []
         var statusChecks: [String] = []
+        var failedContacts: [String] = []
         var began = 0
         var ended = 0
     }
@@ -51,6 +52,7 @@ struct BackgroundWakeServiceTests {
                 return saveSucceeds
             },
             runStatusCheck: { uuid in recorder.statusChecks.append(uuid) },
+            recordFailedContact: { uuid in recorder.failedContacts.append(uuid) },
             beginBackgroundTask: { recorder.began += 1; return UIBackgroundTaskIdentifier(rawValue: 7) },
             endBackgroundTask: { _ in recorder.ended += 1 },
             notificationCenter: notificationCenter
@@ -132,5 +134,53 @@ struct BackgroundWakeServiceTests {
         #expect(recorder.ended == 1)
         #expect(!pool.isBackgroundArmed(sensor.identifier.uuidString))
         #expect(central.connectRequests.count == 1, "Wake handler must not re-arm")
+    }
+
+    @Test("A device still armed from the previous trigger counts one failed contact on the next armAll")
+    func stillArmedCountsFailedContact() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        central.peripheralsAreInRetrieveCache = false   // never advertises: no connect, stays armed
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString])
+
+        await service.armAll(source: .backgroundPush)
+        await pump()
+        #expect(recorder.failedContacts.isEmpty, "First trigger: nothing to judge yet")
+        #expect(pool.isBackgroundArmed(sensor.identifier.uuidString))
+
+        await service.armAll(source: .backgroundPush)
+        await pump()
+        #expect(recorder.failedContacts == [sensor.identifier.uuidString])
+        #expect(pool.isBackgroundArmed(sensor.identifier.uuidString), "Re-armed as before")
+    }
+
+    @Test("A wake read that ends without data counts one failed contact")
+    func failedWakeReadCountsFailedContact() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        central.connectSucceeds = false
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString])
+
+        await service.armAll(source: .backgroundTask)
+        await pump()
+        central.simulateConnectCompletion(of: sensor.identifier)
+        await pump()
+        central.simulateDisconnect(of: sensor.identifier, error: nil)
+        await settle(seconds: 1.0)
+
+        #expect(recorder.failedContacts == [sensor.identifier.uuidString])
+    }
+
+    @Test("A successful wake read records no failed contact")
+    func successfulWakeReadNoFailure() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString])
+
+        await service.armAll(source: .backgroundPush)
+        await settle(seconds: 2.0)
+
+        #expect(recorder.saved.count == 1)
+        #expect(recorder.failedContacts.isEmpty)
     }
 }

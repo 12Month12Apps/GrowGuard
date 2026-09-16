@@ -13,6 +13,11 @@ import ActivityKit
 
 @Observable class DeviceDetailsViewModel {
     var device: FlowerDeviceDTO
+    /// Other devices; witnesses for the peer rule (loaded in init)
+    var peers: [FlowerDeviceDTO] = []
+    var health: SensorHealth {
+        SensorHealth.evaluate(device, peers: peers, now: Date())
+    }
     var groupingOption: Calendar.Component = .day
     private let repositoryManager = RepositoryManager.shared
 
@@ -74,6 +79,9 @@ import ActivityKit
         }
 
         Task {
+            if let all = try? await self.repositoryManager.flowerDeviceRepository.getAllDevices() {
+                await MainActor.run { self.peers = all.filter { $0.uuid != device.uuid } }
+            }
             try await PlantMonitorService.shared.checkDeviceStatus(device: device)
 
             // Load current week's sensor data immediately
@@ -147,10 +155,14 @@ import ActivityKit
             }
         }
 
-        // Subscribe zu Geräte-Infos (Batterie/Firmware) vom ConnectionPool
+        // Batterie/Firmware: nur die Anzeige-Kopie aktualisieren. Persistiert
+        // wird pool-weit vom SensorHealthMonitor (Spec 2026-09-14).
         poolDeviceInfoSubscription = connection.deviceInfoPublisher.sink { [weak self] info in
             Task { @MainActor in
-                await self?.updateDeviceInfo(battery: info.battery, firmware: info.firmware)
+                guard let self else { return }
+                self.device.battery = Int16(clamping: info.battery)
+                self.device.firmware = info.firmware
+                self.device.batteryUpdatedAt = Date()
             }
         }
 
@@ -427,28 +439,6 @@ import ActivityKit
         }
     }
     
-    /// Aktualisiert Batterie/Firmware in der Datenbank.
-    /// `lastUpdate` bleibt unverändert — Batterie-Reads sind keine Messung.
-    @MainActor
-    private func updateDeviceInfo(battery: Int, firmware: String) async {
-        do {
-            // Fetch-mutate-save: only the fields a battery read owns. Location,
-            // contact counters and lastUpdate stay as another writer left them.
-            if let updated = try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: device.uuid, { fresh in
-                fresh.battery = Int16(clamping: battery)
-                fresh.firmware = firmware
-                fresh.batteryUpdatedAt = Date()
-            }) {
-                self.device = updated
-                AppLogger.ble.info("🔋 Updated battery to \(battery)% / firmware \(firmware) for device \(self.device.uuid)")
-            } else {
-                print("⚠️ DeviceDetailsViewModel: device \(device.uuid) not found while updating battery")
-            }
-        } catch {
-            print("Error updating device battery: \(error.localizedDescription)")
-        }
-    }
-
     /// RSSI → Entfernungs-Hinweis für die UI
     private static func distanceHint(forRSSI rssi: Int) -> String {
         if rssi >= -65 {
