@@ -154,6 +154,28 @@ struct BackgroundWakeServiceTests {
         #expect(pool.isBackgroundArmed(sensor.identifier.uuidString), "Re-armed as before")
     }
 
+    @Test("A wake already in progress is not counted as a failed contact")
+    func wakeInProgressIsNotCountedAsFailure() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        central.connectSucceeds = false
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString])
+
+        await service.armAll(source: .backgroundPush)
+        await pump()
+        // Pending connect completes: the read is now open (no disconnect, no
+        // timeout), so the device is still armed *and* has an active read
+        central.simulateConnectCompletion(of: sensor.identifier)
+        await pump()
+        #expect(pool.isBackgroundArmed(sensor.identifier.uuidString),
+                "Precondition: the armed flag survives the connect completion")
+
+        await service.armAll(source: .backgroundPush)
+        await pump()
+
+        #expect(recorder.failedContacts.isEmpty, "A wake in progress is not a failed contact")
+    }
+
     @Test("A wake read that ends without data counts one failed contact")
     func failedWakeReadCountsFailedContact() async {
         let pool = makePool()

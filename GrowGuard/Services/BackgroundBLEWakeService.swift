@@ -135,16 +135,27 @@ final class BackgroundBLEWakeService {
     func armAll(source: SensorDataSource) async {
         let uuids = await loadSensorDeviceUUIDs()
         AppLogger.ble.info("🛡 Background arm: \(uuids.count) sensor(s), source \(source.rawValue)")
+        // Arm every device first, do the bookkeeping afterwards: arming is the
+        // time-critical part (the didEnterBackground path has ~1 s) and must
+        // not wait on a repository write for an earlier device. Only the
+        // *reading* of the armed flag has to happen before arming —
+        // armBackgroundConnect re-inserts an already-armed device, so the flag
+        // is no longer distinguishable once the loop has passed it.
+        var silentSincePreviousTrigger: [String] = []
         for uuid in uuids {
             // Still armed from the previous trigger = the sensor never woke us.
             // A dead (non-advertising) sensor produces no CoreBluetooth
             // callback at all; this is the only place that silence is visible.
             if pool.isBackgroundArmed(uuid) && activeReads[uuid] == nil {
-                AppLogger.sensor.info("🔋 \(uuid) still armed from the previous trigger — counting a failed contact")
-                await recordFailedContact(uuid)
+                silentSincePreviousTrigger.append(uuid)
             }
             armSources[uuid] = source
             pool.armBackgroundConnect(for: uuid)
+        }
+
+        for uuid in silentSincePreviousTrigger {
+            AppLogger.sensor.info("🔋 \(uuid) still armed from the previous trigger — counting a failed contact")
+            await recordFailedContact(uuid)
         }
     }
 
@@ -225,13 +236,17 @@ final class BackgroundBLEWakeService {
                 totalDataPoints: 1,
                 duration: 0
             ))
+            endBackgroundTask(read.backgroundTaskID)
         } else {
+            // Keep the background-task assertion until the failed contact is
+            // persisted; ending it first lets iOS suspend us mid-write.
+            let backgroundTaskID = read.backgroundTaskID
             Task { @MainActor in
                 await self.recordFailedContact(deviceUUID)
+                self.endBackgroundTask(backgroundTaskID)
             }
         }
 
-        endBackgroundTask(read.backgroundTaskID)
         AppLogger.ble.info("🛡 BLE wake read finished for \(deviceUUID) (success: \(success))")
     }
 }
