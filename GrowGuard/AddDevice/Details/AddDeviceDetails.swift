@@ -76,6 +76,9 @@ enum NavigationDestination: Hashable {
 @Observable class AddDeviceDetailsViewModel {
     var device:  DiscoveredDevice?
     var allSavedDevices: [FlowerDeviceDTO] = []
+    var existingLocations: [String] {
+        Array(Set(allSavedDevices.compactMap(\.location))).sorted()
+    }
     var alertView: Alert = .empty
     var showAlert = false
     var flower: FlowerDeviceDTO
@@ -171,6 +174,7 @@ enum NavigationDestination: Hashable {
             }
             
             do {
+                flower.location = FlowerDeviceDTO.normalizeLocation(flower.location)
                 try await repositoryManager.flowerDeviceRepository.saveDevice(flower)
                 
                 // Save optimal range if it exists
@@ -270,6 +274,11 @@ struct AddDeviceDetails:  View {
                         ))
                     }
                 }
+
+                LocationField(location: Binding(
+                    get: { viewModel.flower.location ?? "" },
+                    set: { viewModel.flower.location = $0 }
+                ), suggestions: viewModel.existingLocations)
 
                 Section(header: Text("Pot Size")) {
                     VStack(spacing: 16) {

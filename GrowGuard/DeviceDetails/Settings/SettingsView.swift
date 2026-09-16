@@ -14,6 +14,9 @@ class SettingsViewModel {
     var potSize: PotSizeDTO
     var optimalRange: OptimalRangeDTO
     var deviceName: String = ""
+    var location: String = ""
+    /// Distinct locations of the other devices, for the suggestion chips
+    var existingLocations: [String] = []
     var selectedFlower: VMSpecies? {
         didSet {
             if !isLoadingData {
@@ -84,13 +87,16 @@ class SettingsViewModel {
     @MainActor
     private func loadDeviceName() async {
         do {
-            if let device = try await repositoryManager.flowerDeviceRepository.getDevice(by: deviceUUID) {
+            let all = try await repositoryManager.flowerDeviceRepository.getAllDevices()
+            if let device = all.first(where: { $0.uuid == deviceUUID }) {
                 self.deviceName = device.name
-                print("  Loaded Device Name: \(device.name)")
+                self.location = device.location ?? ""
+                print("  Loaded Device Name: \(device.name), location: \(device.location ?? "nil")")
             } else {
                 print("  Device not found for UUID: \(deviceUUID)")
                 self.deviceName = ""
             }
+            self.existingLocations = Array(Set(all.filter { $0.uuid != deviceUUID }.compactMap(\.location))).sorted()
         } catch {
             print("❌ SettingsViewModel: Failed to load device name: \(error)")
             self.deviceName = ""
@@ -174,6 +180,7 @@ class SettingsViewModel {
         guard try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: deviceUUID, { fresh in
             fresh.name = deviceName
             fresh.selectedFlower = selectedFlower
+            fresh.location = FlowerDeviceDTO.normalizeLocation(location)
         }) != nil else {
             print("❌ SettingsViewModel.saveSettings: Device not found")
             throw RepositoryError.deviceNotFound
@@ -568,6 +575,10 @@ struct SettingsView: View {
                             .frame(width: 30)
                         TextField("Device Name", text: $viewModel.deviceName)
                     }
+                }
+
+                if isSensor {
+                    LocationField(location: $viewModel.location, suggestions: viewModel.existingLocations)
                 }
 
                 Section(header: Text("Plant Selection")) {

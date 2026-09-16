@@ -373,9 +373,16 @@ struct DeviceCard: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(device.name ?? "Unknown Plant")
-                        .font(.headline)
-                        .foregroundColor(.primary)
+                    HStack(spacing: 6) {
+                        Text(device.name)
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        if let location = device.location {
+                            Text("· \(location)")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
 
                     HStack(spacing: 4) {
                         Image(systemName: "clock")
