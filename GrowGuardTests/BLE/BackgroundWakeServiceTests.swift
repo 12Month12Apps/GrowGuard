@@ -44,7 +44,9 @@ struct BackgroundWakeServiceTests {
     private func makeService(pool: ConnectionPoolManager,
                              deviceUUIDs: [String],
                              saveSucceeds: Bool = true,
-                             duringSave: @escaping () async -> Void = {}) -> BackgroundBLEWakeService {
+                             duringSave: @escaping () async -> Void = {
+                                 // Default: nothing happens while the sample is saved
+                             }) -> BackgroundBLEWakeService {
         let recorder = self.recorder
         let service = BackgroundBLEWakeService(
             pool: pool,
