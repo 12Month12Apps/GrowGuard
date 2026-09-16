@@ -71,7 +71,7 @@ struct BatteryIndicator: View {
     /// the age is dropped entirely when the unreachable line already says the
     /// sensor is silent.
     private var compactBody: some View {
-        HStack(spacing: 4) {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
             Image(systemName: symbolName)
                 .font(.caption2)
                 .foregroundColor(color)
@@ -81,6 +81,8 @@ struct BatteryIndicator: View {
                 Text("· " + staleCaption(readAt))
                     .font(.caption2)
                     .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
         }
     }
