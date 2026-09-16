@@ -58,6 +58,7 @@ Hardware (BLE via ConnectionPoolManager + DeviceConnection)
 - **Singletons:** Services use `static let shared`. ViewModels are created per-view (not singletons).
 - **Combine:** BLE services emit via `PassthroughSubject` → `AnyPublisher`. ViewModels subscribe and store in `cancellables: Set<AnyCancellable>`.
 - **Background tasks:** arm-don't-fetch (spec `docs/superpowers/specs/2026-06-12-background-ble-design.md`): triggers (BGAppRefreshTask, silent push, enter-background) only arm pending connects via `ConnectionPoolManager.armBackgroundConnect`; `BackgroundBLEWakeService` does the live read + dry-plant check on the BLE wake. `BackgroundHistorySyncService` runs history sync inside BGProcessingTask windows.
+- **Sensor health:** `SensorHealthMonitor` (spec `docs/superpowers/specs/2026-09-14-sensor-health-design.md`) persists battery + counts failed contacts from the pool-wide `deviceEventsPublisher`; `SensorHealth.evaluate` is the single verdict for UI and notifications. Device writes go through `FlowerDeviceRepository.modifyDevice` — never rebuild a full DTO from a stale copy.
 
 ## BLE Testing & Record/Replay
 
@@ -88,6 +89,7 @@ Any new feature or refactor should respect the existing architecture (MVVM + Rep
 - Run `xcrun simctl list devices available 2>/dev/null` if simulator lineup changes.
 - **Known non-blocking warnings:** (1) Widget `CFBundleVersion` mismatch, (2) "Update Build Number" script runs every build. Do not treat these as build failures.
 - **Tool:** Use `xcodebuild` directly. No MCP xcode tool is available.
+- **Core Data model is versioned** (`CoreDataModels.xcdatamodeld`, current: `CoreDataModels 2`). Schema changes need a new version; editing the current one in place breaks existing stores.
 
 ## 🛠 Subagent Usage Patterns
 
