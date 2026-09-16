@@ -40,6 +40,18 @@ enum ConnectionError: Error {
     }
 }
 
+/// Pool-wide, UUID-tagged view of what the connections report. Consumed by
+/// SensorHealthMonitor (spec 2026-09-14-sensor-health-design.md). Payload-
+/// free cases carry only the UUID: the monitor needs "contact happened",
+/// not the reading.
+enum DeviceEvent: Equatable {
+    case deviceInfo(uuid: String, info: DeviceConnection.DeviceInfo)
+    case sensorData(uuid: String)
+    case historicalData(uuid: String)
+    /// A connect attempt exhausted the reconnect policy without a connection
+    case attemptGaveUp(uuid: String)
+}
+
 @MainActor
 class ConnectionPoolManager: NSObject, BLECentralDelegate {
 
@@ -94,6 +106,33 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
         armedConnectionSubject.eraseToAnyPublisher()
     }
 
+    // MARK: - Device events (sensor health seam)
+
+    private let deviceEventsSubject = PassthroughSubject<DeviceEvent, Never>()
+    private var deviceEventSubscriptions: [String: Set<AnyCancellable>] = [:]
+    var deviceEventsPublisher: AnyPublisher<DeviceEvent, Never> {
+        deviceEventsSubject.eraseToAnyPublisher()
+    }
+
+    /// Merges one connection's publishers into the pool-wide stream. Called
+    /// once per connection, at creation.
+    private func forwardDeviceEvents(from connection: DeviceConnection, uuid: String) {
+        var subscriptions = Set<AnyCancellable>()
+        connection.deviceInfoPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] info in self?.deviceEventsSubject.send(.deviceInfo(uuid: uuid, info: info)) }
+            .store(in: &subscriptions)
+        connection.sensorDataPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.deviceEventsSubject.send(.sensorData(uuid: uuid)) }
+            .store(in: &subscriptions)
+        connection.historicalDataPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.deviceEventsSubject.send(.historicalData(uuid: uuid)) }
+            .store(in: &subscriptions)
+        deviceEventSubscriptions[uuid] = subscriptions
+    }
+
     // MARK: - Initialization
 
     /// Produktion nutzt `shared` (CoreBluetooth-Transport mit State Restoration).
@@ -146,6 +185,7 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
         AppLogger.ble.bleConnection("Creating new connection for device: \(deviceUUID)")
         let newConnection = DeviceConnection(deviceUUID: deviceUUID, scheduler: scheduler)
         connections[deviceUUID] = newConnection
+        forwardDeviceEvents(from: newConnection, uuid: deviceUUID)
         return newConnection
     }
 
@@ -261,6 +301,7 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
             }
         case .giveUp:
             AppLogger.ble.bleError("⛔️ Max retries reached for device \(deviceUUID)")
+            deviceEventsSubject.send(.attemptGaveUp(uuid: deviceUUID))
             if let connection = connections[deviceUUID] {
                 connection.handleConnectionFailed(error: underlyingError ?? ConnectionError.maxRetriesExceeded)
             }

@@ -479,4 +479,51 @@ struct ConnectionPoolManagerTests {
         #expect(Set(entries.map(\.timestamp)).count == 10, "No duplicate entries after resume")
         #expect(!connection.isHistoryLoading)
     }
+
+    // MARK: - Device events (sensor health seam)
+
+    @Test("deviceEventsPublisher relays battery/firmware and live data tagged with the UUID")
+    func deviceEventsRelayInfoAndData() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        let uuid = sensor.identifier.uuidString
+        var events: [DeviceEvent] = []
+        let subscription = pool.deviceEventsPublisher.sink { events.append($0) }
+        defer { subscription.cancel() }
+
+        pool.connect(to: uuid, autoStartHistoryFlow: false)
+        await pump()
+        scheduler.advance(by: 0.5)
+        await pump()
+
+        #expect(events.contains(.deviceInfo(uuid: uuid, info: .init(battery: 80, firmware: "3.2.9"))),
+                "FakeFlowerCarePeripheral answers the firmware read with 80 % / 3.2.9")
+
+        pool.getConnection(for: uuid).requestLiveData()
+        scheduler.advance(by: 0.5)
+        await pump()
+
+        #expect(events.contains(.sensorData(uuid: uuid)))
+        #expect(!events.contains(.attemptGaveUp(uuid: uuid)))
+    }
+
+    @Test("deviceEventsPublisher emits attemptGaveUp when the reconnect policy gives up")
+    func deviceEventsGiveUp() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        let uuid = sensor.identifier.uuidString
+        central.connectSucceeds = false   // connect requests never complete → watchdog timeouts
+        var events: [DeviceEvent] = []
+        let subscription = pool.deviceEventsPublisher.sink { events.append($0) }
+        defer { subscription.cancel() }
+
+        pool.connect(to: uuid, autoStartHistoryFlow: false)
+        for _ in 0..<40 {                 // 10 s timeout + backoff per attempt, 3 attempts
+            await pump()
+            scheduler.advance(by: 5)
+        }
+        await pump()
+
+        #expect(events.filter { $0 == .attemptGaveUp(uuid: uuid) }.count == 1)
+    }
 }
