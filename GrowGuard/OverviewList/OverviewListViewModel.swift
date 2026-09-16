@@ -65,6 +65,10 @@ import CoreData
                 
                 // Delete the device from the repository
                 try await repositoryManager.flowerDeviceRepository.deleteDevice(uuid: device.uuid)
+
+                // Drop the sensor-health markers: a re-paired sensor keeps its
+                // peripheral UUID and would otherwise stay suppressed forever
+                SensorHealthMonitor.shared.forgetDevice(device.uuid)
                 print("Successfully deleted device: \(device.name ?? "Unknown")")
             }
             

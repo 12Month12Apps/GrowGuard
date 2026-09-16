@@ -31,6 +31,12 @@ final class SensorHealthMonitor {
     private let defaults: UserDefaults
     private let now: () -> Date
     private var subscription: AnyCancellable?
+    /// Tail of the chain of in-flight event handlers. The handlers suspend at
+    /// their `await`s and `@MainActor` does not serialize across a suspension
+    /// point, so two unchained tasks for the same uuid could both read a nil
+    /// marker and both notify. Each new task awaits its predecessor, which
+    /// also preserves arrival order.
+    private var pending: Task<Void, Never>?
 
     private enum DefaultsKey {
         static func unreachableNotified(for uuid: String) -> String { "sensorHealth.unreachableNotified.\(uuid)" }
@@ -61,8 +67,20 @@ final class SensorHealthMonitor {
         subscription = events
             .receive(on: DispatchQueue.main)
             .sink { [weak self] event in
-                Task { @MainActor in await self?.handle(event) }
+                guard let self else { return }
+                let previous = self.pending
+                self.pending = Task { @MainActor [weak self] in
+                    await previous?.value
+                    await self?.handle(event)
+                }
             }
+    }
+
+    /// Forget a device's notification markers. Call when the device is deleted;
+    /// a re-paired sensor keeps its peripheral UUID and must start clean.
+    func forgetDevice(_ uuid: String) {
+        defaults.removeObject(forKey: DefaultsKey.unreachableNotified(for: uuid))
+        defaults.removeObject(forKey: DefaultsKey.lowBatteryNotified(for: uuid))
     }
 
     // MARK: - Events
@@ -79,8 +97,9 @@ final class SensorHealthMonitor {
     }
 
     /// Any received reading ends the silence: counter to 0, marker cleared.
-    /// Also re-evaluates every other sensor — this device may be the witness
-    /// that upgrades a neighbour's verdict from unconfirmed to confirmed.
+    /// Evaluates this device — a sensor coming back at 20 % is `.batteryLow`
+    /// right away — and then every other sensor, because this device may be
+    /// the witness that upgrades a neighbour's verdict to confirmed.
     func recordSuccessfulContact(_ uuid: String) async {
         do {
             guard try await repository.modifyDevice(uuid: uuid, { device in
@@ -89,9 +108,11 @@ final class SensorHealthMonitor {
             }) != nil else { return }
             defaults.removeObject(forKey: DefaultsKey.unreachableNotified(for: uuid))
 
-            let others = try await repository.getAllDevices().filter { $0.uuid != uuid && $0.isSensor }
-            for other in others {
-                await evaluateAndNotify(uuid: other.uuid)
+            // One fetch for self and every peer verdict
+            let all = try await repository.getAllDevices()
+            await evaluateAndNotify(uuid: uuid, devices: all)
+            for other in all where other.uuid != uuid && other.isSensor {
+                await evaluateAndNotify(uuid: other.uuid, devices: all)
             }
         } catch {
             AppLogger.sensor.error("🔋 SensorHealthMonitor: failed to record contact for \(uuid): \(error.localizedDescription)")
@@ -115,7 +136,7 @@ final class SensorHealthMonitor {
             }
             guard let updated, counted else { return }
             AppLogger.sensor.info("🔋 \(updated.name): failed contact #\(updated.failedContactAttempts) (silent \(SensorHealth.daysSilent(since: updated.lastReading, now: now)) d)")
-            await evaluateAndNotify(uuid: uuid)
+            await evaluateAndNotify(uuid: uuid, devices: try await repository.getAllDevices())
         } catch {
             AppLogger.sensor.error("🔋 SensorHealthMonitor: failed to record failure for \(uuid): \(error.localizedDescription)")
         }
@@ -137,7 +158,7 @@ final class SensorHealthMonitor {
             if battery > Self.newCellThreshold {
                 defaults.removeObject(forKey: DefaultsKey.lowBatteryNotified(for: uuid))
             }
-            await evaluateAndNotify(uuid: uuid)
+            await evaluateAndNotify(uuid: uuid, devices: try await repository.getAllDevices())
         } catch {
             AppLogger.sensor.error("🔋 SensorHealthMonitor: failed to persist battery for \(uuid): \(error.localizedDescription)")
         }
@@ -145,17 +166,12 @@ final class SensorHealthMonitor {
 
     // MARK: - Verdict → notification
 
-    private func evaluateAndNotify(uuid: String) async {
+    /// `devices` is the caller's single snapshot of the store, taken after its
+    /// own write: evaluating a device and its peers must not re-fetch per peer.
+    private func evaluateAndNotify(uuid: String, devices: [FlowerDeviceDTO]) async {
         let now = self.now()
-        let all: [FlowerDeviceDTO]
-        do {
-            all = try await repository.getAllDevices()
-        } catch {
-            AppLogger.sensor.error("🔋 SensorHealthMonitor: failed to load devices: \(error.localizedDescription)")
-            return
-        }
-        guard let device = all.first(where: { $0.uuid == uuid }) else { return }
-        let peers = all.filter { $0.uuid != uuid }
+        guard let device = devices.first(where: { $0.uuid == uuid }) else { return }
+        let peers = devices.filter { $0.uuid != uuid }
         let health = SensorHealth.evaluate(device, peers: peers, now: now)
 
         switch health {

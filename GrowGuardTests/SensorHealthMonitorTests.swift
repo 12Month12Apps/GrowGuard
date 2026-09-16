@@ -20,11 +20,17 @@ struct SensorHealthMonitorTests {
 
     final class InMemoryFlowerDeviceRepository: FlowerDeviceRepository {
         var devices: [String: FlowerDeviceDTO] = [:]
+        /// Counts writes so a doubled subscription is visible: each handled
+        /// event performs exactly one write.
+        var updateCount = 0
         func getAllDevices() async throws -> [FlowerDeviceDTO] { Array(devices.values).sorted { $0.uuid < $1.uuid } }
         func getDevice(by uuid: String) async throws -> FlowerDeviceDTO? { devices[uuid] }
         func saveDevice(_ device: FlowerDeviceDTO) async throws { devices[device.uuid] = device }
         func deleteDevice(uuid: String) async throws { devices[uuid] = nil }
-        func updateDevice(_ device: FlowerDeviceDTO) async throws { devices[device.uuid] = device }
+        func updateDevice(_ device: FlowerDeviceDTO) async throws {
+            updateCount += 1
+            devices[device.uuid] = device
+        }
     }
 
     final class RecordingNotifier: SensorHealthNotifying {
@@ -270,9 +276,80 @@ struct SensorHealthMonitorTests {
         monitor.start()
 
         events.send(.sensorData(uuid: "A"))
+        await waitUntil { self.repository.devices["A"]!.failedContactAttempts == 0 }
+
+        #expect(repository.devices["A"]!.failedContactAttempts == 0)
+    }
+
+    @Test("start() twice subscribes once: one event is handled once")
+    func startSubscribesOnce() async {
+        seed("A", battery: 80)
+        let monitor = makeMonitor()
+        monitor.start()
+        monitor.start()
+
+        events.send(.deviceInfo(uuid: "A", info: .init(battery: 42, firmware: "f")))
+        await waitUntil { self.repository.updateCount >= 1 }
+        // Give a second (wrongly subscribed) handler every chance to write too
         await drainMainActor()
         await drainMainActor()
 
-        #expect(repository.devices["A"]!.failedContactAttempts == 0)
+        #expect(repository.updateCount == 1)
+    }
+
+    // MARK: - New-cell threshold
+
+    @Test("Only a reading strictly above the new-cell threshold clears the marker")
+    func newCellThresholdBoundary() async {
+        seed("A", battery: 80)
+        let monitor = makeMonitor()
+
+        await monitor.handle(.deviceInfo(uuid: "A", info: .init(battery: 30, firmware: "f")))
+        #expect(notifier.lowBattery.map(\.percent) == [30])
+
+        // Exactly the threshold: a cell this weak is not a fresh one
+        await monitor.handle(.deviceInfo(uuid: "A", info: .init(battery: 40, firmware: "f")))
+        await monitor.handle(.deviceInfo(uuid: "A", info: .init(battery: 29, firmware: "f")))
+        #expect(notifier.lowBattery.map(\.percent) == [30])
+
+        // One above the threshold: new cell, marker cleared
+        await monitor.handle(.deviceInfo(uuid: "A", info: .init(battery: 41, firmware: "f")))
+        await monitor.handle(.deviceInfo(uuid: "A", info: .init(battery: 29, firmware: "f")))
+        #expect(notifier.lowBattery.map(\.percent) == [30, 29])
+    }
+
+    // MARK: - Rate limiting
+
+    @Test("A rate-limited failure neither counts nor evaluates")
+    func rateLimitedFailureDoesNotEvaluate() async {
+        seed("A",
+             silentFor: 3 * 24 * hour,
+             attempts: 2,
+             lastFailedAt: clock.now.addingTimeInterval(-10 * 60))
+        let monitor = makeMonitor()
+
+        await monitor.recordFailedContact("A")
+
+        #expect(repository.devices["A"]!.failedContactAttempts == 2)
+        #expect(notifier.unreachable.isEmpty)
+    }
+
+    // MARK: - Marker sweep on delete
+
+    @Test("forgetDevice removes both markers so a re-paired sensor starts clean")
+    func forgetDeviceClearsMarkers() async {
+        defaults.set("confirmed", forKey: "sensorHealth.unreachableNotified.A")
+        defaults.set(true, forKey: "sensorHealth.lowBatteryNotified.A")
+        let monitor = makeMonitor()
+
+        monitor.forgetDevice("A")
+
+        #expect(defaults.string(forKey: "sensorHealth.unreachableNotified.A") == nil)
+        #expect(defaults.bool(forKey: "sensorHealth.lowBatteryNotified.A") == false)
+
+        // A re-paired sensor with the same uuid notifies again
+        seed("A", battery: 80)
+        await monitor.handle(.deviceInfo(uuid: "A", info: .init(battery: 20, firmware: "f")))
+        #expect(notifier.lowBattery.map(\.percent) == [20])
     }
 }
