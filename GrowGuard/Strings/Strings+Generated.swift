@@ -73,6 +73,10 @@ internal enum L10n {
     internal static let lastUpdate = L10n.tr("Localizable", "device.lastUpdate", fallback: "Last Update: ")
     /// Load Historical Data
     internal static let loadHistoricalData = L10n.tr("Localizable", "device.loadHistoricalData", fallback: "Load Historical Data")
+    /// Location
+    internal static let location = L10n.tr("Localizable", "device.location", fallback: "Location")
+    /// Sensors at the same location are within Bluetooth range of each other. Two floors are two locations.
+    internal static let locationFooter = L10n.tr("Localizable", "device.locationFooter", fallback: "Sensors at the same location are within Bluetooth range of each other. Two floors are two locations.")
     /// Device Name
     internal static let name = L10n.tr("Localizable", "device.name", fallback: "Device Name")
     /// This plant does not have a sensor attached. You need to manage the watering manually.
@@ -311,6 +315,92 @@ internal enum L10n {
     }
     /// Deleting...
     internal static let deleting = L10n.tr("Localizable", "sensorData.deleting", fallback: "Deleting...")
+  }
+  internal enum SensorHealth {
+    internal enum Banner {
+      /// Last known battery %d %%
+      internal static func lastKnown(_ p1: Int) -> String {
+        return L10n.tr("Localizable", "sensorHealth.banner.lastKnown", p1, fallback: "Last known battery %d %%")
+      }
+      /// Tell the app where this sensor is
+      internal static let setLocation = L10n.tr("Localizable", "sensorHealth.banner.setLocation", fallback: "Tell the app where this sensor is")
+      internal enum Confirmed {
+        /// Your other sensors respond, this one does not.
+        internal static let text = L10n.tr("Localizable", "sensorHealth.banner.confirmed.text", fallback: "Your other sensors respond, this one does not.")
+        /// Your other sensors at %@ respond, this one does not.
+        internal static func textLocation(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "sensorHealth.banner.confirmed.textLocation", String(describing: p1), fallback: "Your other sensors at %@ respond, this one does not.")
+        }
+        /// Silent for %d days · replace battery
+        internal static func title(_ p1: Int) -> String {
+          return L10n.tr("Localizable", "sensorHealth.banner.confirmed.title", p1, fallback: "Silent for %d days · replace battery")
+        }
+      }
+      internal enum Unconfirmed {
+        /// If you are at home, check the battery.
+        internal static let text = L10n.tr("Localizable", "sensorHealth.banner.unconfirmed.text", fallback: "If you are at home, check the battery.")
+        /// Were you near %@? If so, check the battery.
+        internal static func textLocation(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "sensorHealth.banner.unconfirmed.textLocation", String(describing: p1), fallback: "Were you near %@? If so, check the battery.")
+        }
+        /// Not responding for %d days
+        internal static func title(_ p1: Int) -> String {
+          return L10n.tr("Localizable", "sensorHealth.banner.unconfirmed.title", p1, fallback: "Not responding for %d days")
+        }
+      }
+    }
+    internal enum Battery {
+      /// read %@
+      internal static func readAgo(_ p1: Any) -> String {
+        return L10n.tr("Localizable", "sensorHealth.battery.readAgo", String(describing: p1), fallback: "read %@")
+      }
+      /// –
+      internal static let unknown = L10n.tr("Localizable", "sensorHealth.battery.unknown", fallback: "–")
+    }
+    internal enum Notification {
+      ///  Last known level %d %%.
+      internal static func lastKnown(_ p1: Int) -> String {
+        return L10n.tr("Localizable", "sensorHealth.notification.lastKnown", p1, fallback: " Last known level %d %%.")
+      }
+      internal enum Confirmed {
+        /// Your other sensors respond, this one has been silent for %d days.
+        internal static func body(_ p1: Int) -> String {
+          return L10n.tr("Localizable", "sensorHealth.notification.confirmed.body", p1, fallback: "Your other sensors respond, this one has been silent for %d days.")
+        }
+        /// Your other sensors at %@ respond, this one has been silent for %d days.
+        internal static func bodyLocation(_ p1: Any, _ p2: Int) -> String {
+          return L10n.tr("Localizable", "sensorHealth.notification.confirmed.bodyLocation", String(describing: p1), p2, fallback: "Your other sensors at %@ respond, this one has been silent for %d days.")
+        }
+        /// 🔋 %@ needs a new battery
+        internal static func title(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "sensorHealth.notification.confirmed.title", String(describing: p1), fallback: "🔋 %@ needs a new battery")
+        }
+      }
+      internal enum LowBattery {
+        /// Battery is at %d %%. Cheap coin cells drop out without warning at this level.
+        internal static func body(_ p1: Int) -> String {
+          return L10n.tr("Localizable", "sensorHealth.notification.lowBattery.body", p1, fallback: "Battery is at %d %%. Cheap coin cells drop out without warning at this level.")
+        }
+        /// 🔋 Replace the battery in %@
+        internal static func title(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "sensorHealth.notification.lowBattery.title", String(describing: p1), fallback: "🔋 Replace the battery in %@")
+        }
+      }
+      internal enum Unreachable {
+        /// No readings for %d days. Were you near it? If so, check the battery.
+        internal static func body(_ p1: Int) -> String {
+          return L10n.tr("Localizable", "sensorHealth.notification.unreachable.body", p1, fallback: "No readings for %d days. Were you near it? If so, check the battery.")
+        }
+        /// No readings from %@ for %d days. Were you near it? If so, check the battery.
+        internal static func bodyLocation(_ p1: Any, _ p2: Int) -> String {
+          return L10n.tr("Localizable", "sensorHealth.notification.unreachable.bodyLocation", String(describing: p1), p2, fallback: "No readings from %@ for %d days. Were you near it? If so, check the battery.")
+        }
+        /// Sensor Health
+        internal static func title(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "sensorHealth.notification.unreachable.title", String(describing: p1), fallback: "🔋 %@ is not responding")
+        }
+      }
+    }
   }
   internal enum Settings {
     /// Removes impossible sensor values like moisture > 100%, extreme temperatures, etc.

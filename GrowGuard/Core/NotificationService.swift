@@ -220,3 +220,77 @@ final class NotificationService {
         }
     }
 }
+
+// MARK: - Sensor health (spec 2026-09-14-sensor-health-design.md)
+
+/// Seam for SensorHealthMonitor; tests record calls instead of touching
+/// UNUserNotificationCenter.
+protocol SensorHealthNotifying {
+    func notifyUnreachable(device: FlowerDeviceDTO, since: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now: Date) async
+    func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async
+}
+
+extension NotificationService: SensorHealthNotifying {
+
+    private enum SensorHealthIdentifier {
+        // Identifiers contain the UUID so cancelNotifications(for:) sweeps them
+        static func unreachable(for uuid: String) -> String { "sensor-unreachable-\(uuid)" }
+        static func lowBattery(for uuid: String) -> String { "sensor-battery-\(uuid)" }
+    }
+
+    func notifyUnreachable(device: FlowerDeviceDTO, since: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now: Date) async {
+        let days = SensorHealth.daysSilent(since: since, now: now)
+        let content = UNMutableNotificationContent()
+        var body: String
+        if confirmedByPeer {
+            content.title = L10n.SensorHealth.Notification.Confirmed.title(device.name)
+            body = device.location.map { L10n.SensorHealth.Notification.Confirmed.bodyLocation($0, days) }
+                ?? L10n.SensorHealth.Notification.Confirmed.body(days)
+        } else {
+            content.title = L10n.SensorHealth.Notification.Unreachable.title(device.name)
+            body = device.location.map { L10n.SensorHealth.Notification.Unreachable.bodyLocation($0, days) }
+                ?? L10n.SensorHealth.Notification.Unreachable.body(days)
+        }
+        if let lastKnownBattery {
+            body += L10n.SensorHealth.Notification.lastKnown(lastKnownBattery)
+        }
+        content.body = body
+        content.sound = .default
+        content.interruptionLevel = .active
+        content.relevanceScore = 0.8
+        content.userInfo = [
+            "deviceUUID": device.uuid,
+            "notificationType": confirmedByPeer ? "sensorUnreachableConfirmed" : "sensorUnreachable"
+        ]
+
+        let identifier = SensorHealthIdentifier.unreachable(for: device.uuid)
+        center.removeDeliveredNotifications(withIdentifiers: [identifier])
+        do {
+            try await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
+            print("📱 NotificationService: Sent unreachable notification (confirmed: \(confirmedByPeer)) for \(device.name)")
+        } catch {
+            print("❌ NotificationService: Failed to send unreachable notification: \(error)")
+        }
+    }
+
+    func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async {
+        let content = UNMutableNotificationContent()
+        content.title = L10n.SensorHealth.Notification.LowBattery.title(device.name)
+        content.body = L10n.SensorHealth.Notification.LowBattery.body(percent)
+        content.sound = .default
+        content.interruptionLevel = .active
+        content.relevanceScore = 0.6
+        content.userInfo = [
+            "deviceUUID": device.uuid,
+            "notificationType": "sensorLowBattery"
+        ]
+
+        let identifier = SensorHealthIdentifier.lowBattery(for: device.uuid)
+        do {
+            try await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
+            print("📱 NotificationService: Sent low battery notification (\(percent) %) for \(device.name)")
+        } catch {
+            print("❌ NotificationService: Failed to send low battery notification: \(error)")
+        }
+    }
+}
