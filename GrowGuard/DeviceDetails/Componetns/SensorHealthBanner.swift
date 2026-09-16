@@ -29,8 +29,11 @@ struct SensorHealthBanner: View {
                     Text(confirmed ? L10n.SensorHealth.Banner.Confirmed.title(days)
                                    : L10n.SensorHealth.Banner.Unconfirmed.title(days))
                         .font(.caption)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                 }
                 .foregroundColor(.red)
+                .layoutPriority(1)
 
             case .banner:
                 VStack(alignment: .leading, spacing: 6) {
@@ -50,6 +53,7 @@ struct SensorHealthBanner: View {
                         Button(L10n.SensorHealth.Banner.setLocation, action: onSetLocation)
                             .font(.caption)
                             .fontWeight(.medium)
+                            .tint(.red)
                     }
                 }
                 .foregroundColor(.red)

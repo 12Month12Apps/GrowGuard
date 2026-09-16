@@ -10,7 +10,7 @@ import SwiftUI
 
 struct BatteryIndicator: View {
     enum Style {
-        /// Overview row: caption-sized, no background
+        /// Overview row: caption-sized, single line, no background
         case compact
         /// Details header: padded chip with tinted background
         case chip
@@ -50,29 +50,60 @@ struct BatteryIndicator: View {
         }
     }
 
-    private var valueText: String {
-        readAt == nil ? L10n.SensorHealth.Battery.unknown : "\(Int(device.battery)) %"
+    private var valueLabel: Text {
+        readAt == nil
+            ? Text(L10n.SensorHealth.Battery.unknown)
+            : Text(Int(device.battery), format: .percent)
+    }
+
+    private func staleCaption(_ readAt: Date) -> String {
+        L10n.SensorHealth.Battery.readAgo(readAt.formatted(.relative(presentation: .named)))
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: style == .chip ? 6 : 4) {
-                Image(systemName: symbolName)
-                    .font(style == .chip ? .body : .caption2)
-                    .foregroundColor(color)
-                Text(valueText)
-                    .font(style == .chip ? .subheadline : .caption)
-                    .fontWeight(style == .chip ? .medium : .regular)
-            }
-            if isStale, let readAt {
-                Text(L10n.SensorHealth.Battery.readAgo(readAt.formatted(.relative(presentation: .named))))
+        switch style {
+        case .compact: compactBody
+        case .chip: chipBody
+        }
+    }
+
+    /// The overview row has a fixed height, so everything stays on one line and
+    /// the age is dropped entirely when the unreachable line already says the
+    /// sensor is silent.
+    private var compactBody: some View {
+        HStack(spacing: 4) {
+            Image(systemName: symbolName)
+                .font(.caption2)
+                .foregroundColor(color)
+            valueLabel
+                .font(.caption)
+            if isStale, !health.isUnreachable, let readAt {
+                Text("· " + staleCaption(readAt))
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
         }
-        .padding(.horizontal, style == .chip ? 16 : 0)
-        .padding(.vertical, style == .chip ? 10 : 0)
-        .background(style == .chip ? color.opacity(0.1) : Color.clear)
-        .cornerRadius(style == .chip ? 10 : 0)
+    }
+
+    private var chipBody: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Image(systemName: symbolName)
+                    .font(.body)
+                    .foregroundColor(color)
+                valueLabel
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+            if isStale, let readAt {
+                Text(staleCaption(readAt))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(color.opacity(0.1))
+        .cornerRadius(10)
     }
 }

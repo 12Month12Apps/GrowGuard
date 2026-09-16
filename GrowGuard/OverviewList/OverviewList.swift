@@ -135,7 +135,7 @@ struct OverviewList: View {
                             .listRowSeparator(.hidden)
                         }
                         .listStyle(.plain)
-                        .frame(height: CGFloat(viewModel.allSavedDevices.count) * 124)
+                        .frame(height: CGFloat(viewModel.allSavedDevices.count) * 110)
                         .scrollDisabled(true)
                     }
                 }
@@ -386,7 +386,7 @@ struct DeviceCard: View {
                     .foregroundColor(.secondary)
 
                     if device.isSensor {
-                        HStack(spacing: 12) {
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
                             BatteryIndicator(device: device, health: health, style: .compact)
                                 .foregroundColor(.secondary)
 
