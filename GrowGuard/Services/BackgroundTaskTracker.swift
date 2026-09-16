@@ -114,9 +114,7 @@ class BackgroundTaskTracker {
             trigger: trigger,
             success: outcome.isSuccess,
             detail: outcome.rawValue,
-            successfulDevices: outcome.isSuccess ? 1 : 0,
-            failedDevices: outcome.isSuccess ? 0 : 1,
-            dataPoints: outcome.isSuccess ? 1 : 0,
+            isSensorRead: true,
             duration: duration
         ))
 
@@ -367,24 +365,23 @@ struct TaskExecution: Codable, Identifiable {
     let success: Bool?
     let detail: String?
 
+    /// - Parameter isSensorRead: one sensor read one sample (BLE wake);
+    ///   fills the device and data point counts from `success`
     init(type: TaskType,
          trigger: BackgroundTrigger?,
          success: Bool,
          detail: String,
-         date: Date = Date(),
-         successfulDevices: Int = 0,
-         failedDevices: Int = 0,
-         dataPoints: Int = 0,
+         isSensorRead: Bool = false,
          duration: TimeInterval = 0) {
         self.id = UUID()
         self.type = type
         self.trigger = trigger
         self.success = success
         self.detail = detail
-        self.date = date
-        self.successfulDevices = successfulDevices
-        self.failedDevices = failedDevices
-        self.dataPoints = dataPoints
+        self.date = Date()
+        self.successfulDevices = isSensorRead && success ? 1 : 0
+        self.failedDevices = isSensorRead && !success ? 1 : 0
+        self.dataPoints = isSensorRead && success ? 1 : 0
         self.duration = duration
     }
 
