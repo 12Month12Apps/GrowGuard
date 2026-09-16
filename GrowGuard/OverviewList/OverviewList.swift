@@ -373,14 +373,17 @@ struct DeviceCard: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text(device.name)
                             .font(.headline)
                             .foregroundColor(.primary)
+                            .lineLimit(1)
+                            .layoutPriority(1)
                         if let location = device.location {
                             Text("· \(location)")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
+                                .lineLimit(1)
                         }
                     }
 

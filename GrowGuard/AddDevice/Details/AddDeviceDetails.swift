@@ -77,7 +77,8 @@ enum NavigationDestination: Hashable {
     var device:  DiscoveredDevice?
     var allSavedDevices: [FlowerDeviceDTO] = []
     var existingLocations: [String] {
-        Array(Set(allSavedDevices.compactMap(\.location))).sorted()
+        Array(Set(allSavedDevices.compactMap(\.location)))
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
     var alertView: Alert = .empty
     var showAlert = false
@@ -275,10 +276,14 @@ struct AddDeviceDetails:  View {
                     }
                 }
 
-                LocationField(location: Binding(
-                    get: { viewModel.flower.location ?? "" },
-                    set: { viewModel.flower.location = $0 }
-                ), suggestions: viewModel.existingLocations)
+                // Only sensors take part in the peer-witness rule; the settings
+                // sheet hides the field for non-sensor plants, so keep both in sync
+                if viewModel.flower.isSensor {
+                    LocationField(location: Binding(
+                        get: { viewModel.flower.location ?? "" },
+                        set: { viewModel.flower.location = $0 }
+                    ), suggestions: viewModel.existingLocations)
+                }
 
                 Section(header: Text("Pot Size")) {
                     VStack(spacing: 16) {

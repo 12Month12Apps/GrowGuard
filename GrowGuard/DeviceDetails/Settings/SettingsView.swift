@@ -96,7 +96,8 @@ class SettingsViewModel {
                 print("  Device not found for UUID: \(deviceUUID)")
                 self.deviceName = ""
             }
-            self.existingLocations = Array(Set(all.filter { $0.uuid != deviceUUID }.compactMap(\.location))).sorted()
+            self.existingLocations = Array(Set(all.filter { $0.uuid != deviceUUID }.compactMap(\.location)))
+                .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
         } catch {
             print("❌ SettingsViewModel: Failed to load device name: \(error)")
             self.deviceName = ""
