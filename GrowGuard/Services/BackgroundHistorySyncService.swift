@@ -91,13 +91,17 @@ final class BackgroundHistorySyncService {
         // Only fetch what was recorded since the last sync — a full read of
         // a year of hourly entries never fits a background window
         let boundary = await loadHistoryBoundary(deviceUUID)
-        pool.getConnection(for: deviceUUID).setHistoryStopBoundary(boundary)
+        let connection = pool.getConnection(for: deviceUUID)
+        // A suspended flow (an earlier window, or a user's full sync) keeps
+        // its own boundary: the entries it saved would otherwise end the
+        // resume at once
+        if !connection.isHistoryFlowActive {
+            connection.setHistoryStopBoundary(boundary)
+        }
 
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             currentDeviceUUID = deviceUUID
             currentContinuation = continuation
-
-            let connection = pool.getConnection(for: deviceUUID)
 
             connection.historicalDataPublisher
                 .receive(on: DispatchQueue.main)
@@ -155,6 +159,12 @@ final class BackgroundHistorySyncService {
             completionObserver = nil
         }
         if let uuid = currentDeviceUUID {
+            let connection = pool.getConnection(for: uuid)
+            // Timeout/error without a flow to resume: the boundary must not
+            // turn the next foreground full sync incremental
+            if !connection.isHistoryFlowActive {
+                connection.setHistoryStopBoundary(nil)
+            }
             pool.disconnect(from: uuid)
         }
         currentDeviceUUID = nil
