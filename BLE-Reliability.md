@@ -154,28 +154,59 @@ hour — verified on recording `522a3a0d_20260612-160740`). Background paths
 set `DeviceConnection.setHistoryStopBoundary(_:)` to the newest stored
 `history` entry; the flow ends at the first entry at or before it
 (tolerance 600 s, device-clock drift) and posts
-`HistoricalDataLoadingCompleted`. The boundary is cleared by
-`cleanupHistoryFlow()`, so it applies to one flow.
+`HistoricalDataLoadingCompleted`.
 
-- `BackgroundHistorySyncService` (BGProcessing): incremental.
+The boundary applies to one flow. `cleanupHistoryFlow()` clears it,
+`suspendHistoryFlow()` keeps it for the resume. A path that set a
+boundary but ends without a flow to resume (timeout, `.error`, flow never
+started) clears it itself: `BackgroundHistorySyncService` in
+`finishCurrentDevice`, `BackgroundBLEWakeService` in `finishRead`. The
+details screen also clears it before every start it owns ("load history",
+auto-start on a connection without an active flow), so a foreground sync
+is always full.
+
+- `BackgroundHistorySyncService` (BGProcessing): incremental. Sets the
+  boundary only if the connection has no active flow — a suspended flow
+  (its own expired window, or a user's full sync) keeps its boundary;
+  loading the newest stored date again would end the resume at the
+  entries it just saved.
 - `BackgroundBLEWakeService`: after a saved live sample, fetches the new
   entries inside the same 9 s wake budget. No stored history → skipped.
-  Disconnect/timeout in this phase still counts as `.saved`.
+  Disconnect/timeout in this phase, and a timeout while the sample is
+  being saved, still count as `.saved`.
 - Details screen "load history": full sync, fills gaps older than the
   newest stored entry.
+- Accepted gap: an interrupted incremental sync (wake read timeout or
+  disconnect after saving some entries) moves the newest stored entry,
+  and with it the next boundary, past the entries it did not reach. Those
+  older entries are only filled by the next foreground full sync.
 
-The details screen claims its own live reads (`LiveReadGate`). Samples
-from background wake reads on the shared connection are neither
-re-requested nor saved a second time as `live_user`.
+The details screen shares its pool connection with background reads and
+only acts on what it started:
+
+- Live reads: `LiveReadGate` — it requests and saves only a sample it
+  claimed. On `didEnterBackgroundNotification` the claim is released
+  (`release()`), so a wake read armed on entering background is not
+  mistaken for the screen's read within the 60 s claim lifetime.
+- History: `ownsHistoryFlow` — set by "load history" and the screen's
+  auto-start, cleared by its completion handler and on cancel. Entries,
+  progress/Live Activity and completion ("history loaded this session")
+  are handled only while it is set. On entering background it stays set
+  only if the flow is already active (a running user sync continues with
+  auto-reconnect; `armBackgroundConnect` skips that connection).
+
+Background samples and history entries are therefore neither re-requested
+nor saved a second time by the screen.
 
 - If the history flow can't start at all (e.g. the sensor drops the link
   during the save), the wake read finishes as `.saved` immediately and
   clears the boundary; `finishRead` always clears a boundary the read set,
   so a foreground full sync never inherits it.
-- `ConnectionPoolManager.attemptFastReconnect` re-checks
-  `connection.shouldAutoReconnect` right before connecting, so a reconnect
-  scheduled for a flow that was cleaned up in the meantime (wake read
-  ended) is skipped.
+- The pool re-checks `connection.shouldAutoReconnect` before an
+  auto-reconnect connects: in `attemptFastReconnect`, and — when the fast
+  attempts fell back to scanning — again on discovery (explicit
+  `connect(to:)` scans are not affected). A reconnect scheduled for a flow
+  that was cleaned up in the meantime (wake read ended) is skipped.
 - An empty sensor history also posts `HistoricalDataLoadingCompleted`.
 
 ## Record & replay (beta-tester problem reports)
