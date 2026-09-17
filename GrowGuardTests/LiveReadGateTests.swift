@@ -75,4 +75,33 @@ struct LiveReadGateTests {
         let authenticated = gate.connectionAuthenticated(at: start)
         #expect(!authenticated)
     }
+
+    @Test("Backgrounding releases the claim, so a wake read armed on entering background is not the screen's read")
+    func releaseDropsClaim() {
+        var gate = LiveReadGate()
+        gate.claim(at: start)
+
+        gate.release()
+
+        let authenticated = gate.connectionAuthenticated(at: start.addingTimeInterval(5))
+        #expect(!authenticated)
+        let received = gate.sampleReceived()
+        #expect(!received)
+    }
+
+    @Test("Releasing while awaiting the answer drops it too")
+    func releaseWhileAwaitingSample() {
+        var gate = LiveReadGate()
+        gate.claim(at: start)
+        let authenticated = gate.connectionAuthenticated(at: start.addingTimeInterval(1))
+        #expect(authenticated)
+
+        gate.release()
+        gate.connectionLost()
+
+        let reAuthenticated = gate.connectionAuthenticated(at: start.addingTimeInterval(5))
+        #expect(!reAuthenticated)
+        let received = gate.sampleReceived()
+        #expect(!received)
+    }
 }

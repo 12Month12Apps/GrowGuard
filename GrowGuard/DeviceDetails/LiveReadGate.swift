@@ -50,6 +50,13 @@ struct LiveReadGate {
         return true
     }
 
+    /// The app went to the background: reads from now on are wake reads
+    /// (BackgroundBLEWakeService), never the screen's own
+    mutating func release() {
+        state = .idle
+        claimedAt = nil
+    }
+
     /// The link dropped before the answer: re-request after the reconnect
     mutating func connectionLost() {
         if state == .awaitingSample {
