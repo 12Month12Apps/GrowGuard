@@ -22,6 +22,7 @@ struct BackgroundWakeServiceTests {
         var statusChecks: [String] = []
         var began = 0
         var ended = 0
+        var historySaved = 0
     }
 
     let scheduler = TestScheduler()
@@ -44,6 +45,7 @@ struct BackgroundWakeServiceTests {
     private func makeService(pool: ConnectionPoolManager,
                              deviceUUIDs: [String],
                              saveSucceeds: Bool = true,
+                             historyBoundary: Date? = nil,
                              duringSave: @escaping () async -> Void = {
                                  // Default: nothing happens while the sample is saved
                              }) -> BackgroundBLEWakeService {
@@ -61,7 +63,9 @@ struct BackgroundWakeServiceTests {
             beginBackgroundTask: { recorder.began += 1; return UIBackgroundTaskIdentifier(rawValue: 7) },
             endBackgroundTask: { _ in recorder.ended += 1 },
             notificationCenter: notificationCenter,
-            tracker: tracker
+            tracker: tracker,
+            loadHistoryBoundary: { _ in historyBoundary },
+            saveHistoricalEntry: { _, _ in recorder.historySaved += 1 }
         )
         service.start()
         return service
@@ -71,6 +75,22 @@ struct BackgroundWakeServiceTests {
         let sensor = FakeFlowerCarePeripheral(scheduler: scheduler)
         central.register(sensor)
         return sensor
+    }
+
+    /// Real sensor order (recording 522a3a0d): index 0 newest, one per hour
+    private func newestFirstHourlyEntries(count: Int, uptime: UInt32) -> [Data] {
+        (0..<count).map { index in
+            FlowerCareFrames.historyEntry(timestamp: uptime - UInt32((index + 1) * 3600),
+                                          temperatureX10: 200,
+                                          brightness: 1000,
+                                          moisture: 40,
+                                          conductivity: 300)
+        }
+    }
+
+    /// Decoded date of entry `index` from `newestFirstHourlyEntries`
+    private func storedEntryDate(index: Int) -> Date {
+        Date().addingTimeInterval(-Double((index + 1) * 3600))
     }
 
     private func pump() async {
@@ -195,5 +215,69 @@ struct BackgroundWakeServiceTests {
         #expect(entry?.success == false, "Failed wake reads must be visible, not silently dropped")
         #expect(entry?.detail == WakeReadOutcome.disconnected.rawValue)
         #expect(tracker.wakeReadFailureCount == 1)
+    }
+
+    @Test("After the live sample, the wake read fetches only history newer than the stored entries")
+    func wakeReadAppendsIncrementalHistory() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        sensor.historyEntries = newestFirstHourlyEntries(count: 6, uptime: sensor.uptimeSeconds)
+        let service = makeService(pool: pool,
+                                  deviceUUIDs: [sensor.identifier.uuidString],
+                                  historyBoundary: storedEntryDate(index: 2))
+
+        await service.armAll(trigger: .silentPush)
+        await settle(seconds: 3.0)
+
+        #expect(recorder.saved.map(\.source) == [.backgroundPush])
+        #expect(recorder.historySaved == 2)
+        #expect(sensor.servedEntryIndices == [0, 1, 2])
+        #expect(tracker.executionHistory.first?.detail == "Saved · 2 history entries")
+        #expect(tracker.wakeReadSuccessCount == 1)
+        #expect(recorder.ended == 1)
+        #expect(sensor.state == .disconnected)
+    }
+
+    @Test("Without any stored history the wake read does not start a full sync")
+    func wakeReadSkipsHistoryWithoutStoredEntries() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        sensor.historyEntries = newestFirstHourlyEntries(count: 6, uptime: sensor.uptimeSeconds)
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString])
+
+        await service.armAll(trigger: .silentPush)
+        await settle(seconds: 3.0)
+
+        #expect(sensor.servedEntryIndices.isEmpty)
+        #expect(recorder.historySaved == 0)
+        #expect(tracker.executionHistory.first?.detail == WakeReadOutcome.saved.rawValue)
+    }
+
+    @Test("A disconnect during the history phase keeps the read saved and ends the flow")
+    func disconnectDuringHistoryKeepsSaved() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        sensor.uptimeSeconds = 1_000_000 // 50 hourly entries need more than the default 100_000 s
+        sensor.historyEntries = newestFirstHourlyEntries(count: 50, uptime: sensor.uptimeSeconds)
+        sensor.silentEntryIndices = Set(1..<50) // sensor stalls after the first entry
+        let service = makeService(pool: pool,
+                                  deviceUUIDs: [sensor.identifier.uuidString],
+                                  historyBoundary: storedEntryDate(index: 40))
+
+        await service.armAll(trigger: .silentPush)
+        for _ in 0..<50 where recorder.historySaved == 0 {
+            await pump()
+            scheduler.advance(by: 0.1)
+        }
+        #expect(recorder.historySaved == 1)
+
+        central.simulateDisconnect(of: sensor.identifier, error: nil)
+        await settle(seconds: 1.0)
+
+        #expect(tracker.executionHistory.first?.detail == "Saved · 1 history entries")
+        #expect(tracker.wakeReadFailureCount == 0)
+        #expect(recorder.ended == 1)
+        #expect(!pool.getConnection(for: sensor.identifier.uuidString).isHistoryFlowActive,
+                "An abandoned flow would make the pool auto-reconnect in the background")
     }
 }
