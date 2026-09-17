@@ -302,6 +302,14 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
             return
         }
 
+        // The flow may have been ended while the reconnect was pending
+        // (e.g. a wake read finished) — reconnecting then would wake the
+        // sensor for nothing
+        guard connection.shouldAutoReconnect else {
+            AppLogger.ble.info("⏹ Auto-reconnect cancelled for device \(deviceUUID): no history flow to resume")
+            return
+        }
+
         AppLogger.ble.bleConnection("🔍 Fast-reconnect retrieve attempt \(attempt)/3 for device: \(deviceUUID)")
 
         if let peripheral = central.retrievePeripherals(withIdentifiers: [uuid]).first {

@@ -272,12 +272,39 @@ struct BackgroundWakeServiceTests {
         #expect(recorder.historySaved == 1)
 
         central.simulateDisconnect(of: sensor.identifier, error: nil)
-        await settle(seconds: 1.0)
+        // Longer than the 1 s clean-disconnect reconnect delay
+        await settle(seconds: 2.5)
 
+        #expect(central.connectRequests.count == 1,
+                "The pool must not reconnect for a flow the wake read already ended")
         #expect(tracker.executionHistory.first?.detail == "Saved · 1 history entries")
         #expect(tracker.wakeReadFailureCount == 0)
         #expect(recorder.ended == 1)
         #expect(!pool.getConnection(for: sensor.identifier.uuidString).isHistoryFlowActive,
                 "An abandoned flow would make the pool auto-reconnect in the background")
+    }
+
+    @Test("A link lost while saving leaves no stop boundary and finishes the read without waiting for the timeout")
+    func disconnectDuringSaveWithHistoryBoundaryFinishesPromptly() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        sensor.historyEntries = newestFirstHourlyEntries(count: 6, uptime: sensor.uptimeSeconds)
+        let central = self.central
+        let service = makeService(pool: pool,
+                                  deviceUUIDs: [sensor.identifier.uuidString],
+                                  historyBoundary: storedEntryDate(index: 2)) {
+            // Sensor drops the link before the history phase can start
+            central.simulateDisconnect(of: sensor.identifier, error: nil)
+            await drainMainActor()
+        }
+
+        await service.armAll(trigger: .silentPush)
+        await settle(seconds: 2.0) // well under the 9 s wake budget
+
+        #expect(tracker.executionHistory.map(\.detail) == [WakeReadOutcome.saved.rawValue])
+        #expect(recorder.ended == 1)
+        #expect(sensor.servedEntryIndices.isEmpty)
+        #expect(pool.getConnection(for: sensor.identifier.uuidString).historyStopBoundary == nil,
+                "A stale boundary would cut the next foreground full sync short")
     }
 }

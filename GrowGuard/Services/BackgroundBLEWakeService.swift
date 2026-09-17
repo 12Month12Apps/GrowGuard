@@ -281,6 +281,13 @@ final class BackgroundBLEWakeService {
         }
 
         connection.startHistoryDataFlow()
+
+        // Not authenticated any more (link lost while saving), already busy
+        // or missing characteristic: no completion will ever be posted
+        if !connection.isHistoryFlowActive {
+            connection.setHistoryStopBoundary(nil)
+            finishRead(for: deviceUUID, outcome: .saved)
+        }
     }
 
     private func finishRead(for deviceUUID: String, outcome: WakeReadOutcome) {
@@ -301,6 +308,10 @@ final class BackgroundBLEWakeService {
         let connection = pool.getConnection(for: deviceUUID)
         if connection.isHistoryFlowActive {
             connection.cleanupHistoryFlow()
+        }
+        if read.phase == .history {
+            // The boundary this read set must never cut a later foreground full sync short
+            connection.setHistoryStopBoundary(nil)
         }
         pool.disconnect(from: deviceUUID)
 
