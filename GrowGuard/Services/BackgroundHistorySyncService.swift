@@ -2,7 +2,8 @@
 //  BackgroundHistorySyncService.swift
 //  GrowGuard
 //
-//  Runs full history syncs inside BGProcessingTask windows (minutes of
+//  Runs incremental history syncs (entries newer than the newest stored one)
+//  inside BGProcessingTask windows (minutes of
 //  runtime, unlike the ~30 s of BGAppRefreshTask). Sequential per device;
 //  the expiration handler suspends the in-flight flow so a later window
 //  can resume while the process lives. Spec:
@@ -23,6 +24,8 @@ final class BackgroundHistorySyncService {
     private let scheduler: BLEScheduler
     private let loadSensorDeviceUUIDs: () async -> [String]
     private let saveHistoricalEntry: (HistoricalSensorData, String) async -> Void
+    /// Newest stored history date per device; nil = full sync
+    private let loadHistoryBoundary: (String) async -> Date?
 
     /// Hard per-device cap; BGProcessing windows are usually several minutes
     private let perDeviceTimeout: TimeInterval = 240
@@ -39,7 +42,8 @@ final class BackgroundHistorySyncService {
     init(pool: ConnectionPoolManager? = nil,
          scheduler: BLEScheduler = MainRunLoopScheduler(),
          loadSensorDeviceUUIDs: (() async -> [String])? = nil,
-         saveHistoricalEntry: ((HistoricalSensorData, String) async -> Void)? = nil) {
+         saveHistoricalEntry: ((HistoricalSensorData, String) async -> Void)? = nil,
+         loadHistoryBoundary: ((String) async -> Date?)? = nil) {
         self.pool = pool ?? ConnectionPoolManager.shared
         self.scheduler = scheduler
         self.loadSensorDeviceUUIDs = loadSensorDeviceUUIDs ?? {
@@ -48,6 +52,9 @@ final class BackgroundHistorySyncService {
         }
         self.saveHistoricalEntry = saveHistoricalEntry ?? { entry, uuid in
             _ = try? await PlantMonitorService.shared.validateHistoricSensorData(entry, deviceUUID: uuid)
+        }
+        self.loadHistoryBoundary = loadHistoryBoundary ?? { uuid in
+            try? await RepositoryManager.shared.sensorDataRepository.getLatestSensorDate(for: uuid, source: .historyLoading)
         }
     }
 
@@ -81,6 +88,11 @@ final class BackgroundHistorySyncService {
     // MARK: - Per-device sync
 
     private func syncDevice(_ deviceUUID: String) async {
+        // Only fetch what was recorded since the last sync — a full read of
+        // a year of hourly entries never fits a background window
+        let boundary = await loadHistoryBoundary(deviceUUID)
+        pool.getConnection(for: deviceUUID).setHistoryStopBoundary(boundary)
+
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             currentDeviceUUID = deviceUUID
             currentContinuation = continuation

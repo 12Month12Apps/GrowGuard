@@ -33,7 +33,9 @@ struct BackgroundHistorySyncTests {
                               defaults: defaults)
     }
 
-    private func makeService(pool: ConnectionPoolManager, deviceUUIDs: [String]) -> BackgroundHistorySyncService {
+    private func makeService(pool: ConnectionPoolManager,
+                             deviceUUIDs: [String],
+                             historyBoundary: Date? = nil) -> BackgroundHistorySyncService {
         let recorder = self.recorder
         return BackgroundHistorySyncService(
             pool: pool,
@@ -41,7 +43,8 @@ struct BackgroundHistorySyncTests {
             loadSensorDeviceUUIDs: { deviceUUIDs },
             saveHistoricalEntry: { entry, uuid in
                 recorder.savedEntries.append((uuid, entry))
-            }
+            },
+            loadHistoryBoundary: { _ in historyBoundary }
         )
     }
 
@@ -110,5 +113,39 @@ struct BackgroundHistorySyncTests {
         await pump()
 
         #expect(recorder.done, "Expiration must make syncAllDevices return")
+    }
+
+    @Test("Stops at the newest stored entry instead of re-reading the whole sensor history")
+    func syncStopsAtStoredHistory() async {
+        let pool = makePool()
+        let sensor = FakeFlowerCarePeripheral(scheduler: scheduler)
+        // Real sensor order: index 0 newest, one entry per hour
+        sensor.historyEntries = (0..<6).map { index in
+            FlowerCareFrames.historyEntry(timestamp: sensor.uptimeSeconds - UInt32((index + 1) * 3600),
+                                          temperatureX10: 200,
+                                          brightness: 1000,
+                                          moisture: 40,
+                                          conductivity: 300)
+        }
+        central.register(sensor)
+        let service = makeService(pool: pool,
+                                  deviceUUIDs: [sensor.identifier.uuidString],
+                                  historyBoundary: Date().addingTimeInterval(-3 * 3600))
+        let recorder = self.recorder
+
+        Task { @MainActor in
+            await service.syncAllDevices()
+            recorder.done = true
+        }
+
+        for _ in 0..<100 where !recorder.done {
+            await pump()
+            scheduler.advance(by: 0.5)
+        }
+        await pump()
+
+        #expect(recorder.done, "syncAllDevices must complete")
+        #expect(recorder.savedEntries.count == 2)
+        #expect(sensor.servedEntryIndices == [0, 1, 2])
     }
 }
