@@ -52,6 +52,16 @@ struct BackgroundTaskTrackerTests {
         #expect(history.first?.detail == WakeReadOutcome.timedOut.rawValue)
     }
 
+    @Test("A wake read that also fetched history says how many entries")
+    func wakeReadReportsHistoryEntries() {
+        let tracker = makeTracker()
+
+        tracker.recordWakeRead(trigger: .silentPush, outcome: .saved, duration: 4, historyEntries: 2)
+        tracker.recordWakeRead(trigger: .silentPush, outcome: .saved, duration: 3)
+
+        #expect(tracker.executionHistory.map(\.detail) == ["Saved", "Saved · 2 history entries"])
+    }
+
     @Test("Wake after an app relaunch has no known trigger")
     func relaunchWakeHasNoTrigger() {
         let tracker = makeTracker()
