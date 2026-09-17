@@ -147,6 +147,37 @@ parameter, not a detail.
   global 10-minute timeout, metadata timeout, loop-guard trip, final
   connection failure.
 
+## Incremental history (stop boundary)
+
+The sensor serves history newest-first (index 0 = newest, one entry per
+hour — verified on recording `522a3a0d_20260612-160740`). Background paths
+set `DeviceConnection.setHistoryStopBoundary(_:)` to the newest stored
+`history` entry; the flow ends at the first entry at or before it
+(tolerance 600 s, device-clock drift) and posts
+`HistoricalDataLoadingCompleted`. The boundary is cleared by
+`cleanupHistoryFlow()`, so it applies to one flow.
+
+- `BackgroundHistorySyncService` (BGProcessing): incremental.
+- `BackgroundBLEWakeService`: after a saved live sample, fetches the new
+  entries inside the same 9 s wake budget. No stored history → skipped.
+  Disconnect/timeout in this phase still counts as `.saved`.
+- Details screen "load history": full sync, fills gaps older than the
+  newest stored entry.
+
+The details screen claims its own live reads (`LiveReadGate`). Samples
+from background wake reads on the shared connection are neither
+re-requested nor saved a second time as `live_user`.
+
+- If the history flow can't start at all (e.g. the sensor drops the link
+  during the save), the wake read finishes as `.saved` immediately and
+  clears the boundary; `finishRead` always clears a boundary the read set,
+  so a foreground full sync never inherits it.
+- `ConnectionPoolManager.attemptFastReconnect` re-checks
+  `connection.shouldAutoReconnect` right before connecting, so a reconnect
+  scheduled for a flow that was cleaned up in the meantime (wake read
+  ended) is skipped.
+- An empty sensor history also posts `HistoricalDataLoadingCompleted`.
+
 ## Record & replay (beta-tester problem reports)
 
 1. Tester enables **Record BLE Sessions** in the debug menu
