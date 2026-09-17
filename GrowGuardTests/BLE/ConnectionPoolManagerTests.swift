@@ -479,4 +479,38 @@ struct ConnectionPoolManagerTests {
         #expect(Set(entries.map(\.timestamp)).count == 10, "No duplicate entries after resume")
         #expect(!connection.isHistoryLoading)
     }
+
+    @Test("An auto-reconnect that fell back to scanning does not connect once the flow was ended meanwhile")
+    func scanFallbackReconnectSkipsEndedFlow() async {
+        let pool = makePool()
+        let sensor = makeSensor(entries: 50)
+        sensor.silentEntryIndices = Set(3..<50) // flow stays active mid-sync
+        let connection = pool.getConnection(for: sensor.identifier.uuidString)
+
+        pool.connect(to: sensor.identifier.uuidString)
+        for _ in 0..<20 {
+            await pump()
+            scheduler.advance(by: 0.1)
+        }
+        #expect(connection.isHistoryFlowActive)
+
+        // Sensor gone from the retrieve cache: the reconnect has to scan
+        central.peripheralsAreInRetrieveCache = false
+        central.simulateDisconnect(of: sensor.identifier)
+        for _ in 0..<25 {
+            await pump()
+            scheduler.advance(by: 0.1)
+        }
+        #expect(central.isScanning, "Fast reconnect attempts failed, the pool scans")
+        let connectsBeforeDiscovery = central.connectRequests.count
+
+        // The flow ends while scanning (e.g. the wake read finished)
+        connection.cleanupHistoryFlow()
+        central.simulateDiscovery(of: sensor.identifier)
+        await pump()
+
+        #expect(central.connectRequests.count == connectsBeforeDiscovery,
+                "Nothing left to resume: waking the sensor would only drain its battery")
+        #expect(!central.isScanning)
+    }
 }
