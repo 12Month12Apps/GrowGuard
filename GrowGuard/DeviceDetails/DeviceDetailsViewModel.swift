@@ -26,6 +26,9 @@ import ActivityKit
     private var poolDeviceInfoSubscription: AnyCancellable?
     private var poolRSSISubscription: AnyCancellable?
     private var blinkOnAuthenticationSubscription: AnyCancellable?
+    /// Distinguishes this screen's live reads from background wake reads
+    /// on the shared pool connection
+    private var liveReadGate = LiveReadGate()
 
     // MARK: - Historical Data Loading
     var isLoadingHistory = false
@@ -116,6 +119,9 @@ import ActivityKit
             return
         }
 
+        // Every connect this screen starts wants one live sample
+        liveReadGate.claim(at: Date())
+
         // Only enable auto-start if history hasn't been loaded this session
         // This prevents the loop where history restarts after completion on reconnect
         if !historyLoadedThisSession {
@@ -136,10 +142,14 @@ import ActivityKit
 
         // Subscribe zu Sensor-Daten vom ConnectionPool
         poolSensorDataSubscription = connection.sensorDataPublisher.sink { [weak self] (data: SensorDataTemp) in
-            print("📡 DeviceDetailsViewModel (Pool): Received new sensor data from ConnectionPool")
             Task { @MainActor in
                 guard let self = self else { return }
-                // Verarbeite Sensor-Daten
+                // Background wake reads share this connection and save
+                // their own samples — only persist what this screen asked for
+                guard self.liveReadGate.sampleReceived() else {
+                    AppLogger.ble.info("📡 DeviceDetailsViewModel: Ignoring sample this screen did not request")
+                    return
+                }
                 let success = await self.saveSensorData(data)
                 if success {
                     await self.updateDeviceLastUpdate()
@@ -283,10 +293,18 @@ import ActivityKit
                     }
                 }
 
-                // Bei erfolgreicher Authentication: Fordere Live-Daten an
-                if state == .authenticated {
-                    AppLogger.ble.bleConnection("DeviceDetailsViewModel (Pool): Device authenticated, requesting live data")
-                    connection.requestLiveData()
+                switch state {
+                case .authenticated:
+                    // Only for connects this screen started — a background
+                    // wake read requests its own sample
+                    if self.liveReadGate.connectionAuthenticated(at: Date()) {
+                        AppLogger.ble.bleConnection("DeviceDetailsViewModel (Pool): Device authenticated, requesting live data")
+                        connection.requestLiveData()
+                    }
+                case .disconnected, .error:
+                    self.liveReadGate.connectionLost()
+                default:
+                    break
                 }
             }
         }
