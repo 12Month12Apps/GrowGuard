@@ -307,4 +307,24 @@ struct BackgroundWakeServiceTests {
         #expect(pool.getConnection(for: sensor.identifier.uuidString).historyStopBoundary == nil,
                 "A stale boundary would cut the next foreground full sync short")
     }
+
+    @Test("Running out of time while the sample is being saved still counts as saved")
+    func timeoutDuringSaveKeepsSavedOutcome() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        let scheduler = self.scheduler
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString]) {
+            // Persistence is slow: the 9 s wake budget runs out mid-save
+            scheduler.advance(by: 10)
+            await drainMainActor()
+        }
+
+        await service.armAll(trigger: .silentPush)
+        await settle(seconds: 2.0)
+
+        #expect(recorder.saved.map(\.uuid) == [sensor.identifier.uuidString])
+        #expect(tracker.executionHistory.map(\.detail) == [WakeReadOutcome.saved.rawValue])
+        #expect(tracker.wakeReadFailureCount == 0)
+        #expect(recorder.ended == 1)
+    }
 }

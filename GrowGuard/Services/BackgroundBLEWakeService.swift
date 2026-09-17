@@ -237,8 +237,9 @@ final class BackgroundBLEWakeService {
         read.timeoutTask = scheduler.schedule(after: wakeReadTimeout) { [weak self] in
             Task { @MainActor in
                 guard let self, let read = self.activeReads[deviceUUID] else { return }
-                // Out of time while appending history: the live sample is stored
-                self.finishRead(for: deviceUUID, outcome: read.phase == .history ? .saved : .timedOut)
+                // Out of time after the sample arrived (saving or appending
+                // history): the live sample is stored
+                self.finishRead(for: deviceUUID, outcome: read.phase == .live ? .timedOut : .saved)
             }
         }
     }
