@@ -69,3 +69,23 @@ struct APNsEnvironmentDetectorTests {
         #expect(APNsEnvironment.production.rawValue == "production")
     }
 }
+
+struct DeviceRegistrationRequestTests {
+
+    private func json(_ request: GrowGuardAPIClient.DeviceRegistrationRequest) throws -> [String: String] {
+        let data = try JSONEncoder().encode(request)
+        return try #require(try JSONSerialization.jsonObject(with: data) as? [String: String])
+    }
+
+    @Test func includesKnownEnvironment() throws {
+        let body = try json(.init(deviceToken: "abc", environment: .sandbox))
+        #expect(body == ["deviceToken": "abc", "environment": "sandbox"])
+    }
+
+    /// Without an environment the key must be absent, not null — the server
+    /// then detects the environment itself.
+    @Test func omitsUnknownEnvironment() throws {
+        let body = try json(.init(deviceToken: "abc", environment: nil))
+        #expect(body == ["deviceToken": "abc"])
+    }
+}

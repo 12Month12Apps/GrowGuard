@@ -46,6 +46,8 @@ actor GrowGuardAPIClient {
 
     struct DeviceRegistrationRequest: Encodable {
         let deviceToken: String
+        /// Omitted from the JSON when `nil`, so the server detects it itself.
+        let environment: APNsEnvironment?
     }
 
     struct DeviceRegistrationResponse: Decodable {
@@ -92,9 +94,10 @@ actor GrowGuardAPIClient {
     /// - Returns: The registration response from the server
     func registerDevice(token deviceToken: String) async throws -> DeviceRegistrationResponse {
         let url = try buildURL(path: "/devices/register")
-        let body = DeviceRegistrationRequest(deviceToken: deviceToken)
+        let environment = APNsEnvironmentDetector.current
+        let body = DeviceRegistrationRequest(deviceToken: deviceToken, environment: environment)
 
-        AppLogger.network.info("Registering device token with server")
+        AppLogger.network.info("Registering device token with server (APNs environment: \(environment?.rawValue ?? "unknown"))")
 
         let response: DeviceRegistrationResponse = try await post(url: url, body: body)
 
@@ -225,3 +228,5 @@ actor GrowGuardAPIClient {
         }
     }
 }
+
+extension APNsEnvironment: Encodable {}
