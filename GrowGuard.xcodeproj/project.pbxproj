@@ -97,6 +97,8 @@
 		56D35EB72E2BE5730059FEE6 /* PotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D35EB62E2BE56C0059FEE6 /* PotView.swift */; };
 		56DC564D2DD9256800041DBA /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 56DC564C2DD9256800041DBA /* GRDB */; };
 		56E9573D2ED3088100082A6F /* GrowGuardAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E9573C2ED3088100082A6F /* GrowGuardAPIClient.swift */; };
+		56APNE012EC7000000000001 /* APNsEnvironmentDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56APNE002EC7000000000001 /* APNsEnvironmentDetector.swift */; };
+		56APNE012EC7000000000002 /* APNsEnvironmentDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56APNE002EC7000000000002 /* APNsEnvironmentDetectorTests.swift */; };
 		56F0F7DB2E564C0400B538AF /* MoistureAnomalyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F0F7DA2E564C0400B538AF /* MoistureAnomalyService.swift */; };
 		56F0F7DD2E564C2800B538AF /* MoistureAnomalyServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */; };
 		56F9D1A12E5B4E0D00A1B2C3 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */; };
@@ -273,6 +275,8 @@
 		56C780520D1F48A1A95C9D43 /* ReplayBLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplayBLETransport.swift; sourceTree = "<group>"; };
 		56D35EB62E2BE56C0059FEE6 /* PotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PotView.swift; sourceTree = "<group>"; };
 		56E9573C2ED3088100082A6F /* GrowGuardAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardAPIClient.swift; sourceTree = "<group>"; };
+		56APNE002EC7000000000001 /* APNsEnvironmentDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APNsEnvironmentDetector.swift; sourceTree = "<group>"; };
+		56APNE002EC7000000000002 /* APNsEnvironmentDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APNsEnvironmentDetectorTests.swift; sourceTree = "<group>"; };
 		56F0F7DA2E564C0400B538AF /* MoistureAnomalyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoistureAnomalyService.swift; sourceTree = "<group>"; };
 		56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoistureAnomalyServiceTests.swift; sourceTree = "<group>"; };
 		56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationService.swift; path = ../Core/NotificationService.swift; sourceTree = "<group>"; };
@@ -582,6 +586,7 @@
 				56BWKS002EC7000000000001 /* BackgroundBLEWakeService.swift */,
 				56BHSY002EC7000000000001 /* BackgroundHistorySyncService.swift */,
 				56E9573C2ED3088100082A6F /* GrowGuardAPIClient.swift */,
+				56APNE002EC7000000000001 /* APNsEnvironmentDetector.swift */,
 				56HLA0012EC8000000000001 /* HistoryLoadingAttributes.swift */,
 				56HLAS012EC8000000000002 /* HistoryLoadingActivityService.swift */,
 				56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */,
@@ -711,6 +716,7 @@
 				5654B2BF2CB46EF200EED3D3 /* BLE */,
 				5654B2BE2CB46EEA00EED3D3 /* ViewModel */,
 				56AF112C2BDED05B00887073 /* GrowGuardTests.swift */,
+				56APNE002EC7000000000002 /* APNsEnvironmentDetectorTests.swift */,
 			);
 			path = GrowGuardTests;
 			sourceTree = "<group>";
@@ -1029,6 +1035,7 @@
 				5684E2E22C0FA2EE005CD8B6 /* OverviewList.swift in Sources */,
 				562629002C42E32700B5DB2A /* AppIntent.swift in Sources */,
 				56E9573D2ED3088100082A6F /* GrowGuardAPIClient.swift in Sources */,
+				56APNE012EC7000000000001 /* APNsEnvironmentDetector.swift in Sources */,
 				56A8C6EF2D8F38CD004021C0 /* Button.swift in Sources */,
 				56A948F72DE3A4790010575F /* FlowerSearch.swift in Sources */,
 				56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */,
@@ -1072,6 +1079,7 @@
 				56FA2DEC0DE4F1B50000000C /* ConnectionPoolManagerTests.swift in Sources */,
 				56BHST012EC7000000000001 /* BackgroundHistorySyncTests.swift in Sources */,
 				56BWKT012EC7000000000001 /* BackgroundWakeServiceTests.swift in Sources */,
+				56APNE012EC7000000000002 /* APNsEnvironmentDetectorTests.swift in Sources */,
 				56BARM012EC7000000000001 /* BackgroundArmTests.swift in Sources */,
 				E74116E2F3304A11BD446D55 /* BLEPerformanceTests.swift in Sources */,
 				56FA2DED0DE4F1B500000102 /* HistoryResumeWindowTests.swift in Sources */,
