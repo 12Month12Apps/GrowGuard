@@ -399,6 +399,10 @@ internal enum L10n {
       /// Tell the app which room this sensor is in
       internal static let setLocation = L10n.tr("Localizable", "sensorHealth.banner.setLocation", fallback: "Tell the app which room this sensor is in")
       internal enum Confirmed {
+        /// Silent for %d days
+        internal static func line(_ p1: Int) -> String {
+          return L10n.tr("Localizable", "sensorHealth.banner.confirmed.line", p1, fallback: "Silent for %d days")
+        }
         /// Your other sensors respond, this one does not.
         internal static let text = L10n.tr("Localizable", "sensorHealth.banner.confirmed.text", fallback: "Your other sensors respond, this one does not.")
         /// Your other sensors at %@ respond, this one does not.

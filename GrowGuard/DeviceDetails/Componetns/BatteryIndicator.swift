@@ -75,8 +75,12 @@ struct BatteryIndicator: View {
             Image(systemName: symbolName)
                 .font(.caption2)
                 .foregroundColor(color)
+            // The percentage never yields its width: a long sibling (the
+            // unreachable line) otherwise squeezes it into per-glyph line breaks
             valueLabel
                 .font(.caption)
+                .lineLimit(1)
+                .fixedSize()
             if isStale, !health.isUnreachable, let readAt {
                 Text("· " + staleCaption(readAt))
                     .font(.caption2)

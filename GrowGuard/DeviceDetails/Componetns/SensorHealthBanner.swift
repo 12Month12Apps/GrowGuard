@@ -26,7 +26,8 @@ struct SensorHealthBanner: View {
             case .line:
                 HStack(spacing: 4) {
                     Circle().fill(Color.red).frame(width: 6, height: 6)
-                    Text(confirmed ? L10n.SensorHealth.Banner.Confirmed.title(days)
+                    // Short form: the row is one line wide and the battery sits next to it
+                    Text(confirmed ? L10n.SensorHealth.Banner.Confirmed.line(days)
                                    : L10n.SensorHealth.Banner.Unconfirmed.title(days))
                         .font(.caption)
                         .lineLimit(1)
