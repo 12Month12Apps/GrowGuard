@@ -9,6 +9,8 @@ import Testing
 import Foundation
 @testable import GrowGuard
 
+// @MainActor: `symbols` reads the main-actor RoomIconStore.
+@MainActor
 struct RoomCatalogTests {
 
     let now = Date(timeIntervalSince1970: 1_800_000_000)

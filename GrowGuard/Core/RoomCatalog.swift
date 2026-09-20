@@ -127,7 +127,10 @@ struct RoomCatalog: Equatable {
         (["wohn", "living", "lounge"], "sofa.fill")
     ]
 
-    /// The room's icon: a custom choice from the store, else the keyword mapping
+    /// The room's icon: a custom choice from the store, else the keyword
+    /// mapping. @MainActor because it reads the main-actor icon store; its
+    /// callers are SwiftUI `body`s. `defaultSymbolName` stays pure and free.
+    @MainActor
     static func symbolName(for name: String?, icons: RoomIconStore = .shared) -> String {
         guard let name else { return "mappin.slash" }
         return icons.symbol(for: name) ?? defaultSymbolName(for: name)

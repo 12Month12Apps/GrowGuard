@@ -24,6 +24,8 @@ private func makeDefaults() -> UserDefaults {
     UserDefaults(suiteName: "RoomEditingTests-\(UUID().uuidString)")!
 }
 
+// @MainActor: RoomIconStore and RoomEditor are main-actor isolated.
+@MainActor
 struct RoomIconStoreTests {
 
     @Test("A custom symbol is stored per folded room name and survives a new store instance")
@@ -85,6 +87,7 @@ struct RoomIconStoreTests {
     }
 }
 
+@MainActor
 struct RoomEditorTests {
 
     private func setUp(_ rooms: [(String, String?)]) -> (InMemoryDeviceRepository, RoomIconStore, RoomEditor) {

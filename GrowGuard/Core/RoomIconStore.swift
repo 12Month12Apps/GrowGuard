@@ -7,10 +7,15 @@
 //  UserDefaults, keyed by the folded room name. @Observable: views that read a
 //  symbol during `body` refresh when it changes.
 //
+//  @MainActor: the dictionary is read from SwiftUI `body` and written by
+//  RoomEditor's bulk operations. Pinning both to the main actor is what keeps
+//  those from racing — @Observable does no locking of its own.
+//
 
 import Foundation
 import Observation
 
+@MainActor
 @Observable
 final class RoomIconStore {
     static let shared = RoomIconStore()

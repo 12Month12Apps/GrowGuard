@@ -8,6 +8,10 @@
 
 import SwiftUI
 
+// @MainActor: the stored editor/icon store and the init's store lookup are
+// main-actor state, and a view's default property values are not isolated
+// on their own.
+@MainActor
 struct RoomEditView: View {
     let room: Room
     let devices: [FlowerDeviceDTO]

@@ -10,6 +10,11 @@
 
 import Foundation
 
+/// @MainActor: every caller is a view or a main-actor view model, and the
+/// icon store these methods mutate is main-actor state. Without it the
+/// nonisolated `async` methods would run on the global executor and write
+/// the store while `body` reads it.
+@MainActor
 struct RoomEditor {
     enum RenameOutcome: Equatable {
         /// Empty after trimming
