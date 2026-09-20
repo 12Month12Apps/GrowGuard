@@ -618,4 +618,17 @@ import ActivityKit
         }
     }
 
+    /// Persists only the room; everything else on the device stays as stored.
+    @MainActor
+    func setRoom(_ room: String?) async {
+        let normalized = FlowerDeviceDTO.normalizeLocation(room)
+        do {
+            if let updated = try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: device.uuid, { $0.location = normalized }) {
+                self.device.location = updated.location
+            }
+        } catch {
+            print("❌ DeviceDetailsViewModel: Failed to save room: \(error.localizedDescription)")
+        }
+    }
+
 }

@@ -16,6 +16,7 @@ struct OverviewList: View {
     @State private var showDeleteConfirmation = false
     @State private var showDeleteError = false
     @State private var hasRequestedDashboardLiveRefresh = false
+    @State private var roomFilter: RoomFilter = .all
 
     private let initialSensorDataService = InitialSensorDataService.shared
 
@@ -46,7 +47,17 @@ struct OverviewList: View {
 
         return Double(totalMoisture) / Double(devices.count) / 100.0
     }
-    
+
+    private var roomCatalog: RoomCatalog {
+        RoomCatalog(devices: viewModel.allSavedDevices, now: Date())
+    }
+
+    /// Devices the list shows: all of them, or one room's
+    private var visibleDevices: [FlowerDeviceDTO] {
+        let filter = roomCatalog.resolve(roomFilter)
+        return viewModel.allSavedDevices.filter(filter.includes)
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -119,13 +130,21 @@ struct OverviewList: View {
                     }
                     .padding(.horizontal)
 
+                    if !roomCatalog.rooms.isEmpty {
+                        RoomFilterBar(catalog: roomCatalog, selection: Binding(
+                            get: { roomCatalog.resolve(roomFilter) },
+                            set: { roomFilter = $0 }
+                        ))
+                    }
+
                     if viewModel.allSavedDevices.isEmpty {
                         EmptyStateView()
                     } else {
                         List {
-                            ForEach(viewModel.allSavedDevices) { device in
+                            ForEach(visibleDevices) { device in
                                 DeviceCard(device: device,
-                                           peers: viewModel.allSavedDevices.filter { $0.uuid != device.uuid }) {
+                                           peers: viewModel.allSavedDevices.filter { $0.uuid != device.uuid },
+                                           showsMissingRoom: !roomCatalog.rooms.isEmpty) {
                                     NavigationService.shared.navigateToDeviceView(flowerDevice: device)
                                 }
                                 .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
@@ -135,7 +154,7 @@ struct OverviewList: View {
                             .listRowSeparator(.hidden)
                         }
                         .listStyle(.plain)
-                        .frame(height: CGFloat(viewModel.allSavedDevices.count) * 110)
+                        .frame(height: CGFloat(visibleDevices.count) * 110)
                         .scrollDisabled(true)
                     }
                 }
@@ -187,7 +206,14 @@ struct OverviewList: View {
         }
     }
     
-    func delete(at offsets: IndexSet) {
+    func delete(at visibleOffsets: IndexSet) {
+        // SwiftUI indexes the rows it shows; the alert and confirmDelete both
+        // index allSavedDevices, so translate here and nowhere else.
+        let visible = visibleDevices
+        let offsets = IndexSet(visibleOffsets.compactMap { offset -> Int? in
+            guard visible.indices.contains(offset) else { return nil }
+            return viewModel.allSavedDevices.firstIndex { $0.uuid == visible[offset].uuid }
+        })
         deviceToDelete = offsets
         showDeleteConfirmation = true
     }
@@ -312,6 +338,8 @@ struct SummaryCard: View {
 struct DeviceCard: View {
     let device: FlowerDeviceDTO
     let peers: [FlowerDeviceDTO]
+    /// Show "No room" for plants without one (only while rooms exist at all)
+    var showsMissingRoom: Bool = false
     let action: () -> Void
 
     @ObservedObject private var activityService = HistoryLoadingActivityService.shared
@@ -373,25 +401,26 @@ struct DeviceCard: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text(device.name)
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                            .lineLimit(1)
-                            .layoutPriority(1)
-                        if let location = device.location {
-                            Text("· \(location)")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                        }
-                    }
+                    Text(device.name)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
 
                     HStack(spacing: 4) {
                         Image(systemName: "clock")
                             .font(.caption2)
                         Text(device.lastUpdate, format: .relative(presentation: .named))
                             .font(.caption)
+                            .lineLimit(1)
+                        if device.location != nil || showsMissingRoom {
+                            Text("·")
+                                .font(.caption)
+                            Image(systemName: device.location == nil ? "mappin.slash" : "mappin")
+                                .font(.caption2)
+                            Text(device.location ?? L10n.Room.none)
+                                .font(.caption)
+                                .lineLimit(1)
+                        }
                     }
                     .foregroundColor(.secondary)
 
