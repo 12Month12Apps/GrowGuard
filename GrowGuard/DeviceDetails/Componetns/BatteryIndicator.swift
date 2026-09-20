@@ -45,7 +45,9 @@ struct BatteryIndicator: View {
         case .batteryUnknown: return .secondary
         case .unreachable(_, let lastKnown, _):
             guard let lastKnown else { return .secondary }
-            return lastKnown <= SensorHealth.criticalBattery ? .red : (lastKnown <= SensorHealth.lowBattery ? .orange : .green)
+            if lastKnown <= SensorHealth.criticalBattery { return .red }
+            if lastKnown <= SensorHealth.lowBattery { return .orange }
+            return .green
         case .ok: return .green
         }
     }

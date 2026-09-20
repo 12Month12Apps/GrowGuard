@@ -21,7 +21,7 @@ enum RoomText {
     }
 
     static func companions(_ names: [String]) -> String {
-        guard let first = names.first else { return L10n.Room.Companions.none }
+        guard let first = names.first else { return L10n.Room.Companions.alone }
         return names.count == 1
             ? L10n.Room.Companions.one(first)
             : L10n.Room.Companions.more(first, names.count - 1)
@@ -84,7 +84,7 @@ struct RoomPickerView: View {
                         HStack(spacing: 4) {
                             Button { pick(room.name) } label: {
                                 row(symbol: RoomCatalog.symbolName(for: room.name),
-                                    title: room.name ?? L10n.Room.none,
+                                    title: room.name ?? L10n.Room.noRoom,
                                     subtitle: "\(RoomText.plants(room.plantCount)) · \(RoomText.sensors(room.sensorCount))",
                                     tint: .green,
                                     isSelected: room.name == selection)
@@ -117,7 +117,7 @@ struct RoomPickerView: View {
                 Section {
                     Button { pick(nil) } label: {
                         row(symbol: RoomCatalog.symbolName(for: nil),
-                            title: L10n.Room.none,
+                            title: L10n.Room.noRoom,
                             subtitle: nil,
                             tint: .secondary,
                             isSelected: selection == nil)
@@ -168,13 +168,13 @@ struct RoomPickerView: View {
                     Task { await deleteRoom(named: name) }
                 }
             }
-            Button(L10n.Alert.cancel, role: .cancel) {}
+            Button(L10n.Alert.cancel, role: .cancel) { /* the alert dismisses itself */ }
         } message: { room in
             Text(room.plantCount == 1 ? L10n.Room.Edit.DeleteConfirm.one
                                       : L10n.Room.Edit.DeleteConfirm.other(room.plantCount))
         }
         .alert(L10n.Alert.error, isPresented: $showEditError) {
-            Button(L10n.Alert.ok) {}
+            Button(L10n.Alert.ok) { /* the alert dismisses itself */ }
         } message: {
             Text(L10n.Room.Edit.failed)
         }
@@ -266,7 +266,7 @@ struct RoomFormSection: View {
                         .frame(width: 30)
                     Text(L10n.Room.title)
                     Spacer()
-                    Text(location ?? L10n.Room.none)
+                    Text(location ?? L10n.Room.noRoom)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }

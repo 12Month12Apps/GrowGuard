@@ -252,7 +252,7 @@ internal enum L10n {
     /// Choose a room
     internal static let choose = L10n.tr("Localizable", "room.choose", fallback: "Choose a room")
     /// No room
-    internal static let `none` = L10n.tr("Localizable", "room.none", fallback: "No room")
+    internal static let noRoom = L10n.tr("Localizable", "room.noRoom", fallback: "No room")
     /// Rooms
     internal static let title = L10n.tr("Localizable", "room.title", fallback: "Room")
     internal enum Action {
@@ -262,12 +262,12 @@ internal enum L10n {
       internal static let more = L10n.tr("Localizable", "room.action.more", fallback: "More")
     }
     internal enum Companions {
+      /// Only plant here
+      internal static let alone = L10n.tr("Localizable", "room.companions.alone", fallback: "Only plant here")
       /// Together with %@ and %d more
       internal static func more(_ p1: Any, _ p2: Int) -> String {
         return L10n.tr("Localizable", "room.companions.more", String(describing: p1), p2, fallback: "Together with %@ and %d more")
       }
-      /// Only plant here
-      internal static let `none` = L10n.tr("Localizable", "room.companions.none", fallback: "Only plant here")
       /// Together with %@
       internal static func one(_ p1: Any) -> String {
         return L10n.tr("Localizable", "room.companions.one", String(describing: p1), fallback: "Together with %@")

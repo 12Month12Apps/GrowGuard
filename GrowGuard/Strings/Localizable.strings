@@ -206,7 +206,7 @@
 
 /* Rooms */
 "room.title" = "Room";
-"room.none" = "No room";
+"room.noRoom" = "No room";
 "room.all" = "All";
 "room.choose" = "Choose a room";
 "room.picker.search" = "Search or add a room";
@@ -218,7 +218,7 @@
 "room.plants.other" = "%d plants";
 "room.sensors.one" = "1 sensor";
 "room.sensors.other" = "%d sensors";
-"room.companions.none" = "Only plant here";
+"room.companions.alone" = "Only plant here";
 "room.companions.one" = "Together with %@";
 "room.companions.more" = "Together with %@ and %d more";
 "room.suggestion.livingRoom" = "Living room";

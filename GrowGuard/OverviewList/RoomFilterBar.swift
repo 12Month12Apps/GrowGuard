@@ -20,7 +20,7 @@ struct RoomFilterBar: View {
                     chip(.room(room.name ?? ""), title: room.name ?? "", count: room.plantCount, alert: room.hasSilentSensor)
                 }
                 if let unassigned = catalog.unassigned {
-                    chip(.unassigned, title: L10n.Room.none, count: unassigned.plantCount, alert: unassigned.hasSilentSensor)
+                    chip(.unassigned, title: L10n.Room.noRoom, count: unassigned.plantCount, alert: unassigned.hasSilentSensor)
                 }
             }
             .padding(.horizontal)

@@ -121,13 +121,13 @@ struct RoomEditView: View {
             // its own Cancel button.
             .alert(L10n.Room.Edit.DeleteConfirm.title(originalName), isPresented: $showDeleteConfirm) {
                 Button(L10n.Room.Edit.delete, role: .destructive) { Task { await delete() } }
-                Button(L10n.Alert.cancel, role: .cancel) {}
+                Button(L10n.Alert.cancel, role: .cancel) { /* the alert dismisses itself */ }
             } message: {
                 Text(members.count == 1 ? L10n.Room.Edit.DeleteConfirm.one
                                         : L10n.Room.Edit.DeleteConfirm.other(members.count))
             }
             .alert(L10n.Alert.error, isPresented: $showError) {
-                Button(L10n.Alert.ok) {}
+                Button(L10n.Alert.ok) { /* the alert dismisses itself */ }
             } message: {
                 Text(L10n.Room.Edit.failed)
             }

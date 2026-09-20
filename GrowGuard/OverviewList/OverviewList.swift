@@ -467,7 +467,7 @@ struct DeviceCard: View {
                                 .font(.caption)
                             Image(systemName: device.location == nil ? "mappin.slash" : "mappin")
                                 .font(.caption2)
-                            Text(device.location ?? L10n.Room.none)
+                            Text(device.location ?? L10n.Room.noRoom)
                                 .font(.caption)
                                 .lineLimit(1)
                         }

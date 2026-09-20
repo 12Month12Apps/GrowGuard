@@ -37,7 +37,7 @@ struct SensorHealthMonitorTests {
         struct Unreachable: Equatable { let uuid: String; let confirmed: Bool; let lastKnownBattery: Int? }
         var unreachable: [Unreachable] = []
         var lowBattery: [(uuid: String, percent: Int)] = []
-        func notifyUnreachable(device: FlowerDeviceDTO, since: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now: Date) async {
+        func notifyUnreachable(device: FlowerDeviceDTO, since _: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now _: Date) async {
             unreachable.append(.init(uuid: device.uuid, confirmed: confirmedByPeer, lastKnownBattery: lastKnownBattery))
         }
         func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async {
@@ -53,7 +53,7 @@ struct SensorHealthMonitorTests {
     final class SuspendingNotifier: SensorHealthNotifying {
         var unreachable: [String] = []
         var lowBattery: [(uuid: String, percent: Int)] = []
-        func notifyUnreachable(device: FlowerDeviceDTO, since: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now: Date) async {
+        func notifyUnreachable(device: FlowerDeviceDTO, since _: Date, lastKnownBattery _: Int?, confirmedByPeer _: Bool, now _: Date) async {
             for _ in 0..<5 { await Task.yield() }
             unreachable.append(device.uuid)
         }
@@ -76,7 +76,7 @@ struct SensorHealthMonitorTests {
         private var parked: [CheckedContinuation<Void, Never>] = []
         private var isOpen = false
 
-        func notifyUnreachable(device: FlowerDeviceDTO, since: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now: Date) async {
+        func notifyUnreachable(device: FlowerDeviceDTO, since _: Date, lastKnownBattery _: Int?, confirmedByPeer _: Bool, now _: Date) async {
             entered += 1
             if !isOpen {
                 await withCheckedContinuation { parked.append($0) }
@@ -84,7 +84,9 @@ struct SensorHealthMonitorTests {
             unreachable.append(device.uuid)
         }
 
-        func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async {}
+        func notifyLowBattery(device _: FlowerDeviceDTO, percent _: Int) async {
+            // Low-battery alerts are irrelevant to the chaining tests this gate serves
+        }
 
         /// Lets everyone waiting through, and everyone arriving afterwards
         func open() {

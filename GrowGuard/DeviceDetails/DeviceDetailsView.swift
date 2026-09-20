@@ -53,10 +53,8 @@ struct DeviceDetailsView: View {
                                            // Only sensors can witness each other, so the
                                            // location hint is pointless without a peer sensor
                                            onSetLocation: viewModel.peers.contains(where: \.isSensor) ? { showRoomPicker = true } : nil)
-                    }
 
-                    // Action buttons
-                    if viewModel.device.isSensor {
+                        // Action buttons
                         HStack(spacing: 12) {
                             BatteryIndicator(device: viewModel.device, health: viewModel.health, style: .chip)
 

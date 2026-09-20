@@ -88,7 +88,7 @@ struct RoomCatalogTests {
         #expect(RoomText.sensors(1) == L10n.Room.Sensors.one)
         #expect(RoomText.sensors(2) == L10n.Room.Sensors.other(2))
 
-        #expect(RoomText.companions([]) == L10n.Room.Companions.none)
+        #expect(RoomText.companions([]) == L10n.Room.Companions.alone)
         #expect(RoomText.companions(["Basilikum"]) == L10n.Room.Companions.one("Basilikum"))
         // The first name is spelled out, the rest counted
         #expect(RoomText.companions(["Basilikum", "Efeu", "Ficus"]) == L10n.Room.Companions.more("Basilikum", 2))
