@@ -33,8 +33,8 @@
 "device.availableSensors" = "Available Sensors";
 "device.unknownDevice" = "Unknown Device";
 "device.name" = "Device Name";
-"device.location" = "Location";
-"device.locationFooter" = "Sensors at the same location are within Bluetooth range of each other. Two floors are two locations.";
+"device.location" = "Room";
+"device.locationFooter" = "Sensors in the same room are within Bluetooth range of each other. Two floors are two rooms.";
 "device.searchFlower" = "Search Flower";
 "device.lastUpdate" = "Last Update: ";
 "device.loadHistoricalData" = "Load Historical Data";
@@ -202,4 +202,32 @@
 "sensorHealth.banner.confirmed.text" = "Your other sensors respond, this one does not.";
 "sensorHealth.banner.confirmed.textLocation" = "Your other sensors at %@ respond, this one does not.";
 "sensorHealth.banner.lastKnown" = "Last known battery %d %%";
-"sensorHealth.banner.setLocation" = "Tell the app where this sensor is";
+"sensorHealth.banner.setLocation" = "Tell the app which room this sensor is in";
+
+/* Rooms */
+"room.title" = "Room";
+"room.none" = "No room";
+"room.all" = "All";
+"room.choose" = "Choose a room";
+"room.picker.search" = "Search or add a room";
+"room.picker.yourRooms" = "Your rooms";
+"room.picker.create" = "Create “%@”";
+"room.picker.createHint" = "No room with that name yet";
+"room.picker.suggestions" = "Suggestions";
+"room.plants.one" = "1 plant";
+"room.plants.other" = "%d plants";
+"room.sensors.one" = "1 sensor";
+"room.sensors.other" = "%d sensors";
+"room.companions.none" = "Only plant here";
+"room.companions.one" = "Together with %@";
+"room.companions.more" = "Together with %@ and %d more";
+"room.suggestion.livingRoom" = "Living room";
+"room.suggestion.kitchen" = "Kitchen";
+"room.suggestion.bedroom" = "Bedroom";
+"room.suggestion.bathroom" = "Bathroom";
+"room.suggestion.hallway" = "Hallway";
+"room.suggestion.office" = "Office";
+"room.suggestion.balcony" = "Balcony";
+"room.suggestion.terrace" = "Terrace";
+"room.suggestion.garden" = "Garden";
+"room.suggestion.basement" = "Basement";

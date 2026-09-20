@@ -73,10 +73,10 @@ internal enum L10n {
     internal static let lastUpdate = L10n.tr("Localizable", "device.lastUpdate", fallback: "Last Update: ")
     /// Load Historical Data
     internal static let loadHistoricalData = L10n.tr("Localizable", "device.loadHistoricalData", fallback: "Load Historical Data")
-    /// Location
-    internal static let location = L10n.tr("Localizable", "device.location", fallback: "Location")
-    /// Sensors at the same location are within Bluetooth range of each other. Two floors are two locations.
-    internal static let locationFooter = L10n.tr("Localizable", "device.locationFooter", fallback: "Sensors at the same location are within Bluetooth range of each other. Two floors are two locations.")
+    /// Room
+    internal static let location = L10n.tr("Localizable", "device.location", fallback: "Room")
+    /// Sensors in the same room are within Bluetooth range of each other. Two floors are two rooms.
+    internal static let locationFooter = L10n.tr("Localizable", "device.locationFooter", fallback: "Sensors in the same room are within Bluetooth range of each other. Two floors are two rooms.")
     /// Device Name
     internal static let name = L10n.tr("Localizable", "device.name", fallback: "Device Name")
     /// This plant does not have a sensor attached. You need to manage the watering manually.
@@ -248,6 +248,80 @@ internal enum L10n {
     /// 100ml
     internal static let volumeUnit = L10n.tr("Localizable", "pot.volumeUnit", fallback: "100ml")
   }
+  internal enum Room {
+    /// All
+    internal static let all = L10n.tr("Localizable", "room.all", fallback: "All")
+    /// Choose a room
+    internal static let choose = L10n.tr("Localizable", "room.choose", fallback: "Choose a room")
+    /// No room
+    internal static let `none` = L10n.tr("Localizable", "room.none", fallback: "No room")
+    /// Rooms
+    internal static let title = L10n.tr("Localizable", "room.title", fallback: "Room")
+    internal enum Companions {
+      /// Together with %@ and %d more
+      internal static func more(_ p1: Any, _ p2: Int) -> String {
+        return L10n.tr("Localizable", "room.companions.more", String(describing: p1), p2, fallback: "Together with %@ and %d more")
+      }
+      /// Only plant here
+      internal static let `none` = L10n.tr("Localizable", "room.companions.none", fallback: "Only plant here")
+      /// Together with %@
+      internal static func one(_ p1: Any) -> String {
+        return L10n.tr("Localizable", "room.companions.one", String(describing: p1), fallback: "Together with %@")
+      }
+    }
+    internal enum Picker {
+      /// Create “%@”
+      internal static func create(_ p1: Any) -> String {
+        return L10n.tr("Localizable", "room.picker.create", String(describing: p1), fallback: "Create “%@”")
+      }
+      /// No room with that name yet
+      internal static let createHint = L10n.tr("Localizable", "room.picker.createHint", fallback: "No room with that name yet")
+      /// Search or add a room
+      internal static let search = L10n.tr("Localizable", "room.picker.search", fallback: "Search or add a room")
+      /// Suggestions
+      internal static let suggestions = L10n.tr("Localizable", "room.picker.suggestions", fallback: "Suggestions")
+      /// Your rooms
+      internal static let yourRooms = L10n.tr("Localizable", "room.picker.yourRooms", fallback: "Your rooms")
+    }
+    internal enum Plants {
+      /// 1 plant
+      internal static let one = L10n.tr("Localizable", "room.plants.one", fallback: "1 plant")
+      /// %d plants
+      internal static func other(_ p1: Int) -> String {
+        return L10n.tr("Localizable", "room.plants.other", p1, fallback: "%d plants")
+      }
+    }
+    internal enum Sensors {
+      /// 1 sensor
+      internal static let one = L10n.tr("Localizable", "room.sensors.one", fallback: "1 sensor")
+      /// %d sensors
+      internal static func other(_ p1: Int) -> String {
+        return L10n.tr("Localizable", "room.sensors.other", p1, fallback: "%d sensors")
+      }
+    }
+    internal enum Suggestion {
+      /// Balcony
+      internal static let balcony = L10n.tr("Localizable", "room.suggestion.balcony", fallback: "Balcony")
+      /// Basement
+      internal static let basement = L10n.tr("Localizable", "room.suggestion.basement", fallback: "Basement")
+      /// Bathroom
+      internal static let bathroom = L10n.tr("Localizable", "room.suggestion.bathroom", fallback: "Bathroom")
+      /// Bedroom
+      internal static let bedroom = L10n.tr("Localizable", "room.suggestion.bedroom", fallback: "Bedroom")
+      /// Garden
+      internal static let garden = L10n.tr("Localizable", "room.suggestion.garden", fallback: "Garden")
+      /// Hallway
+      internal static let hallway = L10n.tr("Localizable", "room.suggestion.hallway", fallback: "Hallway")
+      /// Kitchen
+      internal static let kitchen = L10n.tr("Localizable", "room.suggestion.kitchen", fallback: "Kitchen")
+      /// Living room
+      internal static let livingRoom = L10n.tr("Localizable", "room.suggestion.livingRoom", fallback: "Living room")
+      /// Office
+      internal static let office = L10n.tr("Localizable", "room.suggestion.office", fallback: "Office")
+      /// Terrace
+      internal static let terrace = L10n.tr("Localizable", "room.suggestion.terrace", fallback: "Terrace")
+    }
+  }
   internal enum Sensor {
     /// Sensor Parameters
     internal static let brightness = L10n.tr("Localizable", "sensor.brightness", fallback: "Brightness")
@@ -322,8 +396,8 @@ internal enum L10n {
       internal static func lastKnown(_ p1: Int) -> String {
         return L10n.tr("Localizable", "sensorHealth.banner.lastKnown", p1, fallback: "Last known battery %d %%")
       }
-      /// Tell the app where this sensor is
-      internal static let setLocation = L10n.tr("Localizable", "sensorHealth.banner.setLocation", fallback: "Tell the app where this sensor is")
+      /// Tell the app which room this sensor is in
+      internal static let setLocation = L10n.tr("Localizable", "sensorHealth.banner.setLocation", fallback: "Tell the app which room this sensor is in")
       internal enum Confirmed {
         /// Your other sensors respond, this one does not.
         internal static let text = L10n.tr("Localizable", "sensorHealth.banner.confirmed.text", fallback: "Your other sensors respond, this one does not.")
