@@ -23,6 +23,8 @@ struct BackgroundWakeServiceTests {
         var began = 0
         var ended = 0
         var historySaved = 0
+        /// Order of history writes and the end of the background task
+        var events: [String] = []
     }
 
     let scheduler = TestScheduler()
@@ -61,11 +63,21 @@ struct BackgroundWakeServiceTests {
             },
             runStatusCheck: { uuid in recorder.statusChecks.append(uuid) },
             beginBackgroundTask: { recorder.began += 1; return UIBackgroundTaskIdentifier(rawValue: 7) },
-            endBackgroundTask: { _ in recorder.ended += 1 },
+            endBackgroundTask: { _ in
+                recorder.ended += 1
+                recorder.events.append("end")
+            },
             notificationCenter: notificationCenter,
             tracker: tracker,
             loadHistoryBoundary: { _ in historyBoundary },
-            saveHistoricalEntry: { _, _ in recorder.historySaved += 1 }
+            saveHistoricalEntry: { _, _ in
+                // Suspends like a real Core Data write: a fire-and-forget save
+                // would still be pending when the background task ends
+                await Task.yield()
+                await Task.yield()
+                recorder.historySaved += 1
+                recorder.events.append("history")
+            }
         )
         service.start()
         return service
@@ -232,6 +244,8 @@ struct BackgroundWakeServiceTests {
         #expect(recorder.saved.map(\.source) == [.backgroundPush])
         #expect(recorder.historySaved == 2)
         #expect(sensor.servedEntryIndices == [0, 1, 2])
+        #expect(recorder.events == ["history", "history", "end"],
+                "iOS may suspend the app once the background task ends: the entries must be stored before that")
         #expect(tracker.executionHistory.first?.detail == "Saved · 2 history entries")
         #expect(tracker.wakeReadSuccessCount == 1)
         #expect(recorder.ended == 1)
@@ -308,6 +322,37 @@ struct BackgroundWakeServiceTests {
                 "A stale boundary would cut the next foreground full sync short")
     }
 
+    @Test("A wake read leaves a history flow another owner already started alone")
+    func wakeReadSkipsForeignHistoryFlow() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        sensor.historyEntries = newestFirstHourlyEntries(count: 6, uptime: sensor.uptimeSeconds)
+        sensor.silentEntryIndices = Set(0..<6) // the other owner's flow stays mid-sync
+        let foreignBoundary = storedEntryDate(index: 4)
+        let service = makeService(pool: pool,
+                                  deviceUUIDs: [sensor.identifier.uuidString],
+                                  historyBoundary: storedEntryDate(index: 2)) {
+            // A BGProcessing sync is already fetching on this pooled connection
+            let connection = pool.getConnection(for: sensor.identifier.uuidString)
+            connection.setHistoryStopBoundary(foreignBoundary)
+            connection.startHistoryDataFlow()
+            await drainMainActor()
+        }
+
+        await service.armAll(trigger: .silentPush)
+        await settle(seconds: 2.0)
+
+        let connection = pool.getConnection(for: sensor.identifier.uuidString)
+        #expect(recorder.saved.map(\.source) == [.backgroundPush])
+        #expect(recorder.historySaved == 0, "The owner of the flow stores its own entries")
+        #expect(tracker.executionHistory.map(\.detail) == [WakeReadOutcome.saved.rawValue])
+        #expect(connection.isHistoryFlowActive,
+                "Ending someone else's flow would drop the entries it is still fetching")
+        #expect(connection.historyStopBoundary == foreignBoundary,
+                "The other owner's boundary must survive the wake read")
+        #expect(sensor.state != .disconnected, "The other owner still needs the link")
+    }
+
     @Test("Running out of time while the sample is being saved still counts as saved")
     func timeoutDuringSaveKeepsSavedOutcome() async {
         let pool = makePool()
@@ -325,6 +370,28 @@ struct BackgroundWakeServiceTests {
         #expect(recorder.saved.map(\.uuid) == [sensor.identifier.uuidString])
         #expect(tracker.executionHistory.map(\.detail) == [WakeReadOutcome.saved.rawValue])
         #expect(tracker.wakeReadFailureCount == 0)
+        #expect(recorder.ended == 1)
+    }
+
+    @Test("Running out of time while a rejected sample is written is not reported as saved")
+    func timeoutDuringRejectedSaveIsNotSaved() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        let scheduler = self.scheduler
+        let service = makeService(pool: pool,
+                                  deviceUUIDs: [sensor.identifier.uuidString],
+                                  saveSucceeds: false) {
+            // The 9 s wake budget runs out before the store answers
+            scheduler.advance(by: 10)
+            await drainMainActor()
+        }
+
+        await service.armAll(trigger: .silentPush)
+        await settle(seconds: 2.0)
+
+        #expect(tracker.executionHistory.map(\.detail) == [WakeReadOutcome.sampleRejected.rawValue],
+                "Only the store can say whether the sample was persisted")
+        #expect(tracker.wakeReadSuccessCount == 0)
         #expect(recorder.ended == 1)
     }
 }

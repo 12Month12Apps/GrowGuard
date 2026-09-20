@@ -171,9 +171,16 @@ is always full.
   loading the newest stored date again would end the resume at the
   entries it just saved.
 - `BackgroundBLEWakeService`: after a saved live sample, fetches the new
-  entries inside the same 9 s wake budget. No stored history → skipped.
-  Disconnect/timeout in this phase, and a timeout while the sample is
-  being saved, still count as `.saved`.
+  entries inside the same 9 s wake budget. No stored history → skipped,
+  and a flow that is already active is skipped too: it belongs to another
+  owner, whose boundary, entries and link the read leaves untouched (it
+  cleans up and disconnects only a flow it started itself). A
+  disconnect/timeout in this phase counts as `.saved`; a timeout while
+  the live sample is being written waits for the store's answer, so the
+  outcome never claims a sample the store rejected. Entries are written
+  one after another and awaited before the background task ends —
+  otherwise iOS can suspend the app mid-write — and counted only once
+  stored.
 - Details screen "load history": full sync, fills gaps older than the
   newest stored entry.
 - Accepted gap: an interrupted incremental sync (wake read timeout or
@@ -188,8 +195,10 @@ only acts on what it started:
   claimed. On `didEnterBackgroundNotification` the claim is released
   (`release()`), so a wake read armed on entering background is not
   mistaken for the screen's read within the 60 s claim lifetime.
-- History: `ownsHistoryFlow` — set by "load history" and the screen's
-  auto-start, cleared by its completion handler and on cancel. Entries,
+- History: `ownsHistoryFlow` — set by "load history" and by the screen's
+  auto-start, the latter only when no flow is active (an active one is a
+  background sync's, whose entries its own owner stores), cleared by its
+  completion handler and on cancel. Entries,
   progress/Live Activity and completion ("history loaded this session")
   are handled only while it is set. On entering background it stays set
   only if the flow is already active (a running user sync continues with
@@ -206,7 +215,13 @@ nor saved a second time by the screen.
   auto-reconnect connects: in `attemptFastReconnect`, and — when the fast
   attempts fell back to scanning — again on discovery (explicit
   `connect(to:)` scans are not affected). A reconnect scheduled for a flow
-  that was cleaned up in the meantime (wake read ended) is skipped.
+  that was cleaned up in the meantime (wake read ended) is skipped, and
+  `disconnect(from:)` drops the device from a pending reconnect scan
+  (stopping the scan when it was the last target) instead of leaving the
+  radio scanning for a sensor nobody waits for.
+- `BackgroundHistorySyncService` re-checks `expirationRequested` after
+  loading the boundary: the window can expire while the store is being
+  read, when no flow exists yet for `requestExpiration()` to suspend.
 - An empty sensor history also posts `HistoricalDataLoadingCompleted`.
 
 ## Record & replay (beta-tester problem reports)

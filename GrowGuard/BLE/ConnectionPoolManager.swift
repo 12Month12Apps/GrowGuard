@@ -281,6 +281,17 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
         // Cancel any pending timeouts
         cancelConnectionTimeout(for: deviceUUID)
 
+        // A reconnect scan only exists to resume a flow this disconnect ends;
+        // left running it keeps the radio busy until the sensor happens to
+        // advertise — or forever, if it is out of range
+        if reconnectScanDevices.remove(deviceUUID) != nil {
+            AppLogger.ble.info("⏹ Auto-reconnect scan cancelled for device \(deviceUUID): disconnected")
+            devicesToScan.remove(deviceUUID)
+            if devicesToScan.isEmpty {
+                stopScanning()
+            }
+        }
+
         // Hole Connection aus Dictionary
         guard let connection = connections[deviceUUID] else {
             AppLogger.ble.bleWarning("No connection found for device: \(deviceUUID)")

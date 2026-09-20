@@ -65,6 +65,13 @@ final class BackgroundBLEWakeService {
         var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
         var liveDataRequested = false
         var phase: Phase = .live
+        /// Only this read's own flow may be cleaned up and only its own
+        /// boundary cleared — the pooled connection is shared
+        var startedHistoryFlow = false
+        /// Answers whether the live sample actually reached the store
+        var saveTask: Task<Bool, Never>?
+        /// Chained history writes, awaited before the background task ends
+        var historySaves: Task<Void, Never>?
         var historyEntries = 0
         var historyCompletionObserver: NSObjectProtocol?
         var finished = false
@@ -222,8 +229,15 @@ final class BackgroundBLEWakeService {
                 guard let self, let read = self.activeReads[deviceUUID] else { return }
                 read.phase = .saving
                 let source = trigger?.sensorDataSource ?? .backgroundTask
+                // Held so a timeout during the write can wait for its result
+                // instead of guessing whether the sample was persisted
+                let saveTask = Task { @MainActor in
+                    await self.saveSample(sensorData, deviceUUID, source)
+                }
+                read.saveTask = saveTask
                 Task { @MainActor in
-                    let saved = await self.saveSample(sensorData, deviceUUID, source)
+                    let saved = await saveTask.value
+                    guard let read = self.activeReads[deviceUUID], !read.finished else { return }
                     guard saved else {
                         self.finishRead(for: deviceUUID, outcome: .sampleRejected)
                         return
@@ -237,9 +251,18 @@ final class BackgroundBLEWakeService {
         read.timeoutTask = scheduler.schedule(after: wakeReadTimeout) { [weak self] in
             Task { @MainActor in
                 guard let self, let read = self.activeReads[deviceUUID] else { return }
-                // Out of time after the sample arrived (saving or appending
-                // history): the live sample is stored
-                self.finishRead(for: deviceUUID, outcome: read.phase == .live ? .timedOut : .saved)
+                switch read.phase {
+                case .live:
+                    self.finishRead(for: deviceUUID, outcome: .timedOut)
+                case .saving:
+                    // Out of time while the sample is being written: only the
+                    // store can say whether it was persisted
+                    let stored = await read.saveTask?.value ?? false
+                    self.finishRead(for: deviceUUID, outcome: stored ? .saved : .sampleRejected)
+                case .history:
+                    // The live sample is stored; keep what history arrived
+                    self.finishRead(for: deviceUUID, outcome: .saved)
+                }
             }
         }
     }
@@ -255,6 +278,15 @@ final class BackgroundBLEWakeService {
             return
         }
 
+        // A BGProcessing sync (or a user sync that kept running when the app
+        // was backgrounded) already owns this pooled connection: its boundary
+        // and its entries are not this read's to touch
+        guard !connection.isHistoryFlowActive else {
+            AppLogger.ble.info("🛡 BLE wake: history flow already active for \(deviceUUID), leaving it to its owner")
+            finishRead(for: deviceUUID, outcome: .saved)
+            return
+        }
+
         read.phase = .history
         connection.setHistoryStopBoundary(boundary)
 
@@ -262,9 +294,14 @@ final class BackgroundBLEWakeService {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] entry in
                 guard let self, let read = self.activeReads[deviceUUID] else { return }
-                read.historyEntries += 1
-                Task { @MainActor in
+                // Written one after another and awaited before the background
+                // task ends, so iOS cannot suspend the app mid-write; counted
+                // only once actually stored
+                let pending = read.historySaves
+                read.historySaves = Task { @MainActor in
+                    await pending?.value
                     await self.saveHistoricalEntry(entry, deviceUUID)
+                    read.historyEntries += 1
                 }
             }
             .store(in: &read.cancellables)
@@ -288,7 +325,9 @@ final class BackgroundBLEWakeService {
         if !connection.isHistoryFlowActive {
             connection.setHistoryStopBoundary(nil)
             finishRead(for: deviceUUID, outcome: .saved)
+            return
         }
+        read.startedHistoryFlow = true
     }
 
     private func finishRead(for deviceUUID: String, outcome: WakeReadOutcome) {
@@ -305,17 +344,34 @@ final class BackgroundBLEWakeService {
         // One trigger, one chance: never re-arm from a wake (wake-loop
         // prevention — the sensor advertises continuously in range)
         pool.disarmBackgroundConnect(for: deviceUUID)
-        // An active flow makes the pool auto-reconnect to resume it
+
         let connection = pool.getConnection(for: deviceUUID)
-        if connection.isHistoryFlowActive {
-            connection.cleanupHistoryFlow()
-        }
-        if read.phase == .history {
+        if read.startedHistoryFlow {
+            // An active flow makes the pool auto-reconnect to resume it
+            if connection.isHistoryFlowActive {
+                connection.cleanupHistoryFlow()
+            }
             // The boundary this read set must never cut a later foreground full sync short
             connection.setHistoryStopBoundary(nil)
         }
-        pool.disconnect(from: deviceUUID)
+        // A flow owned by someone else still needs the link
+        if !connection.isHistoryFlowActive {
+            pool.disconnect(from: deviceUUID)
+        }
 
+        // Entries may still be on their way into the store: the background
+        // task has to outlive them, and the tracker counts only what landed
+        if let pendingSaves = read.historySaves {
+            Task { @MainActor in
+                await pendingSaves.value
+                self.completeRead(read, deviceUUID: deviceUUID, outcome: outcome)
+            }
+        } else {
+            completeRead(read, deviceUUID: deviceUUID, outcome: outcome)
+        }
+    }
+
+    private func completeRead(_ read: WakeRead, deviceUUID: String, outcome: WakeReadOutcome) {
         tracker.recordWakeRead(
             trigger: read.trigger,
             outcome: outcome,

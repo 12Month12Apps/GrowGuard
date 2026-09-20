@@ -157,11 +157,13 @@ import UIKit
         // This prevents the loop where history restarts after completion on reconnect
         if !historyLoadedThisSession {
             connection.setAutoStartHistoryFlowEnabled(true)
-            ownsHistoryFlow = true
-            // A fresh auto-started flow is a full sync; a background sync's
-            // failed attempt must not leave its boundary behind. A flow that
-            // is already active (suspended, to be resumed) keeps its own.
+            // A fresh auto-started flow is a full sync this screen owns; a
+            // background sync's failed attempt must not leave its boundary
+            // behind. A flow that is already active belongs to whoever started
+            // it — it keeps its boundary, and its entries are saved by its own
+            // owner, so this screen must not claim it here.
             if !connection.isHistoryFlowActive {
+                ownsHistoryFlow = true
                 connection.setHistoryStopBoundary(nil)
             }
             AppLogger.ble.info("📊 DeviceDetailsViewModel: Auto-start enabled (history not loaded yet)")

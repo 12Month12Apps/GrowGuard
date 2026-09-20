@@ -211,6 +211,47 @@ struct BackgroundHistorySyncTests {
         #expect(pool.getConnection(for: sensor.identifier.uuidString).historyStopBoundary == nil)
     }
 
+    @Test("A window that expires while the stored boundary is read does not wake the sensor")
+    func expirationDuringBoundaryLoadSkipsConnect() async {
+        final class ServiceBox {
+            var service: BackgroundHistorySyncService?
+        }
+
+        let pool = makePool()
+        let sensor = makeSensor(entries: 3)
+        let recorder = self.recorder
+        let box = ServiceBox()
+        let service = BackgroundHistorySyncService(
+            pool: pool,
+            scheduler: scheduler,
+            loadSensorDeviceUUIDs: { [sensor.identifier.uuidString] },
+            saveHistoricalEntry: { entry, uuid in
+                recorder.savedEntries.append((uuid, entry))
+            },
+            loadHistoryBoundary: { _ in
+                // The BGProcessingTask window ends while the store is read:
+                // currentDeviceUUID is still nil, so requestExpiration() has
+                // no flow to suspend
+                box.service?.requestExpiration()
+                return nil
+            }
+        )
+        box.service = service
+
+        Task { @MainActor in
+            await service.syncAllDevices()
+            recorder.done = true
+        }
+        for _ in 0..<20 where !recorder.done {
+            await pump()
+            scheduler.advance(by: 0.2)
+        }
+
+        #expect(recorder.done, "An expired sync must return, not wait out its 240 s per-device timeout")
+        #expect(central.connectRequests.isEmpty, "An expired window must not wake the sensor")
+        #expect(recorder.savedEntries.isEmpty)
+    }
+
     @Test("A sync that ends without a history flow leaves no stop boundary for the next foreground full sync")
     func failedSyncClearsBoundary() async {
         let pool = makePool()

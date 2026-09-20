@@ -91,6 +91,10 @@ final class BackgroundHistorySyncService {
         // Only fetch what was recorded since the last sync — a full read of
         // a year of hourly entries never fits a background window
         let boundary = await loadHistoryBoundary(deviceUUID)
+        // The window can expire while the store is being read: currentDeviceUUID
+        // is still nil then, so requestExpiration() cannot stop this flow and
+        // an expired task would go on to wake the sensor
+        guard !expirationRequested else { return }
         let connection = pool.getConnection(for: deviceUUID)
         // A suspended flow (an earlier window, or a user's full sync) keeps
         // its own boundary: the entries it saved would otherwise end the

@@ -513,4 +513,41 @@ struct ConnectionPoolManagerTests {
                 "Nothing left to resume: waking the sensor would only drain its battery")
         #expect(!central.isScanning)
     }
+
+    @Test("Disconnecting stops a reconnect scan that only existed to resume the ended flow")
+    func disconnectStopsPendingReconnectScan() async {
+        let pool = makePool()
+        let sensor = makeSensor(entries: 50)
+        sensor.silentEntryIndices = Set(3..<50) // flow stays active mid-sync
+        let connection = pool.getConnection(for: sensor.identifier.uuidString)
+
+        pool.connect(to: sensor.identifier.uuidString)
+        for _ in 0..<20 {
+            await pump()
+            scheduler.advance(by: 0.1)
+        }
+        #expect(connection.isHistoryFlowActive)
+
+        // Sensor gone from the retrieve cache: the reconnect has to scan
+        central.peripheralsAreInRetrieveCache = false
+        central.simulateDisconnect(of: sensor.identifier)
+        for _ in 0..<25 {
+            await pump()
+            scheduler.advance(by: 0.1)
+        }
+        #expect(central.isScanning, "Fast reconnect attempts failed, the pool scans")
+        let connectsBeforeCleanup = central.connectRequests.count
+
+        // The wake read ends its flow and drops the device
+        connection.cleanupHistoryFlow()
+        pool.disconnect(from: sensor.identifier.uuidString)
+        await pump()
+
+        #expect(!central.isScanning,
+                "A scan nobody waits for keeps the radio busy until the sensor happens to advertise")
+
+        central.simulateDiscovery(of: sensor.identifier)
+        await pump()
+        #expect(central.connectRequests.count == connectsBeforeCleanup)
+    }
 }
