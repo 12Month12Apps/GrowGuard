@@ -143,10 +143,14 @@ final class BackgroundBLEWakeService {
         // is no longer distinguishable once the loop has passed it.
         var silentSincePreviousTrigger: [String] = []
         for uuid in uuids {
-            // Still armed from the previous trigger = the sensor never woke us.
-            // A dead (non-advertising) sensor produces no CoreBluetooth
-            // callback at all; this is the only place that silence is visible.
-            if pool.isBackgroundArmed(uuid) && activeReads[uuid] == nil {
+            // A connect iOS actually held open since the previous trigger,
+            // which never completed, is the dead-sensor signature: a dead
+            // (non-advertising) sensor produces no CoreBluetooth callback at
+            // all, and this is the only place that silence is visible. Merely
+            // *armed* is not enough — a device stays armed when the radio was
+            // off or the peripheral was not in the retrieve cache, and then
+            // the app never asked it anything.
+            if pool.hasPendingBackgroundConnect(uuid) && activeReads[uuid] == nil {
                 silentSincePreviousTrigger.append(uuid)
             }
             armSources[uuid] = source

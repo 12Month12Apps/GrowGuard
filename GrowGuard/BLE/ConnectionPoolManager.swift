@@ -108,6 +108,12 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
     /// Geräte mit aktivem Background-Pending-Connect. Persistiert, damit ein
     /// State-Restoration-Relaunch armed-Geräte wiedererkennt.
     private var backgroundArmedDevices: Set<String> = []
+    /// Armed devices for which a `central.connect` was actually issued — iOS
+    /// is holding the pending connect open. Armed-but-not-issued (radio off,
+    /// peripheral not in the retrieve cache) means the app never asked, which
+    /// says nothing about the sensor. Not persisted: after a relaunch the
+    /// poweredOn handler re-issues the connects and refills this.
+    private var backgroundConnectsIssued: Set<String> = []
     private let armedDevicesDefaultsKey = "ble_background_armed_devices"
     private let defaults: UserDefaults
 
@@ -434,21 +440,31 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
 
         connection.setPeripheral(peripheral)
         central.connect(peripheral, options: Self.connectOptions)
+        backgroundConnectsIssued.insert(deviceUUID)
         AppLogger.ble.bleConnection("🛡 Armed background pending connect for \(deviceUUID)")
     }
 
     func disarmBackgroundConnect(for deviceUUID: String) {
         backgroundArmedDevices.remove(deviceUUID)
+        backgroundConnectsIssued.remove(deviceUUID)
         persistArmedDevices()
     }
 
     func disarmAllBackgroundConnects() {
         backgroundArmedDevices.removeAll()
+        backgroundConnectsIssued.removeAll()
         persistArmedDevices()
     }
 
     func isBackgroundArmed(_ deviceUUID: String) -> Bool {
         backgroundArmedDevices.contains(deviceUUID)
+    }
+
+    /// Armed *and* the connect request was handed to CoreBluetooth. Only this
+    /// proves the app tried: an armed device whose connect was never issued
+    /// (radio off, not in the retrieve cache) was never asked anything.
+    func hasPendingBackgroundConnect(_ deviceUUID: String) -> Bool {
+        backgroundArmedDevices.contains(deviceUUID) && backgroundConnectsIssued.contains(deviceUUID)
     }
 
     private func persistArmedDevices() {
