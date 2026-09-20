@@ -90,7 +90,8 @@ import UIKit
 
         Task {
             if let all = try? await self.repositoryManager.flowerDeviceRepository.getAllDevices() {
-                await MainActor.run { self.peers = all.filter { $0.uuid != device.uuid } }
+                let others = all.filter { $0.uuid != device.uuid }
+                await MainActor.run { self.peers = others }
             }
             try await PlantMonitorService.shared.checkDeviceStatus(device: device)
 
