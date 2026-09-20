@@ -170,9 +170,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
         if isContentAvailable {
             print("🔄 AppDelegate: Silent push — arming background connects")
-            BackgroundTaskTracker.shared.recordPushReceived()
             Task { @MainActor in
-                await BackgroundBLEWakeService.shared.armAll(source: .backgroundPush)
+                let armed = await BackgroundBLEWakeService.shared.armAll(trigger: .silentPush)
+                BackgroundTaskTracker.shared.recordPushReceived(armedSensors: armed)
                 completionHandler(.newData)
             }
         } else {
@@ -211,8 +211,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // here. The read happens on the BLE wake via BackgroundBLEWakeService,
         // so nothing races the ~30 s window.
         let armWork = Task { @MainActor in
-            await BackgroundBLEWakeService.shared.armAll(source: .backgroundTask)
-            task.setTaskCompleted(success: !Task.isCancelled)
+            let armed = await BackgroundBLEWakeService.shared.armAll(trigger: .refreshTask)
+            let expired = Task.isCancelled
+            BackgroundTaskTracker.shared.recordRefreshTaskRun(armedSensors: armed, expired: expired)
+            task.setTaskCompleted(success: !expired)
         }
 
         task.expirationHandler = {
@@ -252,10 +254,20 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
         print("📚 AppDelegate: Processing task — background history sync")
 
+        let startedAt = Date()
+
         let syncWork = Task { @MainActor in
-            await BackgroundHistorySyncService.shared.syncAllDevices()
-            await PlantMonitorService.shared.performDailyDeviceCheck()
-            task.setTaskCompleted(success: true)
+            let expired = await BackgroundHistorySyncService.shared.syncAllDevices()
+            if !expired {
+                // The daily check has no cancellation guard — only start it
+                // while the task window is still open
+                await PlantMonitorService.shared.performDailyDeviceCheck()
+            }
+            BackgroundTaskTracker.shared.recordProcessingTaskRun(
+                duration: Date().timeIntervalSince(startedAt),
+                expired: expired
+            )
+            task.setTaskCompleted(success: !expired)
         }
 
         task.expirationHandler = {

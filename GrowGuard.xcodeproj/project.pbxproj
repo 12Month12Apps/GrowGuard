@@ -61,6 +61,7 @@
 		5654B2C12CB4739C00EED3D3 /* AddDeviceViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5654B2C02CB4739400EED3D3 /* AddDeviceViewModelTests.swift */; };
 		565DEC402C159B93002D784A /* DeviceDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */; };
 		565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */; };
+		56LRG0012EC7000000000001 /* LiveReadGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56LRG0002EC7000000000001 /* LiveReadGate.swift */; };
 		5663FEB52EB684620038209F /* ConnectionPoolManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB42EB684620038209F /* ConnectionPoolManager.swift */; };
 		5663FEB72EB684800038209F /* DeviceConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB62EB684800038209F /* DeviceConnection.swift */; };
 		5663FEB92EB690AB0038209F /* InitialSensorDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */; };
@@ -112,9 +113,13 @@
 		56D35EB72E2BE5730059FEE6 /* PotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D35EB62E2BE56C0059FEE6 /* PotView.swift */; };
 		56DC564D2DD9256800041DBA /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 56DC564C2DD9256800041DBA /* GRDB */; };
 		56E9573D2ED3088100082A6F /* GrowGuardAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E9573C2ED3088100082A6F /* GrowGuardAPIClient.swift */; };
+		56APNE012EC7000000000001 /* APNsEnvironmentDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56APNE002EC7000000000001 /* APNsEnvironmentDetector.swift */; };
+		56APNE012EC7000000000002 /* APNsEnvironmentDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56APNE002EC7000000000002 /* APNsEnvironmentDetectorTests.swift */; };
 		56F0F7DB2E564C0400B538AF /* MoistureAnomalyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F0F7DA2E564C0400B538AF /* MoistureAnomalyService.swift */; };
 		56F0F7DD2E564C2800B538AF /* MoistureAnomalyServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */; };
 		56SHDT012EC7000000000001 /* FlowerDeviceDTOTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHDT002EC7000000000001 /* FlowerDeviceDTOTests.swift */; };
+		56LRG0012EC7000000000002 /* LiveReadGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56LRG0002EC7000000000002 /* LiveReadGateTests.swift */; };
+		56BGTT012EC7000000000001 /* BackgroundTaskTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BGTT002EC7000000000001 /* BackgroundTaskTrackerTests.swift */; };
 		56F9D1A12E5B4E0D00A1B2C3 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */; };
 		56FA2DEC0DE4F1B500000002 /* FlowerCareFrameFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000001 /* FlowerCareFrameFixtures.swift */; };
 		56FA2DEC0DE4F1B500000004 /* BLETransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FA2DEC0DE4F1B500000003 /* BLETransport.swift */; };
@@ -248,6 +253,7 @@
 		5654B2C02CB4739400EED3D3 /* AddDeviceViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceViewModelTests.swift; sourceTree = "<group>"; };
 		565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsView.swift; sourceTree = "<group>"; };
 		565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailsViewModel.swift; sourceTree = "<group>"; };
+		56LRG0002EC7000000000001 /* LiveReadGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReadGate.swift; sourceTree = "<group>"; };
 		5663FEB42EB684620038209F /* ConnectionPoolManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionPoolManager.swift; sourceTree = "<group>"; };
 		5663FEB62EB684800038209F /* DeviceConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceConnection.swift; sourceTree = "<group>"; };
 		5663FEB82EB690AB0038209F /* InitialSensorDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitialSensorDataService.swift; sourceTree = "<group>"; };
@@ -305,9 +311,13 @@
 		56C780520D1F48A1A95C9D43 /* ReplayBLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplayBLETransport.swift; sourceTree = "<group>"; };
 		56D35EB62E2BE56C0059FEE6 /* PotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PotView.swift; sourceTree = "<group>"; };
 		56E9573C2ED3088100082A6F /* GrowGuardAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowGuardAPIClient.swift; sourceTree = "<group>"; };
+		56APNE002EC7000000000001 /* APNsEnvironmentDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APNsEnvironmentDetector.swift; sourceTree = "<group>"; };
+		56APNE002EC7000000000002 /* APNsEnvironmentDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APNsEnvironmentDetectorTests.swift; sourceTree = "<group>"; };
 		56F0F7DA2E564C0400B538AF /* MoistureAnomalyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoistureAnomalyService.swift; sourceTree = "<group>"; };
 		56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoistureAnomalyServiceTests.swift; sourceTree = "<group>"; };
 		56SHDT002EC7000000000001 /* FlowerDeviceDTOTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerDeviceDTOTests.swift; sourceTree = "<group>"; };
+		56LRG0002EC7000000000002 /* LiveReadGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReadGateTests.swift; sourceTree = "<group>"; };
+		56BGTT002EC7000000000001 /* BackgroundTaskTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskTrackerTests.swift; sourceTree = "<group>"; };
 		56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationService.swift; path = ../Core/NotificationService.swift; sourceTree = "<group>"; };
 		56FA2DEC0DE4F1B500000001 /* FlowerCareFrameFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerCareFrameFixtures.swift; sourceTree = "<group>"; };
 		56FA2DEC0DE4F1B500000003 /* BLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLETransport.swift; sourceTree = "<group>"; };
@@ -558,6 +568,7 @@
 				565DEC3F2C159B93002D784A /* DeviceDetailsView.swift */,
 				5663FEBC2EC3CD000038209F /* BenchmarkView.swift */,
 				565DEC412C159BA3002D784A /* DeviceDetailsViewModel.swift */,
+				56LRG0002EC7000000000001 /* LiveReadGate.swift */,
 			);
 			path = DeviceDetails;
 			sourceTree = "<group>";
@@ -626,6 +637,7 @@
 				56BWKS002EC7000000000001 /* BackgroundBLEWakeService.swift */,
 				56BHSY002EC7000000000001 /* BackgroundHistorySyncService.swift */,
 				56E9573C2ED3088100082A6F /* GrowGuardAPIClient.swift */,
+				56APNE002EC7000000000001 /* APNsEnvironmentDetector.swift */,
 				56HLA0012EC8000000000001 /* HistoryLoadingAttributes.swift */,
 				56HLAS012EC8000000000002 /* HistoryLoadingActivityService.swift */,
 				56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */,
@@ -757,9 +769,12 @@
 				56RMET002EC7000000000001 /* RoomEditingTests.swift */,
 				56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */,
 				56SHDT002EC7000000000001 /* FlowerDeviceDTOTests.swift */,
+				56LRG0002EC7000000000002 /* LiveReadGateTests.swift */,
+				56BGTT002EC7000000000001 /* BackgroundTaskTrackerTests.swift */,
 				5654B2BF2CB46EF200EED3D3 /* BLE */,
 				5654B2BE2CB46EEA00EED3D3 /* ViewModel */,
 				56AF112C2BDED05B00887073 /* GrowGuardTests.swift */,
+				56APNE002EC7000000000002 /* APNsEnvironmentDetectorTests.swift */,
 			);
 			path = GrowGuardTests;
 			sourceTree = "<group>";
@@ -1042,6 +1057,7 @@
 				5622B0E32E317717002C7E74 /* RepositoryManager.swift in Sources */,
 				56A8C6EA2D8ECF37004021C0 /* AddDeviceDetails.swift in Sources */,
 				565DEC422C159BA3002D784A /* DeviceDetailsViewModel.swift in Sources */,
+				56LRG0012EC7000000000001 /* LiveReadGate.swift in Sources */,
 				5663FEB72EB684800038209F /* DeviceConnection.swift in Sources */,
 				4A1BC0DE12340001AB00B001 /* DeviceConnection+Authentication.swift in Sources */,
 				4A1BC0DE12340002AB00B002 /* DeviceConnection+LiveData.swift in Sources */,
@@ -1089,6 +1105,7 @@
 				5684E2E22C0FA2EE005CD8B6 /* OverviewList.swift in Sources */,
 				562629002C42E32700B5DB2A /* AppIntent.swift in Sources */,
 				56E9573D2ED3088100082A6F /* GrowGuardAPIClient.swift in Sources */,
+				56APNE012EC7000000000001 /* APNsEnvironmentDetector.swift in Sources */,
 				56A8C6EF2D8F38CD004021C0 /* Button.swift in Sources */,
 				56A948F72DE3A4790010575F /* FlowerSearch.swift in Sources */,
 				56B44CCE2D78E8EC00A6A75A /* print.swift in Sources */,
@@ -1136,6 +1153,7 @@
 				56FA2DEC0DE4F1B50000000C /* ConnectionPoolManagerTests.swift in Sources */,
 				56BHST012EC7000000000001 /* BackgroundHistorySyncTests.swift in Sources */,
 				56BWKT012EC7000000000001 /* BackgroundWakeServiceTests.swift in Sources */,
+				56APNE012EC7000000000002 /* APNsEnvironmentDetectorTests.swift in Sources */,
 				56BARM012EC7000000000001 /* BackgroundArmTests.swift in Sources */,
 				E74116E2F3304A11BD446D55 /* BLEPerformanceTests.swift in Sources */,
 				56FA2DED0DE4F1B500000102 /* HistoryResumeWindowTests.swift in Sources */,
@@ -1148,6 +1166,8 @@
 				56AF112D2BDED05B00887073 /* GrowGuardTests.swift in Sources */,
 				56F0F7DD2E564C2800B538AF /* MoistureAnomalyServiceTests.swift in Sources */,
 				56SHDT012EC7000000000001 /* FlowerDeviceDTOTests.swift in Sources */,
+				56LRG0012EC7000000000002 /* LiveReadGateTests.swift in Sources */,
+				56BGTT012EC7000000000001 /* BackgroundTaskTrackerTests.swift in Sources */,
 				26A048DD6828B0F96B4FB336 /* BridgeBLECentralTests.swift in Sources */,
 				1C094F5B7AE87D738830D849 /* BridgeDeviceDiscoveryTests.swift in Sources */,
 			);

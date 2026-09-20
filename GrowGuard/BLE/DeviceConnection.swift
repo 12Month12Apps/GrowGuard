@@ -122,6 +122,19 @@ class DeviceConnection: NSObject {
     /// Flag ob der Historical Data Flow aktiv ist
     var isHistoryFlowActive: Bool = false
 
+    /// Newest history entry already stored. The sensor serves history
+    /// newest-first, so the flow ends at the first entry at or before this
+    /// date. nil = full sync. Cleared when the flow ends.
+    var historyStopBoundary: Date?
+
+    /// Stored and re-decoded dates of one entry drift by seconds (device
+    /// clock); entries are 3600 s apart
+    static let historyStopTolerance: TimeInterval = 600
+
+    func setHistoryStopBoundary(_ date: Date?) {
+        historyStopBoundary = date
+    }
+
     /// Device Boot Time für Timestamp-Berechnungen
     var deviceBootTime: Date?
 
