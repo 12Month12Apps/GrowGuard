@@ -45,6 +45,24 @@ struct SensorHealthMonitorTests {
         }
     }
 
+    /// Notifier that really suspends inside `notifyUnreachable`, the way the
+    /// `UNUserNotificationCenter.add` round trip does. `RecordingNotifier`
+    /// appends synchronously and therefore cannot expose a read-notify-write
+    /// race: only a notifier that gives the main actor away mid-call lets a
+    /// second handler observe the not-yet-written marker.
+    final class SuspendingNotifier: SensorHealthNotifying {
+        var unreachable: [String] = []
+        var lowBattery: [(uuid: String, percent: Int)] = []
+        func notifyUnreachable(device: FlowerDeviceDTO, since: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now: Date) async {
+            for _ in 0..<5 { await Task.yield() }
+            unreachable.append(device.uuid)
+        }
+        func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async {
+            for _ in 0..<5 { await Task.yield() }
+            lowBattery.append((device.uuid, percent))
+        }
+    }
+
     final class Clock {
         var now = Date(timeIntervalSince1970: 1_800_000_000)
         func advance(_ seconds: TimeInterval) { now = now.addingTimeInterval(seconds) }
@@ -57,10 +75,10 @@ struct SensorHealthMonitorTests {
     let defaults = UserDefaults(suiteName: "SensorHealthMonitorTests-\(UUID().uuidString)")!
     let hour: TimeInterval = 3600
 
-    private func makeMonitor() -> SensorHealthMonitor {
+    private func makeMonitor(notifier: SensorHealthNotifying? = nil) -> SensorHealthMonitor {
         SensorHealthMonitor(events: events.eraseToAnyPublisher(),
                             repository: repository,
-                            notifier: notifier,
+                            notifier: notifier ?? self.notifier,
                             defaults: defaults,
                             now: { [clock] in clock.now })
     }
@@ -320,6 +338,32 @@ struct SensorHealthMonitorTests {
         await drainMainActor()
 
         #expect(repository.updateCount == 1)
+    }
+
+    /// Every success evaluates *every* peer, so two handlers for two different
+    /// devices both touch the third device's notification marker. The marker
+    /// is read before `await notifier…` and written after it, so handlers that
+    /// are not on one chain interleave inside that suspension, both see nil
+    /// and both notify. One wake in which two sensors deliver is exactly that
+    /// situation.
+    @Test("Two peers delivering in the same wake notify the silent third sensor once")
+    func concurrentPeerEventsNotifyOnce() async {
+        seed("A")
+        seed("B")
+        seed("C", silentFor: 3 * 24 * hour, attempts: 3)
+        let suspending = SuspendingNotifier()
+        let monitor = makeMonitor(notifier: suspending)
+        monitor.start()
+
+        events.send(.sensorData(uuid: "A"))
+        events.send(.sensorData(uuid: "B"))
+
+        // Both events written, and at least one notification recorded
+        await waitUntil { self.repository.updateCount >= 2 && !suspending.unreachable.isEmpty }
+        // Give a second, racing notification every chance to land
+        await drainMainActor(passes: 20)
+
+        #expect(suspending.unreachable == ["C"])
     }
 
     // MARK: - New-cell threshold

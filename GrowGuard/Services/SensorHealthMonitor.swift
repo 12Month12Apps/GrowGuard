@@ -38,17 +38,25 @@ final class SensorHealthMonitor {
     private let defaults: UserDefaults
     private let now: () -> Date
     private var subscription: AnyCancellable?
-    /// Tail of the chain of in-flight event handlers, **per device**. The
-    /// handlers suspend at their `await`s and `@MainActor` does not serialize
-    /// across a suspension point, so two unchained tasks for the same uuid
-    /// could both read a nil marker and both notify. Each new task awaits its
-    /// predecessor for the same uuid, which also preserves arrival order.
+    /// Tail of the chain of in-flight event handlers. Each new task awaits its
+    /// predecessor's `.value` before handling its own event, which serializes
+    /// every handler and preserves arrival order.
     ///
-    /// Keyed by uuid rather than global: a slow handler for one device (a
-    /// history sync hammering the store) must not block the events of every
-    /// other device behind it. Devices share no mutable state here — each
-    /// device's markers and counters are its own.
-    private var pending: [String: Task<Void, Never>] = [:]
+    /// The chain is **global, not per device**. `@MainActor` does not serialize
+    /// across a suspension point, and `evaluateAndNotify` reads a device's
+    /// notification marker, suspends at `await notifier…`, then writes it. A
+    /// success does not only evaluate its own device: `recordSuccessfulContact`
+    /// evaluates every peer, because the delivering sensor may be the witness
+    /// that upgrades a neighbour's verdict. So a handler for device A touches
+    /// device C's marker, and a handler for device B touches it too — two
+    /// sensors delivering in one wake would both read C's nil marker inside
+    /// that suspension and both notify. Devices therefore do share mutable
+    /// state and one FIFO is the only correct chain.
+    ///
+    /// Cheap enough: the 60 s success coalescing already collapses a history
+    /// sync's thousands of replayed entries into one handled event, so the
+    /// queue this chain serializes is short.
+    private var pending: Task<Void, Never>?
     /// Last recorded successful contact per device, for the coalesce window.
     private var lastSuccessAt: [String: Date] = [:]
 
@@ -82,9 +90,8 @@ final class SensorHealthMonitor {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] event in
                 guard let self else { return }
-                let uuid = event.uuid
-                let previous = self.pending[uuid]
-                self.pending[uuid] = Task { @MainActor [weak self] in
+                let previous = self.pending
+                self.pending = Task { @MainActor [weak self] in
                     await previous?.value
                     await self?.handle(event)
                 }
