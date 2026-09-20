@@ -567,7 +567,8 @@ struct DeviceDetailsView: View {
                 RoomPickerView(selection: Binding(
                     get: { viewModel.device.location },
                     set: { room in Task { await viewModel.setRoom(room) } }
-                ), devices: viewModel.peers + [viewModel.device])
+                ), devices: viewModel.peers + [viewModel.device],
+                   onRoomsChanged: { await viewModel.reloadRooms() })
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button(L10n.Alert.cancel) { showRoomPicker = false }

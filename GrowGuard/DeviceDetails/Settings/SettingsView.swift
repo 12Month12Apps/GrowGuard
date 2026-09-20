@@ -103,7 +103,17 @@ class SettingsViewModel {
             self.deviceName = ""
         }
     }
-    
+
+    /// After a room was renamed or deleted in the picker: the room list is
+    /// derived from the devices, so refresh them. The form's own `location`
+    /// is moved by the picker itself.
+    @MainActor
+    func reloadDevices() async {
+        if let all = try? await repositoryManager.flowerDeviceRepository.getAllDevices() {
+            allDevices = all
+        }
+    }
+
     @MainActor
     private func loadPotSize() async {
         do {
@@ -578,7 +588,9 @@ struct SettingsView: View {
                     }
                 }
 
-                RoomFormSection(location: $viewModel.location, devices: viewModel.allDevices)
+                RoomFormSection(location: $viewModel.location,
+                                devices: viewModel.allDevices,
+                                onRoomsChanged: { await viewModel.reloadDevices() })
 
                 Section(header: Text("Plant Selection")) {
                     if let selectedFlower = viewModel.selectedFlower {

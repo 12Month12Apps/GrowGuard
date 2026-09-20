@@ -31,11 +31,19 @@ enum RoomText {
 struct RoomPickerView: View {
     @Binding var selection: String?
     let devices: [FlowerDeviceDTO]
+    /// Lets the host refresh its own copy after a room was renamed or deleted
+    var onRoomsChanged: (() async -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
+    /// Reloaded after an edit; nil until then (use the host's snapshot)
+    @State private var reloadedDevices: [FlowerDeviceDTO]?
+    @State private var editingRoom: Room?
+    @State private var roomPendingDeletion: Room?
 
-    private var catalog: RoomCatalog { RoomCatalog(devices: devices, now: Date()) }
+    private var currentDevices: [FlowerDeviceDTO] { reloadedDevices ?? devices }
+
+    private var catalog: RoomCatalog { RoomCatalog(devices: currentDevices, now: Date()) }
 
     var body: some View {
         let catalog = self.catalog
@@ -69,12 +77,33 @@ struct RoomPickerView: View {
             if !matches.isEmpty {
                 Section(header: Text(L10n.Room.Picker.yourRooms)) {
                     ForEach(matches) { room in
-                        Button { pick(room.name) } label: {
-                            row(symbol: RoomCatalog.symbolName(for: room.name),
-                                title: room.name ?? L10n.Room.none,
-                                subtitle: "\(RoomText.plants(room.plantCount)) · \(RoomText.sensors(room.sensorCount))",
-                                tint: .green,
-                                isSelected: room.name == selection)
+                        HStack(spacing: 4) {
+                            Button { pick(room.name) } label: {
+                                row(symbol: RoomCatalog.symbolName(for: room.name),
+                                    title: room.name ?? L10n.Room.none,
+                                    subtitle: "\(RoomText.plants(room.plantCount)) · \(RoomText.sensors(room.sensorCount))",
+                                    tint: .green,
+                                    isSelected: room.name == selection)
+                            }
+                            .buttonStyle(.plain)
+
+                            Menu {
+                                Button { editingRoom = room } label: { Label(L10n.Room.Action.edit, systemImage: "pencil") }
+                                Button(role: .destructive) { roomPendingDeletion = room } label: { Label(L10n.Alert.delete, systemImage: "trash") }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                                    .font(.title3)
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 36, height: 36)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.borderless)
+                            .accessibilityLabel(L10n.Room.Action.more)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) { roomPendingDeletion = room } label: { Label(L10n.Alert.delete, systemImage: "trash") }
+                            Button { editingRoom = room } label: { Label(L10n.Room.Action.edit, systemImage: "pencil") }
+                                .tint(.blue)
                         }
                     }
                 }
@@ -117,6 +146,39 @@ struct RoomPickerView: View {
         }
         .navigationTitle(L10n.Room.title)
         .navigationBarTitleDisplayMode(.large)
+        .sheet(item: $editingRoom) { room in
+            RoomEditView(room: room, devices: currentDevices) { newName in
+                Task { await roomChanged(from: room.name, to: newName) }
+            }
+        }
+        // An alert, not a confirmationDialog: on iOS 26 the dialog is an
+        // anchored popover that lands over the navigation bar and hides its
+        // own Cancel button, leaving a destructive action without a way back.
+        .alert(L10n.Room.Edit.DeleteConfirm.title(roomPendingDeletion?.name ?? ""),
+               isPresented: Binding(get: { roomPendingDeletion != nil }, set: { if !$0 { roomPendingDeletion = nil } })) {
+            Button(L10n.Room.Edit.delete, role: .destructive) {
+                if let room = roomPendingDeletion, let name = room.name {
+                    Task {
+                        _ = try? await RoomEditor().delete(name)
+                        await roomChanged(from: name, to: nil)
+                    }
+                }
+            }
+            Button(L10n.Alert.cancel, role: .cancel) {}
+        } message: {
+            let count = roomPendingDeletion?.plantCount ?? 0
+            Text(count == 1 ? L10n.Room.Edit.DeleteConfirm.one : L10n.Room.Edit.DeleteConfirm.other(count))
+        }
+    }
+
+    /// A room was renamed (new name) or deleted (nil): keep the selection on
+    /// it, reload the list, tell the host. The picker stays open.
+    private func roomChanged(from oldName: String?, to newName: String?) async {
+        if selection == oldName {
+            selection = newName
+        }
+        reloadedDevices = try? await RepositoryManager.shared.flowerDeviceRepository.getAllDevices()
+        await onRoomsChanged?()
     }
 
     /// Return key: take an exact existing room, else create, else do nothing
@@ -168,11 +230,13 @@ struct RoomPickerView: View {
 struct RoomFormSection: View {
     @Binding var location: String?
     let devices: [FlowerDeviceDTO]
+    /// Forwarded to the picker: the host refreshes after a rename or delete
+    var onRoomsChanged: (() async -> Void)? = nil
 
     var body: some View {
         Section {
             NavigationLink {
-                RoomPickerView(selection: $location, devices: devices)
+                RoomPickerView(selection: $location, devices: devices, onRoomsChanged: onRoomsChanged)
             } label: {
                 HStack {
                     Image(systemName: RoomCatalog.symbolName(for: location))

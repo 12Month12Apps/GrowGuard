@@ -77,6 +77,7 @@
 		56SHBI012EC7000000000001 /* BatteryIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHBI002EC7000000000001 /* BatteryIndicator.swift */; };
 		56SHBN012EC7000000000001 /* SensorHealthBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHBN002EC7000000000001 /* SensorHealthBanner.swift */; };
 		56RMPV012EC7000000000001 /* RoomPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMPV002EC7000000000001 /* RoomPickerView.swift */; };
+		56RMEV012EC7000000000001 /* RoomEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMEV002EC7000000000001 /* RoomEditView.swift */; };
 		56RMFB012EC7000000000001 /* RoomFilterBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMFB002EC7000000000001 /* RoomFilterBar.swift */; };
 		56RMRC012EC7000000000001 /* RoomRowCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMRC002EC7000000000001 /* RoomRowCard.swift */; };
 		5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5688920A2C84B4B9000E8FAE /* AppDelegate.swift */; };
@@ -264,6 +265,7 @@
 		56SHBI002EC7000000000001 /* BatteryIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryIndicator.swift; sourceTree = "<group>"; };
 		56SHBN002EC7000000000001 /* SensorHealthBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorHealthBanner.swift; sourceTree = "<group>"; };
 		56RMPV002EC7000000000001 /* RoomPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomPickerView.swift; sourceTree = "<group>"; };
+		56RMEV002EC7000000000001 /* RoomEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomEditView.swift; sourceTree = "<group>"; };
 		56RMFB002EC7000000000001 /* RoomFilterBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomFilterBar.swift; sourceTree = "<group>"; };
 		56RMRC002EC7000000000001 /* RoomRowCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomRowCard.swift; sourceTree = "<group>"; };
 		5688920A2C84B4B9000E8FAE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -606,6 +608,7 @@
 				56SHBI002EC7000000000001 /* BatteryIndicator.swift */,
 				56SHBN002EC7000000000001 /* SensorHealthBanner.swift */,
 				56RMPV002EC7000000000001 /* RoomPickerView.swift */,
+				56RMEV002EC7000000000001 /* RoomEditView.swift */,
 				56RMRC002EC7000000000001 /* RoomRowCard.swift */,
 			);
 			path = Componetns;
@@ -1061,6 +1064,7 @@
 				56SHBI012EC7000000000001 /* BatteryIndicator.swift in Sources */,
 				56SHBN012EC7000000000001 /* SensorHealthBanner.swift in Sources */,
 				56RMPV012EC7000000000001 /* RoomPickerView.swift in Sources */,
+				56RMEV012EC7000000000001 /* RoomEditView.swift in Sources */,
 				56RMFB012EC7000000000001 /* RoomFilterBar.swift in Sources */,
 				56RMRC012EC7000000000001 /* RoomRowCard.swift in Sources */,
 				5622B0D92E317710002C7E74 /* CoreDataPotSizeRepository.swift in Sources */,

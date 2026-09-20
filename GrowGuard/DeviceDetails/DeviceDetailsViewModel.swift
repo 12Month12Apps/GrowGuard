@@ -631,4 +631,15 @@ import ActivityKit
         }
     }
 
+    /// After a room was renamed or deleted in the picker: refresh the peers and
+    /// this plant's own room from the store.
+    @MainActor
+    func reloadRooms() async {
+        guard let all = try? await repositoryManager.flowerDeviceRepository.getAllDevices() else { return }
+        peers = all.filter { $0.uuid != device.uuid }
+        if let me = all.first(where: { $0.uuid == device.uuid }) {
+            device.location = me.location
+        }
+    }
+
 }

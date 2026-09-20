@@ -255,6 +255,12 @@ internal enum L10n {
     internal static let `none` = L10n.tr("Localizable", "room.none", fallback: "No room")
     /// Rooms
     internal static let title = L10n.tr("Localizable", "room.title", fallback: "Room")
+    internal enum Action {
+      /// Edit
+      internal static let edit = L10n.tr("Localizable", "room.action.edit", fallback: "Edit")
+      /// More
+      internal static let more = L10n.tr("Localizable", "room.action.more", fallback: "More")
+    }
     internal enum Companions {
       /// Together with %@ and %d more
       internal static func more(_ p1: Any, _ p2: Int) -> String {
@@ -265,6 +271,44 @@ internal enum L10n {
       /// Together with %@
       internal static func one(_ p1: Any) -> String {
         return L10n.tr("Localizable", "room.companions.one", String(describing: p1), fallback: "Together with %@")
+      }
+    }
+    internal enum Edit {
+      /// Delete room
+      internal static let delete = L10n.tr("Localizable", "room.edit.delete", fallback: "Delete room")
+      /// The room could not be changed. Try again.
+      internal static let failed = L10n.tr("Localizable", "room.edit.failed", fallback: "The room could not be changed. Try again.")
+      /// Icon
+      internal static let icon = L10n.tr("Localizable", "room.edit.icon", fallback: "Icon")
+      /// Automatic
+      internal static let iconAutomatic = L10n.tr("Localizable", "room.edit.iconAutomatic", fallback: "Automatic")
+      /// Merge
+      internal static let merge = L10n.tr("Localizable", "room.edit.merge", fallback: "Merge")
+      /// Name
+      internal static let name = L10n.tr("Localizable", "room.edit.name", fallback: "Name")
+      /// Plants in this room
+      internal static let plants = L10n.tr("Localizable", "room.edit.plants", fallback: "Plants in this room")
+      /// Edit room
+      internal static let title = L10n.tr("Localizable", "room.edit.title", fallback: "Edit room")
+      internal enum DeleteConfirm {
+        /// 1 plant will have no room. The plant itself stays.
+        internal static let one = L10n.tr("Localizable", "room.edit.deleteConfirm.one", fallback: "1 plant will have no room. The plant itself stays.")
+        /// %d plants will have no room. The plants themselves stay.
+        internal static func other(_ p1: Int) -> String {
+          return L10n.tr("Localizable", "room.edit.deleteConfirm.other", p1, fallback: "%d plants will have no room. The plants themselves stay.")
+        }
+        /// Delete “%@”?
+        internal static func title(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "room.edit.deleteConfirm.title", String(describing: p1), fallback: "Delete “%@”?")
+        }
+      }
+      internal enum MergeConfirm {
+        /// A room with that name already exists. The plants of both rooms will be together.
+        internal static let message = L10n.tr("Localizable", "room.edit.mergeConfirm.message", fallback: "A room with that name already exists. The plants of both rooms will be together.")
+        /// Merge into “%@”?
+        internal static func title(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "room.edit.mergeConfirm.title", String(describing: p1), fallback: "Merge into “%@”?")
+        }
       }
     }
     internal enum Picker {

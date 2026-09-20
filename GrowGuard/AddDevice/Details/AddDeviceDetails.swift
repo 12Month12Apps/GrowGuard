@@ -279,7 +279,8 @@ struct AddDeviceDetails:  View {
                 RoomFormSection(location: Binding(
                     get: { viewModel.flower.location },
                     set: { viewModel.flower.location = $0 }
-                ), devices: viewModel.allSavedDevices)
+                ), devices: viewModel.allSavedDevices,
+                   onRoomsChanged: { await viewModel.fetchSavedDevices() })
 
                 Section(header: Text("Pot Size")) {
                     VStack(spacing: 16) {
