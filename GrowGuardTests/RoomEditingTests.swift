@@ -137,6 +137,35 @@ struct RoomEditorTests {
         #expect(repo.devices["uuid-Tomate"]?.location == "Balkon")
     }
 
+    @Test("A legacy case-duplicate is a merge, not a rename: it needs the confirmation")
+    func caseDuplicateIsAMergeNotARename() async throws {
+        let (repo, _, editor) = setUp([("Tomate", "balkon"), ("Basilikum", "Balkon")])
+        #expect(try await editor.mergeTarget(renaming: "balkon", to: "Balkon") == "Balkon")
+        #expect(try await editor.rename("balkon", to: "Balkon") == .merged(into: "Balkon", plants: 1))
+        #expect(repo.devices["uuid-Tomate"]?.location == "Balkon")
+        #expect(repo.devices["uuid-Basilikum"]?.location == "Balkon")
+    }
+
+    @Test("The merge target is deterministic: the exact typed spelling wins, else the one with the most plants")
+    func mergeTargetIsDeterministic() async throws {
+        let (_, _, editor) = setUp([("Ficus", "BALKON"),
+                                    ("Monstera", "Balkon"), ("Efeu", "Balkon"),
+                                    ("Minze", "balkon"),
+                                    ("Tomate", "Terrasse")])
+        #expect(try await editor.mergeTarget(renaming: "Terrasse", to: "balkon") == "balkon",
+                "an existing room spelled exactly as typed wins")
+        #expect(try await editor.mergeTarget(renaming: "Terrasse", to: "BaLkOn") == "Balkon",
+                "no exact match: the spelling the most plants use")
+    }
+
+    @Test("rename uses a confirmed merge target instead of recomputing it")
+    func renameUsesTheConfirmedTarget() async throws {
+        let (repo, _, editor) = setUp([("Ficus", "BALKON"), ("Monstera", "Balkon"), ("Tomate", "Terrasse")])
+        let outcome = try await editor.rename("Terrasse", to: "balkon", mergingInto: "Balkon")
+        #expect(outcome == .merged(into: "Balkon", plants: 1))
+        #expect(repo.devices["uuid-Tomate"]?.location == "Balkon")
+    }
+
     @Test("Empty and unchanged names write nothing")
     func invalidAndUnchanged() async throws {
         let (repo, _, editor) = setUp([("Tomate", "Balkon")])

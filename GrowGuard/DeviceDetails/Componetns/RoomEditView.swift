@@ -97,15 +97,19 @@ struct RoomEditView: View {
                     Button(L10n.Alert.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.Alert.save) { Task { await save(confirmedMerge: false) } }
+                    Button(L10n.Alert.save) { Task { await save(confirmedTarget: nil) } }
                         .disabled(trimmedName == nil || isWorking)
                 }
             }
+            // `presenting:` hands the confirmed spelling to the action, so the
+            // rename lands in exactly the room the alert named — the dismissal
+            // resetting `mergeTarget` cannot race the write.
             .alert(L10n.Room.Edit.MergeConfirm.title(mergeTarget ?? ""),
-                   isPresented: Binding(get: { mergeTarget != nil }, set: { if !$0 { mergeTarget = nil } })) {
+                   isPresented: Binding(get: { mergeTarget != nil }, set: { if !$0 { mergeTarget = nil } }),
+                   presenting: mergeTarget) { target in
                 Button(L10n.Alert.cancel, role: .cancel) { mergeTarget = nil }
-                Button(L10n.Room.Edit.merge) { Task { await save(confirmedMerge: true) } }
-            } message: {
+                Button(L10n.Room.Edit.merge) { Task { await save(confirmedTarget: target) } }
+            } message: { _ in
                 Text(L10n.Room.Edit.MergeConfirm.message)
             }
             // An alert, not a confirmationDialog: on iOS 26 the dialog is an
@@ -155,24 +159,43 @@ struct RoomEditView: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
-    private func save(confirmedMerge: Bool) async {
-        guard let newName = trimmedName else { return }
+    /// `confirmedTarget` is the merge the user just agreed to in the alert;
+    /// nil means "ask first if this turns out to be a merge".
+    private func save(confirmedTarget: String?) async {
+        guard let newName = trimmedName else {
+            showError = true
+            return
+        }
         isWorking = true
         defer { isWorking = false }
         do {
-            if !confirmedMerge, let target = try await editor.mergeTarget(renaming: originalName, to: newName) {
+            if confirmedTarget == nil,
+               let target = try await editor.mergeTarget(renaming: originalName, to: newName) {
                 mergeTarget = target
                 return
             }
+            let outcome = try await editor.rename(originalName, to: newName, mergingInto: confirmedTarget)
             mergeTarget = nil
             let finalName: String
-            switch try await editor.rename(originalName, to: newName) {
-            case .invalid: return
-            case .unchanged: finalName = originalName
-            case .renamed(let to, _): finalName = to
-            case .merged(let into, _): finalName = into
+            let isMerge: Bool
+            switch outcome {
+            case .invalid:
+                showError = true
+                return
+            case .unchanged:
+                finalName = originalName
+                isMerge = false
+            case .renamed(let to, _):
+                finalName = to
+                isMerge = false
+            case .merged(let into, _):
+                finalName = into
+                isMerge = true
             }
-            if symbol != originalSymbol {
+            // A merge dissolves this room into another one: `originalSymbol`
+            // is the dissolved room's icon, so comparing against it here
+            // would write over — or wipe — the target's own look.
+            if !isMerge, symbol != originalSymbol {
                 icons.setSymbol(symbol, for: finalName)
             }
             onFinished(finalName)

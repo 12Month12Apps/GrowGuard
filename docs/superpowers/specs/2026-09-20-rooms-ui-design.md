@@ -110,9 +110,14 @@ entity or a schema change.
 - **Rename** rewrites `location` on every plant of the room (`RoomEditor`,
   one `modifyDevice` per plant, only `location`). If the new name folds to an
   existing *other* room, the user is asked to merge; the existing spelling
-  wins. A case-only change of the same room is a plain rename. Empty names are
-  rejected. Because all members move together, peer-witness groups are
-  unchanged.
+  wins. When several existing spellings fold alike (legacy duplicates), the
+  target is the room spelled exactly as the user typed, otherwise the spelling
+  the most plants use (ties by name), and the confirmed target is handed back
+  to `rename(_:to:mergingInto:)` so the alert and the write cannot disagree.
+  A case-only change is a plain rename only while no other spelling exists —
+  a "balkon" next to a "Balkon" is a second room and is confirmed as a merge.
+  Empty names are rejected. Because all members move together, peer-witness
+  groups are unchanged.
 - **Delete** sets `location = nil` on every plant of the room after a
   confirmation that names the number of affected plants. Plants are never
   deleted.

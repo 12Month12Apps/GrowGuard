@@ -30,22 +30,47 @@ struct RoomEditor {
     }
 
     /// The existing OTHER room a rename would merge into (its spelling), or
-    /// nil. A case-only change of the same room is not a merge.
+    /// nil. Only the source spelling itself is excluded — a legacy
+    /// case-duplicate ("Balkon" next to "balkon") is a real second room and
+    /// must be confirmed like any other merge. With no other spelling left,
+    /// a case-only change is a plain rename.
+    ///
+    /// Deterministic when several spellings fold alike: an existing room
+    /// spelled exactly as the user typed wins, otherwise the spelling the
+    /// most plants use, ties by name.
     func mergeTarget(renaming oldName: String, to proposed: String) async throws -> String? {
         guard let newName = FlowerDeviceDTO.normalizeLocation(proposed) else { return nil }
         let key = RoomCatalog.fold(newName)
-        guard key != RoomCatalog.fold(oldName) else { return nil }
-        return try await repository.getAllDevices()
-            .compactMap(\.location)
-            .first { $0 != oldName && RoomCatalog.fold($0) == key }
+        var counts: [String: Int] = [:]
+        for location in try await repository.getAllDevices().compactMap(\.location)
+        where location != oldName && RoomCatalog.fold(location) == key {
+            counts[location, default: 0] += 1
+        }
+        guard !counts.isEmpty else { return nil }
+        if counts[newName] != nil { return newName }
+        return counts
+            .sorted { lhs, rhs in
+                lhs.value == rhs.value
+                    ? lhs.key.localizedStandardCompare(rhs.key) == .orderedAscending
+                    : lhs.value > rhs.value
+            }
+            .first?.key
     }
 
+    /// `mergingInto` is the target the user already confirmed: it is used as
+    /// the final name verbatim, so the alert and the write can never disagree
+    /// about which spelling wins.
     @discardableResult
-    func rename(_ oldName: String, to proposed: String) async throws -> RenameOutcome {
+    func rename(_ oldName: String, to proposed: String, mergingInto confirmedTarget: String? = nil) async throws -> RenameOutcome {
         guard let newName = FlowerDeviceDTO.normalizeLocation(proposed) else { return .invalid }
         guard newName != oldName else { return .unchanged }
 
-        let target = try await mergeTarget(renaming: oldName, to: newName)
+        let target: String?
+        if let confirmedTarget {
+            target = confirmedTarget
+        } else {
+            target = try await mergeTarget(renaming: oldName, to: newName)
+        }
         let finalName = target ?? newName
         let members = try await repository.getAllDevices().filter { $0.location == oldName }
         for member in members {
