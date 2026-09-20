@@ -68,7 +68,9 @@ import CoreData
 
                 // Drop the sensor-health markers: a re-paired sensor keeps its
                 // peripheral UUID and would otherwise stay suppressed forever
-                SensorHealthMonitor.shared.forgetDevice(device.uuid)
+                // Queued behind any handler still running for this device, so a
+                // resuming handler cannot write the marker back
+                await SensorHealthMonitor.shared.enqueueForgetDevice(device.uuid)
 
                 // Both families: a deleted device must leave no scheduled
                 // watering reminder and no delivered sensor-health alert behind

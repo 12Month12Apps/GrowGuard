@@ -115,8 +115,17 @@ final class SensorHealthMonitor {
         await enqueue { [weak self] in await self?.recordFailedContact(uuid) }.value
     }
 
-    /// Forget a device's notification markers. Call when the device is deleted;
-    /// a re-paired sensor keeps its peripheral UUID and must start clean.
+    /// Chained variant of `forgetDevice` for the delete path. A handler can be
+    /// suspended mid-notify for this device and would write its marker back
+    /// after an immediate forget; queued behind it, the forget wins. Await it
+    /// before cancelling the device's notifications.
+    func enqueueForgetDevice(_ uuid: String) async {
+        await enqueue { [weak self] in self?.forgetDevice(uuid) }.value
+    }
+
+    /// Forget a device's notification markers: a re-paired sensor keeps its
+    /// peripheral UUID and must start clean. Unchained internal — the delete
+    /// path calls `enqueueForgetDevice`.
     func forgetDevice(_ uuid: String) {
         defaults.removeObject(forKey: DefaultsKey.unreachableNotified(for: uuid))
         defaults.removeObject(forKey: DefaultsKey.lowBatteryNotified(for: uuid))

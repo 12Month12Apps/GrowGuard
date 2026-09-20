@@ -557,6 +557,30 @@ struct SensorHealthMonitorTests {
         #expect(gated.entered == 1, "the external record must not re-evaluate C behind A's handler")
     }
 
+    @Test("Forgetting a deleted device waits for a handler that is mid-notify, so the marker stays cleared")
+    func forgetDeviceIsChainedBehindARunningHandler() async {
+        seed("A")
+        seed("C", silentFor: 3 * 24 * hour, attempts: 3)
+        let gated = GatedNotifier()
+        let monitor = makeMonitor(notifier: gated)
+        monitor.start()
+
+        events.send(.sensorData(uuid: "A"))
+        // A's handler is parked mid-notify for C; it writes C's marker when it resumes
+        await waitUntil { gated.entered == 1 }
+
+        // The user deletes C now. An unchained forget clears the (still unset)
+        // marker immediately and the resuming handler then sets it again.
+        async let forgotten: Void = monitor.enqueueForgetDevice("C")
+        await drainMainActor(passes: 20)
+        gated.open()
+        await forgotten
+        await drainMainActor(passes: 20)
+
+        #expect(defaults.string(forKey: "sensorHealth.unreachableNotified.C") == nil,
+                "a re-paired sensor with the same UUID must not inherit a stale marker")
+    }
+
     // MARK: - New-cell threshold
 
     @Test("Only a reading strictly above the new-cell threshold clears the marker")
