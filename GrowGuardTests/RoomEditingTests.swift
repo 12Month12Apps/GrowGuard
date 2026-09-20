@@ -45,7 +45,7 @@ struct RoomIconStoreTests {
         #expect(store.symbol(for: "Küche") == nil)
     }
 
-    @Test("move carries the icon along; a merge keeps the target's own icon")
+    @Test("move carries the icon along; a merge leaves the target's look untouched")
     func move() {
         let store = RoomIconStore(defaults: makeDefaults())
         store.setSymbol("flame.fill", for: "Küche")
@@ -60,7 +60,8 @@ struct RoomIconStoreTests {
 
         store.setSymbol("leaf.fill", for: "Flur")
         store.move(from: "Flur", to: "Diele", keepingExistingTarget: true)
-        #expect(store.symbol(for: "Diele") == "leaf.fill", "a target without an icon inherits")
+        #expect(store.symbol(for: "Diele") == nil, "a merge target keeps its automatic look")
+        #expect(store.symbol(for: "Flur") == nil)
     }
 
     @Test("A case-only move keeps the entry; remove deletes it")

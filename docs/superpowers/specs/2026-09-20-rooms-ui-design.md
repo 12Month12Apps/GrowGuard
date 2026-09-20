@@ -120,8 +120,9 @@ entity or a schema change.
   the folded room name, `@Observable` so views refresh) holds an optional
   custom SF Symbol per room. "Automatic" removes the entry and falls back to
   the keyword mapping. `RoomCatalog.symbolName(for:icons:)` asks the store
-  first. Rename moves the entry; a merge keeps the target's icon if it has
-  one; delete removes it. Not synced and not part of the Core Data store — an
+  first. Rename moves the entry; a merge leaves the target room's look
+  untouched (its own icon, or automatic) and drops the dissolved room's
+  entry; delete removes it. Not synced and not part of the Core Data store — an
   accepted trade-off for avoiding model version 3.
 - **Refresh.** After an edit the picker reloads its devices from the
   repository, moves the current selection along (renamed → new name, deleted

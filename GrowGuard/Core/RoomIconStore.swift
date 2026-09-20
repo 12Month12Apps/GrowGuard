@@ -42,16 +42,15 @@ final class RoomIconStore {
         persist()
     }
 
-    /// Rename: the icon follows. With `keepingExistingTarget` (a merge) the
-    /// target's own icon wins; a target without one inherits.
+    /// Rename: the icon follows. A merge (`keepingExistingTarget`) leaves the
+    /// target room exactly as it looked — its own icon, or automatic — and
+    /// drops the dissolved room's entry.
     func move(from oldName: String, to newName: String, keepingExistingTarget: Bool) {
         let from = RoomCatalog.fold(oldName)
         let to = RoomCatalog.fold(newName)
-        guard from != to, let moving = icons.removeValue(forKey: from) else {
-            if from != to { persist() }
-            return
-        }
-        if !(keepingExistingTarget && icons[to] != nil) {
+        guard from != to else { return }
+        let moving = icons.removeValue(forKey: from)
+        if let moving, !keepingExistingTarget {
             icons[to] = moving
         }
         persist()

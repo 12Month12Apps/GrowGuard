@@ -68,7 +68,7 @@ struct RoomEditView: View {
                 }
 
                 Section(header: Text(L10n.Room.Edit.icon)) {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 5), spacing: 10) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10, alignment: .top), count: 5), spacing: 10) {
                         iconCell(symbolName: nil)
                         ForEach(RoomIconStore.choices, id: \.self) { choice in
                             iconCell(symbolName: choice)
@@ -149,6 +149,8 @@ struct RoomEditView: View {
             }
         }
         .buttonStyle(.plain)
+        // Same cell height with or without the "Automatic" caption, so the grid rows line up
+        .frame(height: 62, alignment: .top)
         .accessibilityLabel(symbolName ?? L10n.Room.Edit.iconAutomatic)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
