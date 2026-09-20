@@ -45,7 +45,8 @@ struct RoomCatalog: Equatable {
     init(devices: [FlowerDeviceDTO], now: Date) {
         func makeRoom(_ name: String?, _ members: [FlowerDeviceDTO]) -> Room {
             let silent = members.contains { member in
-                SensorHealth.evaluate(member, peers: devices.filter { $0.uuid != member.uuid }, now: now).isUnreachable
+                // No peers: they only set `confirmedByPeer`, never `isUnreachable`.
+                SensorHealth.evaluate(member, peers: [], now: now).isUnreachable
             }
             return Room(name: name,
                         plantCount: members.count,
@@ -142,6 +143,8 @@ struct RoomCatalog: Equatable {
 
     private static func fold(_ text: String) -> String {
         text.trimmingCharacters(in: .whitespacesAndNewlines)
-            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            // locale: nil — folding is a lookup key, not display text. Under a
+            // Turkish locale "I" would fold to dotless "ı" and break search.
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
     }
 }

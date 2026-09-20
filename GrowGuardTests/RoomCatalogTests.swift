@@ -119,6 +119,19 @@ struct RoomCatalogTests {
         #expect(RoomCatalog.companions(of: home[6], in: home).isEmpty, "no room, no companions")
     }
 
+    @Test("Rooms and companions sort numerically, the way Finder sorts names")
+    func numericAwareSorting() {
+        let rooms = [plant("A", room: "Zimmer 10"),
+                     plant("B", room: "Zimmer 2"),
+                     plant("C", room: "zimmer 1")]
+        #expect(RoomCatalog(devices: rooms, now: now).rooms.map(\.name) == ["zimmer 1", "Zimmer 2", "Zimmer 10"])
+
+        let shelf = [plant("Pflanze 10", room: "Regal"),
+                     plant("Pflanze 2", room: "Regal"),
+                     plant("Pflanze 3", room: "Regal")]
+        #expect(RoomCatalog.companions(of: shelf[2], in: shelf) == ["Pflanze 2", "Pflanze 10"])
+    }
+
     @Test("RoomFilter.includes and resolve")
     func filter() {
         let catalog = RoomCatalog(devices: home, now: now)
