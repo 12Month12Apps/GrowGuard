@@ -247,14 +247,23 @@ final class SensorHealthMonitor {
             let shouldNotify = prior == nil || (prior == .unconfirmed && flavour == .confirmed)
             guard shouldNotify else { return }
             AppLogger.sensor.warning("🔋 \(device.name): unreachable (\(flavour.rawValue)), \(device.failedContactAttempts) attempts, silent \(SensorHealth.daysSilent(since: since, now: now)) d, battery \(lastKnownBattery.map(String.init) ?? "unknown")")
-            await notifier.notifyUnreachable(device: device, since: since, lastKnownBattery: lastKnownBattery, confirmedByPeer: confirmedByPeer, now: now)
+            // Marker only on a real submission: it means "the user has been
+            // told". Setting it after a failed `center.add` swallowed the
+            // alert for the whole episode.
+            guard await notifier.notifyUnreachable(device: device, since: since, lastKnownBattery: lastKnownBattery, confirmedByPeer: confirmedByPeer, now: now) else {
+                AppLogger.sensor.warning("🔋 \(device.name): unreachable notification was not submitted — marker left unset, will retry")
+                return
+            }
             defaults.set(flavour.rawValue, forKey: key)
 
         case .batteryLow(let percent), .batteryCritical(let percent):
             let key = DefaultsKey.lowBatteryNotified(for: uuid)
             guard !defaults.bool(forKey: key) else { return }
             AppLogger.sensor.warning("🔋 \(device.name): battery low (\(percent) %)")
-            await notifier.notifyLowBattery(device: device, percent: percent)
+            guard await notifier.notifyLowBattery(device: device, percent: percent) else {
+                AppLogger.sensor.warning("🔋 \(device.name): low-battery notification was not submitted — marker left unset, will retry")
+                return
+            }
             defaults.set(true, forKey: key)
 
         case .ok, .batteryUnknown:

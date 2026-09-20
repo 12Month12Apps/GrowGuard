@@ -37,11 +37,16 @@ struct SensorHealthMonitorTests {
         struct Unreachable: Equatable { let uuid: String; let confirmed: Bool; let lastKnownBattery: Int? }
         var unreachable: [Unreachable] = []
         var lowBattery: [(uuid: String, percent: Int)] = []
-        func notifyUnreachable(device: FlowerDeviceDTO, since _: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now _: Date) async {
+        /// Stands in for `UNUserNotificationCenter.add` throwing: the attempt is
+        /// recorded either way, only the reported outcome changes.
+        var succeeds = true
+        func notifyUnreachable(device: FlowerDeviceDTO, since _: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now _: Date) async -> Bool {
             unreachable.append(.init(uuid: device.uuid, confirmed: confirmedByPeer, lastKnownBattery: lastKnownBattery))
+            return succeeds
         }
-        func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async {
+        func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async -> Bool {
             lowBattery.append((device.uuid, percent))
+            return succeeds
         }
     }
 
@@ -53,13 +58,15 @@ struct SensorHealthMonitorTests {
     final class SuspendingNotifier: SensorHealthNotifying {
         var unreachable: [String] = []
         var lowBattery: [(uuid: String, percent: Int)] = []
-        func notifyUnreachable(device: FlowerDeviceDTO, since _: Date, lastKnownBattery _: Int?, confirmedByPeer _: Bool, now _: Date) async {
+        func notifyUnreachable(device: FlowerDeviceDTO, since _: Date, lastKnownBattery _: Int?, confirmedByPeer _: Bool, now _: Date) async -> Bool {
             for _ in 0..<5 { await Task.yield() }
             unreachable.append(device.uuid)
+            return true
         }
-        func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async {
+        func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async -> Bool {
             for _ in 0..<5 { await Task.yield() }
             lowBattery.append((device.uuid, percent))
+            return true
         }
     }
 
@@ -76,16 +83,18 @@ struct SensorHealthMonitorTests {
         private var parked: [CheckedContinuation<Void, Never>] = []
         private var isOpen = false
 
-        func notifyUnreachable(device: FlowerDeviceDTO, since _: Date, lastKnownBattery _: Int?, confirmedByPeer _: Bool, now _: Date) async {
+        func notifyUnreachable(device: FlowerDeviceDTO, since _: Date, lastKnownBattery _: Int?, confirmedByPeer _: Bool, now _: Date) async -> Bool {
             entered += 1
             if !isOpen {
                 await withCheckedContinuation { parked.append($0) }
             }
             unreachable.append(device.uuid)
+            return true
         }
 
-        func notifyLowBattery(device _: FlowerDeviceDTO, percent _: Int) async {
+        func notifyLowBattery(device _: FlowerDeviceDTO, percent _: Int) async -> Bool {
             // Low-battery alerts are irrelevant to the chaining tests this gate serves
+            return true
         }
 
         /// Lets everyone waiting through, and everyone arriving afterwards
@@ -376,6 +385,33 @@ struct SensorHealthMonitorTests {
         #expect(defaults.string(forKey: "sensorHealth.unreachableNotified.A") == "confirmed")
     }
 
+    /// The marker says "the user has been told". A submission that never
+    /// reached the notification centre told nobody, so setting it anyway
+    /// swallowed the alert for the rest of the episode.
+    @Test("A failed unreachable submission leaves the marker unset and notifies again")
+    func failedUnreachableSubmissionNotifiesAgain() async {
+        seed("A", silentFor: 3 * 24 * hour, attempts: 2)
+        notifier.succeeds = false
+        let monitor = makeMonitor()
+
+        await monitor.recordFailedContact("A")
+        #expect(notifier.unreachable.count == 1, "the attempt was made")
+        #expect(defaults.string(forKey: "sensorHealth.unreachableNotified.A") == nil,
+                "a failed submission must not close the episode")
+
+        notifier.succeeds = true
+        clock.advance(2 * hour)
+        await monitor.recordFailedContact("A")
+
+        #expect(notifier.unreachable.count == 2)
+        #expect(defaults.string(forKey: "sensorHealth.unreachableNotified.A") == "unconfirmed")
+
+        // …and now that it landed, it stays at one delivered alert
+        clock.advance(2 * hour)
+        await monitor.recordFailedContact("A")
+        #expect(notifier.unreachable.count == 2)
+    }
+
     @Test("Peer witness respects location")
     func witnessRespectsLocation() async {
         seed("A", silentFor: 3 * 24 * hour, attempts: 2, location: "Balcony")
@@ -410,6 +446,27 @@ struct SensorHealthMonitorTests {
         let monitor = makeMonitor()
         await monitor.handle(.deviceInfo(uuid: "A", info: .init(battery: 9, firmware: "f")))
         #expect(notifier.lowBattery.map(\.percent) == [9])
+    }
+
+    @Test("A failed low-battery submission leaves the marker unset and notifies again")
+    func failedLowBatterySubmissionNotifiesAgain() async {
+        seed("A", battery: 80)
+        notifier.succeeds = false
+        let monitor = makeMonitor()
+
+        await monitor.handle(.deviceInfo(uuid: "A", info: .init(battery: 30, firmware: "f")))
+        #expect(notifier.lowBattery.map(\.percent) == [30], "the attempt was made")
+        #expect(defaults.bool(forKey: "sensorHealth.lowBatteryNotified.A") == false,
+                "a failed submission must not mark the cell as reported")
+
+        notifier.succeeds = true
+        await monitor.handle(.deviceInfo(uuid: "A", info: .init(battery: 29, firmware: "f")))
+        #expect(notifier.lowBattery.map(\.percent) == [30, 29])
+        #expect(defaults.bool(forKey: "sensorHealth.lowBatteryNotified.A"))
+
+        // Delivered once: the same cell does not alert again
+        await monitor.handle(.deviceInfo(uuid: "A", info: .init(battery: 28, firmware: "f")))
+        #expect(notifier.lowBattery.map(\.percent) == [30, 29])
     }
 
     // MARK: - Subscription

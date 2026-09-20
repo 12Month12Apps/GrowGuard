@@ -266,6 +266,11 @@ following the existing `notification.lastImmediate.<uuid>` pattern:
 | Health becomes `.unreachable` | `sensorHealth.unreachableNotified.<uuid>` stores the flavour (`unconfirmed` / `confirmed`) | next successful contact |
 | Health becomes `.batteryLow` or `.batteryCritical` | `sensorHealth.lowBatteryNotified.<uuid>` | battery read back above 40 % (new cell) |
 
+A marker is set **only after the notification was really submitted**: both
+notifier methods return whether `UNUserNotificationCenter.add` succeeded, and a
+failed submission leaves the marker unset (logged as a warning) so the next
+evaluation alerts again instead of silencing the whole episode.
+
 The unreachable marker allows exactly one upgrade: an episode that was
 notified as `unconfirmed` may notify once more when it becomes `confirmed`
 (the user came home, another sensor answered, this one still did not). A

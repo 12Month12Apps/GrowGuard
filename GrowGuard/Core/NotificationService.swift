@@ -314,9 +314,16 @@ final class NotificationService {
 
 /// Seam for SensorHealthMonitor; tests record calls instead of touching
 /// UNUserNotificationCenter.
+///
+/// Both methods report whether the notification was really handed to the
+/// system: the once-per-episode markers may only be set for a submission that
+/// succeeded, otherwise a single `center.add` failure silences the alert for
+/// the whole episode.
 protocol SensorHealthNotifying {
-    func notifyUnreachable(device: FlowerDeviceDTO, since: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now: Date) async
-    func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async
+    /// - Returns: true when the request was submitted.
+    func notifyUnreachable(device: FlowerDeviceDTO, since: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now: Date) async -> Bool
+    /// - Returns: true when the request was submitted.
+    func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async -> Bool
 }
 
 extension NotificationService: SensorHealthNotifying {
@@ -328,7 +335,7 @@ extension NotificationService: SensorHealthNotifying {
         static func lowBattery(for uuid: String) -> String { "sensor-battery-\(uuid)" }
     }
 
-    func notifyUnreachable(device: FlowerDeviceDTO, since: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now: Date) async {
+    func notifyUnreachable(device: FlowerDeviceDTO, since: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now: Date) async -> Bool {
         let days = SensorHealth.daysSilent(since: since, now: now)
         let content = UNMutableNotificationContent()
         var body: String
@@ -358,12 +365,14 @@ extension NotificationService: SensorHealthNotifying {
         do {
             try await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
             print("📱 NotificationService: Sent unreachable notification (confirmed: \(confirmedByPeer)) for \(device.name)")
+            return true
         } catch {
             print("❌ NotificationService: Failed to send unreachable notification: \(error)")
+            return false
         }
     }
 
-    func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async {
+    func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async -> Bool {
         let content = UNMutableNotificationContent()
         content.title = L10n.SensorHealth.Notification.LowBattery.title(device.name)
         content.body = L10n.SensorHealth.Notification.LowBattery.body(percent)
@@ -379,8 +388,10 @@ extension NotificationService: SensorHealthNotifying {
         do {
             try await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
             print("📱 NotificationService: Sent low battery notification (\(percent) %) for \(device.name)")
+            return true
         } catch {
             print("❌ NotificationService: Failed to send low battery notification: \(error)")
+            return false
         }
     }
 }
