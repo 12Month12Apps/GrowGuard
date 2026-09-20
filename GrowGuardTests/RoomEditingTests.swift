@@ -10,14 +10,23 @@ import Testing
 import Foundation
 @testable import GrowGuard
 
+private struct RepositoryFailure: Error {}
+
 private final class InMemoryDeviceRepository: FlowerDeviceRepository {
     var devices: [String: FlowerDeviceDTO] = [:]
     var updateCount = 0
+    /// Throw on the n-th `updateDevice` (1-based) — a bulk edit that dies
+    /// halfway, the way a Core Data save can.
+    var failOnUpdateNumber: Int?
     func getAllDevices() async throws -> [FlowerDeviceDTO] { devices.values.sorted { $0.uuid < $1.uuid } }
     func getDevice(by uuid: String) async throws -> FlowerDeviceDTO? { devices[uuid] }
     func saveDevice(_ device: FlowerDeviceDTO) async throws { devices[device.uuid] = device }
     func deleteDevice(uuid: String) async throws { devices[uuid] = nil }
-    func updateDevice(_ device: FlowerDeviceDTO) async throws { devices[device.uuid] = device; updateCount += 1 }
+    func updateDevice(_ device: FlowerDeviceDTO) async throws {
+        updateCount += 1
+        if updateCount == failOnUpdateNumber { throw RepositoryFailure() }
+        devices[device.uuid] = device
+    }
 }
 
 private func makeDefaults() -> UserDefaults {
@@ -63,6 +72,22 @@ struct RoomIconStoreTests {
         store.setSymbol("leaf.fill", for: "Flur")
         store.move(from: "Flur", to: "Diele", keepingExistingTarget: true)
         #expect(store.symbol(for: "Diele") == nil, "a merge target keeps its automatic look")
+        #expect(store.symbol(for: "Flur") == nil)
+    }
+
+    @Test("A plain rename decides the destination's icon on its own, orphan entry or not")
+    func plainRenameOwnsTheDestination() {
+        let store = RoomIconStore(defaults: makeDefaults())
+        // "Diele" vanished when its last plant moved away, but its icon stayed
+        // behind. Renaming an icon-less "Flur" onto that key must not inherit it.
+        store.setSymbol("sofa.fill", for: "Diele")
+        store.move(from: "Flur", to: "Diele", keepingExistingTarget: false)
+        #expect(store.symbol(for: "Diele") == nil, "the renamed room had no custom icon")
+
+        store.setSymbol("leaf.fill", for: "Flur")
+        store.setSymbol("sofa.fill", for: "Diele")
+        store.move(from: "Flur", to: "Diele", keepingExistingTarget: false)
+        #expect(store.symbol(for: "Diele") == "leaf.fill", "the renamed room's own icon wins")
         #expect(store.symbol(for: "Flur") == nil)
     }
 
@@ -176,6 +201,56 @@ struct RoomEditorTests {
         #expect(try await editor.rename("Balkon", to: "Balkon") == .unchanged)
         #expect(try await editor.mergeTarget(renaming: "Balkon", to: "") == nil)
         #expect(repo.updateCount == 0)
+    }
+
+    @Test("A rename that fails halfway leaves the icon put and converges when it is retried")
+    func renameConvergesAfterPartialFailure() async throws {
+        let (repo, icons, editor) = setUp([("Basilikum", "Balkon"), ("Minze", "Balkon"), ("Tomate", "Balkon")])
+        icons.setSymbol("leaf.fill", for: "Balkon")
+        repo.failOnUpdateNumber = 2
+
+        await #expect(throws: (any Error).self) { try await editor.rename("Balkon", to: "Terrasse") }
+
+        var all = try await repo.getAllDevices()
+        #expect(all.filter { $0.location == "Terrasse" }.count == 1)
+        #expect(all.filter { $0.location == "Balkon" }.count == 2)
+        #expect(icons.symbol(for: "Balkon") == "leaf.fill", "the icon only moves once every plant did")
+        #expect(icons.symbol(for: "Terrasse") == nil)
+
+        repo.failOnUpdateNumber = nil
+        // The half-migrated "Terrasse" is a real room now, so the retry is a
+        // merge into it — and by the merge rule the target keeps the look it
+        // has, which is automatic. The plants converge; the custom icon does
+        // not come back.
+        let outcome = try await editor.rename("Balkon", to: "Terrasse")
+
+        #expect(outcome == .merged(into: "Terrasse", plants: 2))
+        all = try await repo.getAllDevices()
+        #expect(all.allSatisfy { $0.location == "Terrasse" })
+        #expect(icons.symbol(for: "Balkon") == nil)
+        #expect(icons.symbol(for: "Terrasse") == nil)
+    }
+
+    @Test("A delete that fails halfway keeps the icon and converges when it is retried")
+    func deleteConvergesAfterPartialFailure() async throws {
+        let (repo, icons, editor) = setUp([("Basilikum", "Balkon"), ("Minze", "Balkon"), ("Tomate", "Balkon")])
+        icons.setSymbol("leaf.fill", for: "Balkon")
+        repo.failOnUpdateNumber = 2
+
+        await #expect(throws: (any Error).self) { try await editor.delete("Balkon") }
+
+        var all = try await repo.getAllDevices()
+        #expect(all.filter { $0.location == nil }.count == 1)
+        #expect(all.filter { $0.location == "Balkon" }.count == 2)
+        #expect(icons.symbol(for: "Balkon") == "leaf.fill")
+
+        repo.failOnUpdateNumber = nil
+        #expect(try await editor.delete("Balkon") == 2)
+
+        all = try await repo.getAllDevices()
+        #expect(all.allSatisfy { $0.location == nil })
+        #expect(all.count == 3, "plants are never deleted")
+        #expect(icons.symbol(for: "Balkon") == nil)
     }
 
     @Test("Delete clears the room on its plants, keeps the plants, removes the icon")

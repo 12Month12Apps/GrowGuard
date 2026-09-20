@@ -28,8 +28,14 @@ struct RoomEditor {
     private let repository: FlowerDeviceRepository
     private let icons: RoomIconStore
 
-    init(repository: FlowerDeviceRepository = RepositoryManager.shared.flowerDeviceRepository,
-         icons: RoomIconStore = .shared) {
+    /// Two initializers rather than `icons: RoomIconStore = .shared`: a
+    /// default argument is evaluated in a nonisolated context in Swift 5
+    /// mode, so naming the main-actor shared store there warns.
+    init(repository: FlowerDeviceRepository = RepositoryManager.shared.flowerDeviceRepository) {
+        self.init(repository: repository, icons: .shared)
+    }
+
+    init(repository: FlowerDeviceRepository, icons: RoomIconStore) {
         self.repository = repository
         self.icons = icons
     }

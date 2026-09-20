@@ -28,6 +28,9 @@ enum RoomText {
     }
 }
 
+// @MainActor: the edit helpers below drive the main-actor RoomEditor and
+// write @State / the selection binding straight after.
+@MainActor
 struct RoomPickerView: View {
     @Binding var selection: String?
     let devices: [FlowerDeviceDTO]
@@ -40,6 +43,7 @@ struct RoomPickerView: View {
     @State private var reloadedDevices: [FlowerDeviceDTO]?
     @State private var editingRoom: Room?
     @State private var roomPendingDeletion: Room?
+    @State private var showEditError = false
 
     private var currentDevices: [FlowerDeviceDTO] { reloadedDevices ?? devices }
 
@@ -154,20 +158,38 @@ struct RoomPickerView: View {
         // An alert, not a confirmationDialog: on iOS 26 the dialog is an
         // anchored popover that lands over the navigation bar and hides its
         // own Cancel button, leaving a destructive action without a way back.
+        // `presenting:` hands the room to the action and the message, so
+        // neither reads state that the dismissal has already reset.
         .alert(L10n.Room.Edit.DeleteConfirm.title(roomPendingDeletion?.name ?? ""),
-               isPresented: Binding(get: { roomPendingDeletion != nil }, set: { if !$0 { roomPendingDeletion = nil } })) {
+               isPresented: Binding(get: { roomPendingDeletion != nil }, set: { if !$0 { roomPendingDeletion = nil } }),
+               presenting: roomPendingDeletion) { room in
             Button(L10n.Room.Edit.delete, role: .destructive) {
-                if let room = roomPendingDeletion, let name = room.name {
-                    Task {
-                        _ = try? await RoomEditor().delete(name)
-                        await roomChanged(from: name, to: nil)
-                    }
+                if let name = room.name {
+                    Task { await deleteRoom(named: name) }
                 }
             }
             Button(L10n.Alert.cancel, role: .cancel) {}
+        } message: { room in
+            Text(room.plantCount == 1 ? L10n.Room.Edit.DeleteConfirm.one
+                                      : L10n.Room.Edit.DeleteConfirm.other(room.plantCount))
+        }
+        .alert(L10n.Alert.error, isPresented: $showEditError) {
+            Button(L10n.Alert.ok) {}
         } message: {
-            let count = roomPendingDeletion?.plantCount ?? 0
-            Text(count == 1 ? L10n.Room.Edit.DeleteConfirm.one : L10n.Room.Edit.DeleteConfirm.other(count))
+            Text(L10n.Room.Edit.failed)
+        }
+    }
+
+    /// A failed delete still reloads: some plants may already have moved, and
+    /// the list has to show what is really there. The selection stays on the
+    /// room, which still exists.
+    private func deleteRoom(named name: String) async {
+        do {
+            _ = try await RoomEditor().delete(name)
+            await roomChanged(from: name, to: nil)
+        } catch {
+            showEditError = true
+            await roomChanged(from: name, to: name)
         }
     }
 

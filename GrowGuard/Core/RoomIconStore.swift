@@ -47,15 +47,20 @@ final class RoomIconStore {
         persist()
     }
 
-    /// Rename: the icon follows. A merge (`keepingExistingTarget`) leaves the
-    /// target room exactly as it looked — its own icon, or automatic — and
-    /// drops the dissolved room's entry.
+    /// Rename: the icon follows. The renamed room owns its new key outright —
+    /// it gets the room's symbol, or nothing when the room was automatic. An
+    /// orphan entry on that key (left behind by a room that vanished when its
+    /// last plant moved away) is never inherited.
+    ///
+    /// A merge (`keepingExistingTarget`) is the opposite: the target room
+    /// stays exactly as it looked — its own icon, or automatic — and the
+    /// dissolved room's entry is dropped.
     func move(from oldName: String, to newName: String, keepingExistingTarget: Bool) {
         let from = RoomCatalog.fold(oldName)
         let to = RoomCatalog.fold(newName)
         guard from != to else { return }
         let moving = icons.removeValue(forKey: from)
-        if let moving, !keepingExistingTarget {
+        if !keepingExistingTarget {
             icons[to] = moving
         }
         persist()

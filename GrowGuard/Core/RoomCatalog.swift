@@ -130,8 +130,17 @@ struct RoomCatalog: Equatable {
     /// The room's icon: a custom choice from the store, else the keyword
     /// mapping. @MainActor because it reads the main-actor icon store; its
     /// callers are SwiftUI `body`s. `defaultSymbolName` stays pure and free.
+    ///
+    /// Two overloads rather than `icons: RoomIconStore = .shared`: a default
+    /// argument is evaluated in a nonisolated context in Swift 5 mode, so
+    /// naming the shared store there warns.
     @MainActor
-    static func symbolName(for name: String?, icons: RoomIconStore = .shared) -> String {
+    static func symbolName(for name: String?) -> String {
+        symbolName(for: name, icons: .shared)
+    }
+
+    @MainActor
+    static func symbolName(for name: String?, icons: RoomIconStore) -> String {
         guard let name else { return "mappin.slash" }
         return icons.symbol(for: name) ?? defaultSymbolName(for: name)
     }
