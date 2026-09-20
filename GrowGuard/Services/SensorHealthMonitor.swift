@@ -90,12 +90,29 @@ final class SensorHealthMonitor {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] event in
                 guard let self else { return }
-                let previous = self.pending
-                self.pending = Task { @MainActor [weak self] in
-                    await previous?.value
-                    await self?.handle(event)
-                }
+                _ = self.enqueue { [weak self] in await self?.handle(event) }
             }
+    }
+
+    /// Runs `work` after everything already queued. External callers (the wake
+    /// service) must come through here; `handle(_:)` already runs ON the chain
+    /// and therefore calls the unchained internals — enqueueing from inside a
+    /// chained task would await itself.
+    private func enqueue(_ work: @escaping @MainActor () async -> Void) -> Task<Void, Never> {
+        let previous = pending
+        let task = Task { @MainActor in
+            await previous?.value
+            await work()
+        }
+        pending = task
+        return task
+    }
+
+    /// Chained variant of `recordFailedContact` for callers outside the event
+    /// stream. Returns when the record has been processed — the wake service
+    /// holds its background-task assertion until then.
+    func enqueueFailedContact(_ uuid: String) async {
+        await enqueue { [weak self] in await self?.recordFailedContact(uuid) }.value
     }
 
     /// Forget a device's notification markers. Call when the device is deleted;

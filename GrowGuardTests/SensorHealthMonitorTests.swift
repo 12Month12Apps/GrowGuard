@@ -63,6 +63,38 @@ struct SensorHealthMonitorTests {
         }
     }
 
+    /// Notifier that parks inside `notifyUnreachable` until the test releases
+    /// it, holding the read-marker → notify → write-marker window open on
+    /// purpose. `SuspendingNotifier`'s fixed yield count cannot do that here:
+    /// its yields are main-actor hops, while a competing handler spends its
+    /// head start on repository calls that hop to the global executor and
+    /// back, so the suspended handler always wins the race by luck.
+    final class GatedNotifier: SensorHealthNotifying {
+        var unreachable: [String] = []
+        /// Calls that reached the gate, whether or not they are through it
+        private(set) var entered = 0
+        private var parked: [CheckedContinuation<Void, Never>] = []
+        private var isOpen = false
+
+        func notifyUnreachable(device: FlowerDeviceDTO, since: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now: Date) async {
+            entered += 1
+            if !isOpen {
+                await withCheckedContinuation { parked.append($0) }
+            }
+            unreachable.append(device.uuid)
+        }
+
+        func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async {}
+
+        /// Lets everyone waiting through, and everyone arriving afterwards
+        func open() {
+            isOpen = true
+            let waiting = parked
+            parked.removeAll()
+            waiting.forEach { $0.resume() }
+        }
+    }
+
     final class Clock {
         var now = Date(timeIntervalSince1970: 1_800_000_000)
         func advance(_ seconds: TimeInterval) { now = now.addingTimeInterval(seconds) }
@@ -383,6 +415,38 @@ struct SensorHealthMonitorTests {
         await drainMainActor(passes: 20)
 
         #expect(suspending.unreachable == ["C"])
+    }
+
+    /// The wake service records failed contacts from *outside* the event
+    /// stream (still-armed devices in `armAll`, the failure path of
+    /// `finishRead`). Called unchained, that work interleaves with a chained
+    /// handler evaluating the same silent sensor: the success handler for A
+    /// evaluates every peer, so both it and the external failure read C's nil
+    /// marker inside `await notifier…` and both notify.
+    @Test("An externally recorded failed contact joins the handler chain")
+    func externalFailedContactIsChained() async {
+        seed("A")
+        // Already at the attempt gate and long silent, with no marker: both
+        // the chained peer evaluation and the external failure would notify.
+        seed("C", silentFor: 3 * 24 * hour, attempts: 3)
+        let gated = GatedNotifier()
+        let monitor = makeMonitor(notifier: gated)
+        monitor.start()
+
+        events.send(.sensorData(uuid: "A"))
+        // A's handler is now parked mid-notify for C, marker still unwritten
+        await waitUntil { gated.entered == 1 }
+
+        async let external: Void = monitor.enqueueFailedContact("C")
+        // An unchained record gets all the time it needs to read C's nil
+        // marker here; a chained one is still waiting for A's handler.
+        await drainMainActor(passes: 20)
+        gated.open()
+        await external
+        await drainMainActor(passes: 20)
+
+        #expect(gated.unreachable == ["C"])
+        #expect(gated.entered == 1, "the external record must not re-evaluate C behind A's handler")
     }
 
     // MARK: - New-cell threshold

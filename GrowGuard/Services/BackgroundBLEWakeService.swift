@@ -77,8 +77,12 @@ final class BackgroundBLEWakeService {
             guard let device = try? await RepositoryManager.shared.flowerDeviceRepository.getDevice(by: uuid) else { return }
             try? await PlantMonitorService.shared.checkDeviceStatus(device: device)
         }
+        // Chained: this runs outside the monitor's event stream, and the
+        // unchained entry point would interleave with a `.sensorData` handler
+        // evaluating the same silent sensor — both read its nil marker inside
+        // `await notifier…` and both notify.
         self.recordFailedContact = recordFailedContact ?? { uuid in
-            await SensorHealthMonitor.shared.recordFailedContact(uuid)
+            await SensorHealthMonitor.shared.enqueueFailedContact(uuid)
         }
         self.beginBackgroundTask = beginBackgroundTask ?? {
             var id: UIBackgroundTaskIdentifier = .invalid
