@@ -12,6 +12,9 @@
 		56SHEA012EC7000000000001 /* SensorHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHEA002EC7000000000001 /* SensorHealth.swift */; };
 		56RMCA012EC7000000000001 /* RoomCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMCA002EC7000000000001 /* RoomCatalog.swift */; };
 		56RMCT012EC7000000000001 /* RoomCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMCT002EC7000000000001 /* RoomCatalogTests.swift */; };
+		56RMIS012EC7000000000001 /* RoomIconStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMIS002EC7000000000001 /* RoomIconStore.swift */; };
+		56RMED012EC7000000000001 /* RoomEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMED002EC7000000000001 /* RoomEditor.swift */; };
+		56RMET012EC7000000000001 /* RoomEditingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMET002EC7000000000001 /* RoomEditingTests.swift */; };
 		56SHTS012EC7000000000001 /* SensorHealthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHTS002EC7000000000001 /* SensorHealthTests.swift */; };
 		10F70A0DB6B34BF6AFFF6504 /* ReplaySessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE5968580C64DA890C5A581 /* ReplaySessionTests.swift */; };
 		1C094F5B7AE87D738830D849 /* BridgeDeviceDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37BDED0CB8CD95167A61EB78 /* BridgeDeviceDiscoveryTests.swift */; };
@@ -188,6 +191,9 @@
 		56SHEA002EC7000000000001 /* SensorHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SensorHealth.swift; path = ../Core/SensorHealth.swift; sourceTree = "<group>"; };
 		56RMCA002EC7000000000001 /* RoomCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RoomCatalog.swift; path = ../Core/RoomCatalog.swift; sourceTree = "<group>"; };
 		56RMCT002EC7000000000001 /* RoomCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomCatalogTests.swift; sourceTree = "<group>"; };
+		56RMIS002EC7000000000001 /* RoomIconStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RoomIconStore.swift; path = ../Core/RoomIconStore.swift; sourceTree = "<group>"; };
+		56RMED002EC7000000000001 /* RoomEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomEditor.swift; sourceTree = "<group>"; };
+		56RMET002EC7000000000001 /* RoomEditingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomEditingTests.swift; sourceTree = "<group>"; };
 		56SHTS002EC7000000000001 /* SensorHealthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorHealthTests.swift; sourceTree = "<group>"; };
 		04F0CD25E2C043A18AB06797 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		151A0CCD48234A048293F85A /* RecordingBLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingBLETransport.swift; sourceTree = "<group>"; };
@@ -611,6 +617,8 @@
 				56SHMO002EC7000000000001 /* SensorHealthMonitor.swift */,
 				56SHEA002EC7000000000001 /* SensorHealth.swift */,
 				56RMCA002EC7000000000001 /* RoomCatalog.swift */,
+				56RMIS002EC7000000000001 /* RoomIconStore.swift */,
+				56RMED002EC7000000000001 /* RoomEditor.swift */,
 				56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */,
 				56BWKS002EC7000000000001 /* BackgroundBLEWakeService.swift */,
 				56BHSY002EC7000000000001 /* BackgroundHistorySyncService.swift */,
@@ -743,6 +751,7 @@
 				56SHMT002EC7000000000001 /* SensorHealthMonitorTests.swift */,
 				56SHTS002EC7000000000001 /* SensorHealthTests.swift */,
 				56RMCT002EC7000000000001 /* RoomCatalogTests.swift */,
+				56RMET002EC7000000000001 /* RoomEditingTests.swift */,
 				56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */,
 				56SHDT002EC7000000000001 /* FlowerDeviceDTOTests.swift */,
 				5654B2BF2CB46EF200EED3D3 /* BLE */,
@@ -1005,6 +1014,8 @@
 				56SHMO012EC7000000000001 /* SensorHealthMonitor.swift in Sources */,
 				56SHEA012EC7000000000001 /* SensorHealth.swift in Sources */,
 				56RMCA012EC7000000000001 /* RoomCatalog.swift in Sources */,
+				56RMIS012EC7000000000001 /* RoomIconStore.swift in Sources */,
+				56RMED012EC7000000000001 /* RoomEditor.swift in Sources */,
 				565058CB2E3F64F900CC6E2B /* LogExportView.swift in Sources */,
 				5663FEB52EB684620038209F /* ConnectionPoolManager.swift in Sources */,
 				56FA2DEC0DE4F1B500000004 /* BLETransport.swift in Sources */,
@@ -1112,6 +1123,7 @@
 				56SHMT012EC7000000000001 /* SensorHealthMonitorTests.swift in Sources */,
 				56SHTS012EC7000000000001 /* SensorHealthTests.swift in Sources */,
 				56RMCT012EC7000000000001 /* RoomCatalogTests.swift in Sources */,
+				56RMET012EC7000000000001 /* RoomEditingTests.swift in Sources */,
 				5654B2C12CB4739C00EED3D3 /* AddDeviceViewModelTests.swift in Sources */,
 				5654B2BB2CB45C6E00EED3D3 /* SensorDataDecoderTests.swift in Sources */,
 				56FA2DEC0DE4F1B500000002 /* FlowerCareFrameFixtures.swift in Sources */,

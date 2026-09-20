@@ -5,7 +5,9 @@
 //  Rooms as the UI shows them, derived from the devices' `location` strings
 //  (spec docs/superpowers/specs/2026-09-20-rooms-ui-design.md). A room is
 //  never stored on its own: it exists for as long as a plant uses it.
-//  Pure: DTOs in, value types out.
+//  Pure: DTOs in, value types out — no Core Data, no BLE. The one lookup that
+//  needs stored state, the custom room icon, is injected (`RoomIconStore`),
+//  so tests can pass a store of their own.
 //
 
 import Foundation
@@ -125,8 +127,14 @@ struct RoomCatalog: Equatable {
         (["wohn", "living", "lounge"], "sofa.fill")
     ]
 
-    static func symbolName(for name: String?) -> String {
+    /// The room's icon: a custom choice from the store, else the keyword mapping
+    static func symbolName(for name: String?, icons: RoomIconStore = .shared) -> String {
         guard let name else { return "mappin.slash" }
+        return icons.symbol(for: name) ?? defaultSymbolName(for: name)
+    }
+
+    /// Keyword → SF Symbol only ("Automatic" in the edit sheet)
+    static func defaultSymbolName(for name: String) -> String {
         let key = fold(name)
         return symbolKeywords.first { entry in entry.keywords.contains { key.contains($0) } }?.symbol
             ?? "mappin.circle.fill"
@@ -141,7 +149,9 @@ struct RoomCatalog: Equatable {
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
-    private static func fold(_ text: String) -> String {
+    /// Lookup key for a room name. Internal: `RoomIconStore` and `RoomEditor`
+    /// key on exactly the same folding.
+    static func fold(_ text: String) -> String {
         text.trimmingCharacters(in: .whitespacesAndNewlines)
             // locale: nil — folding is a lookup key, not display text. Under a
             // Turkish locale "I" would fold to dotless "ı" and break search.
