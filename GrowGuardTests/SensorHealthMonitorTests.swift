@@ -173,6 +173,25 @@ struct SensorHealthMonitorTests {
         #expect(repository.updateCount == 2)
     }
 
+    /// The coalesce stamp says "a success was recorded"; it must not be set by
+    /// a contact that recorded nothing. A reading arriving just before the
+    /// device is in the store (pairing, first sync) would otherwise swallow
+    /// every real success for the next minute.
+    @Test("A success that persisted nothing does not open the coalesce window")
+    func unpersistedSuccessDoesNotCoalesce() async {
+        let monitor = makeMonitor()
+
+        await monitor.handle(.sensorData(uuid: "A"))
+        #expect(repository.updateCount == 0, "Precondition: nothing was written")
+
+        // Same instant, the device is known now
+        seed("A", attempts: 2)
+        await monitor.handle(.sensorData(uuid: "A"))
+
+        #expect(repository.updateCount == 1)
+        #expect(repository.devices["A"]!.failedContactAttempts == 0)
+    }
+
     @Test("Failures 10 min apart count once; 61 min apart count twice")
     func failureRateLimit() async {
         seed("A")

@@ -132,13 +132,18 @@ final class SensorHealthMonitor {
         if let last = lastSuccessAt[uuid], now.timeIntervalSince(last) < Self.successCoalesceWindow {
             return
         }
-        lastSuccessAt[uuid] = now
 
         do {
             guard try await repository.modifyDevice(uuid: uuid, { device in
                 device.failedContactAttempts = 0
                 device.lastFailedContactAt = nil
             }) != nil else { return }
+            // Stamped only now: the window means "a success was persisted".
+            // Stamping before the write let an unknown device or a throwing
+            // store swallow the next minute of real successes. Handlers are
+            // serialized on one chain, so nothing slips through the gate
+            // while this write is in flight.
+            lastSuccessAt[uuid] = now
             defaults.removeObject(forKey: DefaultsKey.unreachableNotified(for: uuid))
 
             // One fetch for self and every peer verdict
