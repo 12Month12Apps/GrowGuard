@@ -141,4 +141,44 @@ class CoreDataFlowerDeviceRepository: FlowerDeviceRepository {
     func updateDevice(_ device: FlowerDeviceDTO) async throws {
         try await saveDevice(device)
     }
+
+    /// Atomic read-modify-write: fetch, mutate and save happen inside ONE
+    /// `context.perform` block. The context is queue-confined (a single
+    /// background context by default), so its blocks are serialized against
+    /// every other `modifyDevice`/`saveDevice` — no other writer can slip
+    /// between the read and the write and have its fields overwritten.
+    ///
+    /// Returns nil for an unknown device, without inserting anything.
+    @discardableResult
+    func modifyDevice(uuid: String, _ mutate: @escaping (inout FlowerDeviceDTO) -> Void) async throws -> FlowerDeviceDTO? {
+        return try await withCheckedThrowingContinuation { continuation in
+            context.perform {
+                do {
+                    let request = NSFetchRequest<FlowerDevice>(entityName: "FlowerDevice")
+                    request.predicate = NSPredicate(format: "uuid == %@", uuid)
+                    request.fetchLimit = 1
+
+                    guard let existing = try self.context.fetch(request).first else {
+                        continuation.resume(returning: nil)
+                        return
+                    }
+                    guard var dto = existing.toDTO() else {
+                        continuation.resume(returning: nil)
+                        return
+                    }
+
+                    mutate(&dto)
+                    existing.updateFromDTO(dto)
+
+                    if self.context.hasChanges {
+                        try self.context.save()
+                    }
+
+                    continuation.resume(returning: existing.toDTO() ?? dto)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
 }

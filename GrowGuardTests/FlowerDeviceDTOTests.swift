@@ -124,6 +124,36 @@ struct FlowerDeviceRepositoryModifyTests {
         #expect(reloaded?.lastFailedContactAt == lastFailedContactAt)
     }
 
+    /// A BLE battery event from `SensorHealthMonitor` can land while a settings
+    /// save is in flight. A fetch → mutate → save built from three separate
+    /// awaits lets both sides read the same row and write it back, so whichever
+    /// finishes last silently drops the other's field. The Core Data
+    /// implementation does the whole read-modify-write inside one
+    /// `context.perform`, which the queue-confined context serializes against
+    /// every other `modifyDevice`/`saveDevice`.
+    @Test("Concurrent modifications on one device never lose an update")
+    func concurrentModificationsDoNotLoseUpdates() async throws {
+        let repo = try makeIsolatedRepository()
+        let uuid = "MODIFY-CONCURRENT-\(UUID().uuidString)"
+        try await repo.saveDevice(FlowerDeviceDTO(name: "Rose", uuid: uuid, battery: 25))
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for _ in 0..<50 {
+                group.addTask {
+                    try await repo.modifyDevice(uuid: uuid) { $0.failedContactAttempts += 1 }
+                }
+                group.addTask {
+                    try await repo.modifyDevice(uuid: uuid) { $0.battery = 77 }
+                }
+            }
+            try await group.waitForAll()
+        }
+
+        let reloaded = try await repo.getDevice(by: uuid)
+        #expect(reloaded?.failedContactAttempts == 50, "every increment has to survive")
+        #expect(reloaded?.battery == 77, "the interleaved writer's field survives too")
+    }
+
     @Test("modifyDevice returns nil for an unknown device and writes nothing")
     func modifyDeviceUnknown() async throws {
         let repo = try makeIsolatedRepository()

@@ -188,10 +188,15 @@ class SettingsViewModel {
         // The nil result is the not-found check — no separate pre-fetch needed.
         // Runs first so a missing device aborts before PotSize/OptimalRange rows
         // are committed for a device that does not exist.
+        // Read the form's fields into locals: the closure escapes, so capturing
+        // `self` would keep this view model alive inside the repository call.
+        let newName = deviceName
+        let newFlower = selectedFlower
+        let newLocation = FlowerDeviceDTO.normalizeLocation(location)
         guard try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: deviceUUID, { fresh in
-            fresh.name = deviceName
-            fresh.selectedFlower = selectedFlower
-            fresh.location = FlowerDeviceDTO.normalizeLocation(location)
+            fresh.name = newName
+            fresh.selectedFlower = newFlower
+            fresh.location = newLocation
         }) != nil else {
             print("❌ SettingsViewModel.saveSettings: Device not found")
             throw RepositoryError.deviceNotFound
