@@ -19,6 +19,7 @@ import Foundation
 @testable import GrowGuard
 
 @MainActor
+@Suite(.serialized)
 struct BLEPerformanceTests {
 
     let scheduler = TestScheduler()
@@ -42,9 +43,7 @@ struct BLEPerformanceTests {
     }
 
     private func pump() async {
-        for _ in 0..<10 {
-            await Task.yield()
-        }
+        await drainMainActor()
     }
 
     /// Drives the scheduler until the history flow started AND finished, or

@@ -76,6 +76,15 @@ class InitialSensorDataService {
         AppLogger.ble.info("🔄 InitialSensorDataService: Connecting to \(targets.count) sensor(s) for one-time live refresh")
 
         for deviceUUID in targets {
+            // Geräte mit laufendem History-Sync nicht anfassen: ein Live-Request
+            // mitten im Sync stört das Protokoll, und der Reset des Loop-Guards
+            // würde die Schleifenerkennung der laufenden Session aushebeln
+            let connection = pool.getConnection(for: deviceUUID)
+            if connection.isHistoryLoading || connection.shouldAutoReconnect {
+                AppLogger.ble.info("⏭️ InitialSensorDataService: Skipping \(deviceUUID) — history sync in progress")
+                continue
+            }
+
             AppLogger.ble.bleConnection("🧭 InitialSensorDataService: Observing connection state for \(deviceUUID)")
             setupConnectionObserver(for: deviceUUID)
             // Neue user-sichtbare Session: frisches Retry-Budget, sonst bleibt

@@ -14,6 +14,7 @@ import CoreBluetooth
 @testable import GrowGuard
 
 @MainActor
+@Suite(.serialized)
 struct BackgroundArmTests {
 
     let scheduler = TestScheduler()
@@ -33,11 +34,10 @@ struct BackgroundArmTests {
         return sensor
     }
 
-    /// Lets the pool's Task-hopped delegate callbacks run
+    /// Lets the pool's Task-hopped delegate callbacks run. Drains the main
+    /// actor deterministically instead of yielding a fixed number of times.
     private func pump() async {
-        for _ in 0..<10 {
-            await Task.yield()
-        }
+        await drainMainActor()
     }
 
     @Test("armBackgroundConnect issues a connect and emits on the armed publisher")
@@ -49,7 +49,7 @@ struct BackgroundArmTests {
         defer { sub.cancel() }
 
         pool.armBackgroundConnect(for: sensor.identifier.uuidString)
-        await pump()
+        await waitUntil { emitted == [sensor.identifier.uuidString] }
 
         #expect(central.connectRequests == [sensor.identifier])
         #expect(emitted == [sensor.identifier.uuidString])
@@ -66,7 +66,7 @@ struct BackgroundArmTests {
         defer { sub.cancel() }
 
         pool.armBackgroundConnect(for: sensor.identifier.uuidString)
-        await pump()
+        await waitUntil { self.central.connectRequests.count == 1 }
         // Far past the 10 s foreground watchdog and all retry backoffs
         scheduler.advance(by: 120)
         await pump()
@@ -80,7 +80,7 @@ struct BackgroundArmTests {
 
         // The pending connect completes much later — wake event fires
         central.simulateConnectCompletion(of: sensor.identifier)
-        await pump()
+        await waitUntil { emitted == [sensor.identifier.uuidString] }
         #expect(emitted == [sensor.identifier.uuidString])
     }
 
@@ -117,7 +117,7 @@ struct BackgroundArmTests {
         central.connectSucceeds = false
 
         pool.armBackgroundConnect(for: sensor.identifier.uuidString)
-        await pump()
+        await waitUntil { self.central.connectRequests.count == 1 }
 
         // Simulate iOS reporting a transient connect failure 3x
         for _ in 0..<3 {
@@ -132,6 +132,8 @@ struct BackgroundArmTests {
             Issue.record("Armed connect failure must not surface as error state")
         }
         #expect(pool.isBackgroundArmed(sensor.identifier.uuidString))
+        #expect(central.connectRequests.count == 1,
+                "Armed failures burn no retries — no new connect attempt")
     }
 
     @Test("poweredOn re-issues pending connects for persisted armed devices")
@@ -145,7 +147,7 @@ struct BackgroundArmTests {
         #expect(central.connectRequests.isEmpty)
 
         central.simulateStateChange(to: .poweredOn)
-        await pump()
+        await waitUntil { self.central.connectRequests == [sensor.identifier] }
 
         #expect(central.connectRequests == [sensor.identifier])
     }
@@ -162,7 +164,7 @@ struct BackgroundArmTests {
         defer { sub.cancel() }
 
         central.centralDelegate?.central(central, willRestoreState: [sensor])
-        await pump()
+        await waitUntil { emitted == [sensor.identifier.uuidString] }
 
         #expect(emitted == [sensor.identifier.uuidString])
     }

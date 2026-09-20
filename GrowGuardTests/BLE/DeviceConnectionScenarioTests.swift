@@ -218,19 +218,67 @@ struct DeviceConnectionScenarioTests {
         #expect(sensor.servedEntryIndices == [0, 1, 2, 3, 4])
     }
 
+    /// Real sensor order (recording 522a3a0d): index 0 is the newest entry,
+    /// one entry per hour
+    private func newestFirstHourlyEntries(count: Int, uptime: UInt32) -> [Data] {
+        (0..<count).map { index in
+            FlowerCareFrames.historyEntry(timestamp: uptime - UInt32((index + 1) * 3600),
+                                          temperatureX10: 200,
+                                          brightness: 1000,
+                                          moisture: 40,
+                                          conductivity: 300)
+        }
+    }
+
+    @Test("History flow with a stop boundary ends at the first already-stored entry")
+    func historyStopsAtBoundary() {
+        let (sensor, connection) = makeSensor()
+        sensor.historyEntries = newestFirstHourlyEntries(count: 6, uptime: sensor.uptimeSeconds)
+        // Entry index 2 is the newest one already stored
+        connection.setHistoryStopBoundary(Date().addingTimeInterval(-3 * 3600))
+
+        var entries: [HistoricalSensorData] = []
+        var completed = false
+        let uuid = connection.deviceUUID
+        let c1 = connection.historicalDataPublisher.sink { entries.append($0) }
+        let observer = NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("HistoricalDataLoadingCompleted"), object: nil, queue: nil
+        ) { note in
+            if note.object as? String == uuid { completed = true }
+        }
+        defer { c1.cancel(); NotificationCenter.default.removeObserver(observer) }
+
+        connect(sensor, connection)
+        scheduler.advance(by: 5.0)
+
+        #expect(entries.count == 2)
+        #expect(sensor.servedEntryIndices == [0, 1, 2])
+        #expect(completed)
+        #expect(!connection.isHistoryLoading)
+        #expect(connection.historyStopBoundary == nil, "The boundary applies to one flow only")
+    }
+
     @Test("Empty history finishes cleanly without entries")
     func historyZeroEntries() {
         let (sensor, connection) = makeSensor(entries: 0)
 
         var entries: [HistoricalSensorData] = []
+        var completed = false
+        let uuid = connection.deviceUUID
         let cancellable = connection.historicalDataPublisher.sink { entries.append($0) }
-        defer { cancellable.cancel() }
+        let observer = NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("HistoricalDataLoadingCompleted"), object: nil, queue: nil
+        ) { note in
+            if note.object as? String == uuid { completed = true }
+        }
+        defer { cancellable.cancel(); NotificationCenter.default.removeObserver(observer) }
 
         connect(sensor, connection)
         scheduler.advance(by: 5.0)
 
         #expect(entries.isEmpty)
         #expect(!connection.isHistoryLoading)
+        #expect(completed, "Waiters (wake read, background sync) must not run into their timeout")
     }
 
     @Test("Metadata timeout aborts the flow cleanly")

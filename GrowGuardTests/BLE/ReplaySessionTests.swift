@@ -60,12 +60,11 @@ private final class BundleToken {}
 // MARK: - Tests
 
 @MainActor
+@Suite(.serialized)
 struct ReplaySessionTests {
 
     private func pump() async {
-        for _ in 0..<10 {
-            await Task.yield()
-        }
+        await drainMainActor()
     }
 
     /// Drives a pool against the replay transport until the script is

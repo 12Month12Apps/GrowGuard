@@ -14,6 +14,7 @@ import CoreBluetooth
 @testable import GrowGuard
 
 @MainActor
+@Suite(.serialized)
 struct ConnectionPoolManagerTests {
 
     let scheduler = TestScheduler()
@@ -36,11 +37,10 @@ struct ConnectionPoolManagerTests {
         return sensor
     }
 
-    /// Lets the pool's Task-hopped delegate callbacks run
+    /// Lets the pool's Task-hopped delegate callbacks run. Drains the main
+    /// actor deterministically instead of yielding a fixed number of times.
     private func pump() async {
-        for _ in 0..<10 {
-            await Task.yield()
-        }
+        await drainMainActor()
     }
 
     // MARK: - Tests
@@ -327,6 +327,89 @@ struct ConnectionPoolManagerTests {
         #expect(!connection.isHistoryLoading, "Live-only session must not start the history flow after a retry")
     }
 
+    /// One mid-flight history sync plus everything a test needs to poke at it.
+    /// Holding this keeps the pool — and therefore its connections — alive.
+    private final class MidFlightSync {
+        let pool: ConnectionPoolManager
+        let sensor: FakeFlowerCarePeripheral
+        let connection: DeviceConnection
+        private(set) var entries: [HistoricalSensorData] = []
+        private var cancellable: AnyCancellable?
+
+        init(pool: ConnectionPoolManager, sensor: FakeFlowerCarePeripheral, connection: DeviceConnection) {
+            self.pool = pool
+            self.sensor = sensor
+            self.connection = connection
+            cancellable = connection.historicalDataPublisher.sink { [weak self] entry in
+                self?.entries.append(entry)
+            }
+        }
+    }
+
+    /// Drives a fresh pool + sensor until the history sync is mid-flight, i.e.
+    /// at least `minEntries` entries have arrived. Models what the app is
+    /// really doing when the user comes back to the overview during a sync.
+    private func startSyncMidFlight(entryCount: Int = 10, minEntries: Int = 3) async -> MidFlightSync {
+        let pool = makePool()
+        let sensor = makeSensor(entries: entryCount)
+        let connection = pool.getConnection(for: sensor.identifier.uuidString)
+        let sync = MidFlightSync(pool: pool, sensor: sensor, connection: connection)
+
+        pool.connect(to: sensor.identifier.uuidString)
+        await pump()
+        scheduler.advance(by: 0.7) // discovery + auth + history start delay
+
+        var safety = 0
+        while sync.entries.count < minEntries && safety < 200 {
+            scheduler.advance(by: 0.05)
+            safety += 1
+        }
+        return sync
+    }
+
+    /// Mid-sync disconnect plus the reconnect the FlowerCare forces on us
+    /// constantly, then enough time for the resumed sync to drain.
+    private func reconnectAndDrain(_ sync: MidFlightSync) async {
+        central.simulateDisconnect(of: sync.sensor.identifier)
+        await pump()
+        scheduler.advance(by: 1.0) // auto-reconnect delay (clean disconnect)
+        await pump()
+        scheduler.advance(by: 1.0) // re-discovery + auth + resume delay
+        await pump()
+        scheduler.advance(by: 10.0) // drain remaining entries
+    }
+
+    @Test("Dashboard refresh leaves an active history sync untouched")
+    func dashboardRefreshDoesNotBreakActiveHistorySync() async {
+        let sync = await startSyncMidFlight()
+        #expect(sync.entries.count >= 3, "Sync should be mid-flight before the dashboard appears")
+
+        // User navigates back to the overview: dashboard triggers its
+        // one-time live refresh for all sensors — including the syncing one
+        let service = InitialSensorDataService(pool: sync.pool)
+        await service.requestLiveData(for: [sync.sensor.identifier.uuidString])
+        await pump()
+
+        await reconnectAndDrain(sync)
+
+        #expect(sync.entries.count == 10, "History sync must resume and complete despite the dashboard refresh")
+        #expect(!sync.connection.isHistoryLoading)
+    }
+
+    @Test("Disabling auto-start is ignored while a history flow is active")
+    func autoStartDisableIgnoredDuringActiveFlow() async {
+        let sync = await startSyncMidFlight()
+        #expect(sync.entries.count >= 3)
+
+        // Live-only callers (background fetch) must not flip a running session
+        sync.connection.setAutoStartHistoryFlowEnabled(false)
+        #expect(sync.connection.autoStartHistoryFlowEnabled, "Disable is deferred while the flow is active")
+
+        await reconnectAndDrain(sync)
+
+        #expect(sync.entries.count == 10, "Sync resumes after reconnect even though a caller tried to disable auto-start")
+    }
+
     @Test("Two devices get isolated connections and data streams")
     func multiDeviceIsolation() async {
         let pool = makePool()
@@ -395,5 +478,68 @@ struct ConnectionPoolManagerTests {
         #expect(entries.count == 10, "History sync should complete after auto-reconnect")
         #expect(Set(entries.map(\.timestamp)).count == 10, "No duplicate entries after resume")
         #expect(!connection.isHistoryLoading)
+    }
+
+    /// A history flow stalled mid-sync whose auto-reconnect fell back to
+    /// scanning, so a test can end the flow while the pool is still looking
+    /// for the sensor.
+    /// - Returns: the pool, its connection and the connect requests so far
+    private func reconnectScanForStalledFlow() async -> (pool: ConnectionPoolManager,
+                                                         sensor: FakeFlowerCarePeripheral,
+                                                         connection: DeviceConnection,
+                                                         connectRequests: Int) {
+        let pool = makePool()
+        let sensor = makeSensor(entries: 50)
+        sensor.silentEntryIndices = Set(3..<50) // flow stays active mid-sync
+        let connection = pool.getConnection(for: sensor.identifier.uuidString)
+
+        pool.connect(to: sensor.identifier.uuidString)
+        for _ in 0..<20 {
+            await pump()
+            scheduler.advance(by: 0.1)
+        }
+        #expect(connection.isHistoryFlowActive)
+
+        // Sensor gone from the retrieve cache: the reconnect has to scan
+        central.peripheralsAreInRetrieveCache = false
+        central.simulateDisconnect(of: sensor.identifier)
+        for _ in 0..<25 {
+            await pump()
+            scheduler.advance(by: 0.1)
+        }
+        #expect(central.isScanning, "Fast reconnect attempts failed, the pool scans")
+
+        return (pool, sensor, connection, central.connectRequests.count)
+    }
+
+    @Test("An auto-reconnect that fell back to scanning does not connect once the flow was ended meanwhile")
+    func scanFallbackReconnectSkipsEndedFlow() async {
+        let scan = await reconnectScanForStalledFlow()
+
+        // The flow ends while scanning (e.g. the wake read finished)
+        scan.connection.cleanupHistoryFlow()
+        central.simulateDiscovery(of: scan.sensor.identifier)
+        await pump()
+
+        #expect(central.connectRequests.count == scan.connectRequests,
+                "Nothing left to resume: waking the sensor would only drain its battery")
+        #expect(!central.isScanning)
+    }
+
+    @Test("Disconnecting stops a reconnect scan that only existed to resume the ended flow")
+    func disconnectStopsPendingReconnectScan() async {
+        let scan = await reconnectScanForStalledFlow()
+
+        // The wake read ends its flow and drops the device
+        scan.connection.cleanupHistoryFlow()
+        scan.pool.disconnect(from: scan.sensor.identifier.uuidString)
+        await pump()
+
+        #expect(!central.isScanning,
+                "A scan nobody waits for keeps the radio busy until the sensor happens to advertise")
+
+        central.simulateDiscovery(of: scan.sensor.identifier)
+        await pump()
+        #expect(central.connectRequests.count == scan.connectRequests)
     }
 }

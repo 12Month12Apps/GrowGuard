@@ -160,6 +160,11 @@ extension DeviceConnection: BLEPeripheralLinkDelegate {
             return
         }
 
+        // Auth-Write bestätigt → kurze Gnadenfrist statt 4 s Timeout
+        if characteristicUUID == authenticationCharacteristicUUID {
+            handleAuthenticationWriteConfirmed()
+        }
+
         // Nach bestätigtem Mode Change (0xA01F) den Realtime-Wert lesen —
         // FlowerCare liefert Live-Daten nur per Read (wie FlowerCareManager:
         // kurze Pause, damit der Sensor die Messung aktualisiert)
@@ -289,6 +294,7 @@ extension DeviceConnection: BLEPeripheralLinkDelegate {
                     fetchHistoricalDataEntry(index: currentEntryIndex)
                 } else {
                     AppLogger.ble.info("ℹ️ No historical entries available for device \(self.deviceUUID)")
+                    NotificationCenter.default.post(name: NSNotification.Name("HistoricalDataLoadingCompleted"), object: self.deviceUUID)
                     cleanupHistoryFlow()
                 }
             } else {
@@ -303,6 +309,15 @@ extension DeviceConnection: BLEPeripheralLinkDelegate {
 
                 // Erfolg → Retry-Zähler für den nächsten Entry zurücksetzen
                 entryRetryCount = 0
+
+                // Incremental sync: everything from here on is already stored
+                if let boundary = historyStopBoundary,
+                   historicalData.date <= boundary.addingTimeInterval(Self.historyStopTolerance) {
+                    AppLogger.ble.info("⏹ History entry \(self.currentEntryIndex) is already stored for device \(self.deviceUUID) - incremental sync complete")
+                    NotificationCenter.default.post(name: NSNotification.Name("HistoricalDataLoadingCompleted"), object: self.deviceUUID)
+                    cleanupHistoryFlow()
+                    return
+                }
 
                 // Send historical data via publisher
                 historicalDataSubject.send(historicalData)

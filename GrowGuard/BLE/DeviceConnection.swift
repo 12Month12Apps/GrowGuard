@@ -122,6 +122,19 @@ class DeviceConnection: NSObject {
     /// Flag ob der Historical Data Flow aktiv ist
     var isHistoryFlowActive: Bool = false
 
+    /// Newest history entry already stored. The sensor serves history
+    /// newest-first, so the flow ends at the first entry at or before this
+    /// date. nil = full sync. Cleared when the flow ends.
+    var historyStopBoundary: Date?
+
+    /// Stored and re-decoded dates of one entry drift by seconds (device
+    /// clock); entries are 3600 s apart
+    static let historyStopTolerance: TimeInterval = 600
+
+    func setHistoryStopBoundary(_ date: Date?) {
+        historyStopBoundary = date
+    }
+
     /// Device Boot Time für Timestamp-Berechnungen
     var deviceBootTime: Date?
 
@@ -261,8 +274,20 @@ class DeviceConnection: NSObject {
         AppLogger.ble.bleConnection("DeviceConnection initialized for device: \(deviceUUID)")
     }
 
-    /// Konfiguriert, ob der History Flow automatisch nach der Authentifizierung starten soll
+    /// Konfiguriert, ob der History Flow automatisch nach der Authentifizierung starten soll.
+    ///
+    /// Achtung: Ein `false` während eines aktiven Flows wird bewusst ignoriert
+    /// (siehe unten). Aufrufer, die den Flow wirklich beenden wollen, müssen
+    /// vorher `cleanupHistoryFlow()` rufen — das setzt `isHistoryFlowActive`
+    /// zurück, wodurch der Disable anschließend greift.
     func setAutoStartHistoryFlowEnabled(_ enabled: Bool) {
+        // Ein laufender (oder suspendierter) Sync braucht das Flag für den
+        // Resume nach Reconnect — Live-only-Caller (Dashboard/Background)
+        // dürfen ihn nicht stranden lassen
+        if !enabled && isHistoryFlowActive {
+            AppLogger.ble.bleWarning("Ignoring auto-start disable for device \(self.deviceUUID) — history flow is active and needs it to resume")
+            return
+        }
         autoStartHistoryFlowEnabled = enabled
         if !enabled {
             waitingForCharacteristicsForHistoryResume = false
