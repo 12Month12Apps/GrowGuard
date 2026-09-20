@@ -45,6 +45,17 @@ final class NotificationService {
         static func wateringDaily(for uuid: String) -> String { "watering-daily-\(uuid)" }
     }
 
+    /// Prefix of the snooze the user sets from the REMIND_LATER action.
+    static let reminderLaterPrefix = "watering-reminder-later-"
+
+    /// The snooze scheduled from the REMIND_LATER notification action. Inside
+    /// the `watering-` family so `cancelNotifications(for:kinds: [.watering])`
+    /// sweeps it when the plant is watered or the device is deleted — an
+    /// unprefixed identifier outlived both.
+    static func reminderLaterIdentifier(for uuid: String) -> String {
+        reminderLaterPrefix + uuid
+    }
+
     private enum DefaultsKey {
         static func lastImmediateNotification(for uuid: String) -> String { "notification.lastImmediate.\(uuid)" }
         static func lastMoistureAboveMin(for uuid: String) -> String { "notification.lastMoistureAboveMin.\(uuid)" }
@@ -59,9 +70,10 @@ final class NotificationService {
         let dailyIdentifier = Identifier.wateringDaily(for: device.uuid)
 
         // Remove legacy one-off reminders from older builds
-        let legacyReminderIds = pendingRequests
-            .filter { $0.identifier.contains(device.uuid) && $0.identifier.contains("watering-reminder") }
-            .map { $0.identifier }
+        let legacyReminderIds = Self.legacyReminderIdentifiers(
+            pending: pendingRequests.map(\.identifier),
+            deviceUUID: device.uuid
+        )
         if !legacyReminderIds.isEmpty {
             center.removePendingNotificationRequests(withIdentifiers: legacyReminderIds)
             print("🧹 NotificationService: Removed legacy reminders for \(device.name)")
@@ -196,6 +208,24 @@ final class NotificationService {
             print("📱 NotificationService: Scheduled predictive watering notification for \(device.name)")
         } catch {
             print("❌ NotificationService: Failed to schedule predictive notification: \(error)")
+        }
+    }
+
+    /// One-off reminders from builds before the `watering-` prefixes existed.
+    /// Pure so the exclusion below can be tested without UNUserNotificationCenter.
+    ///
+    /// `watering-reminder-later-` is *not* legacy: it is the snooze the user
+    /// just chose from the REMIND_LATER action. Every wake read with moisture
+    /// still below the minimum calls `scheduleWateringNotifications`, and the
+    /// 24 h immediate cooldown means no replacement alert is posted — sweeping
+    /// the snooze here would silently drop it while the plant is still dry, so
+    /// the user would hear nothing until the daily reminder. A new watering
+    /// schedule does not supersede a snooze the user set minutes ago.
+    static func legacyReminderIdentifiers(pending: [String], deviceUUID: String) -> [String] {
+        pending.filter {
+            $0.contains(deviceUUID)
+                && $0.contains("watering-reminder")
+                && !$0.hasPrefix(reminderLaterPrefix)
         }
     }
 

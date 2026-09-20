@@ -496,4 +496,31 @@ struct NotificationScopingTests {
     func noKindsRemovesNothing() {
         #expect(cancel([]).isEmpty)
     }
+
+    /// The REMIND_LATER snooze used to be `reminder-later-<uuid>`, outside every
+    /// prefix, so the kind filter never cancelled it when the plant was watered
+    /// or the device deleted.
+    @Test("The remind-later snooze belongs to the watering family, not the sensor-health one")
+    func remindLaterIsWatering() {
+        let snooze = ["watering-reminder-later-A"]
+        #expect(NotificationService.identifiersToCancel(
+            pending: snooze, delivered: [], deviceUUID: "A", kinds: [.watering]) == snooze)
+        #expect(NotificationService.identifiersToCancel(
+            pending: snooze, delivered: [], deviceUUID: "A", kinds: [.sensorHealth]).isEmpty)
+    }
+
+    /// The legacy sweep in `scheduleWateringNotifications` runs on every wake
+    /// read with moisture still low. It must clear the pre-prefix reminders and
+    /// spare the snooze the user just set.
+    @Test("The legacy reminder sweep spares the remind-later snooze")
+    func legacySweepSparesTheSnooze() {
+        let identifiers = [
+            "watering-reminder-A",          // pre-prefix one-off, must go
+            "watering-reminder-later-A",    // the user's snooze, must stay
+            "watering-daily-A",
+            "watering-reminder-B"           // another device
+        ]
+        #expect(NotificationService.legacyReminderIdentifiers(
+            pending: identifiers, deviceUUID: "A") == ["watering-reminder-A"])
+    }
 }
