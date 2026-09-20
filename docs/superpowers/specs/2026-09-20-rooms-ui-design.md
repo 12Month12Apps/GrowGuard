@@ -96,8 +96,45 @@ nil; companions (none / one / more, self excluded, other rooms excluded);
 `RoomFilter.includes`. Views stay untested (project convention) and get one
 manual look with seeded devices.
 
+## Editing rooms (added 2026-09-20)
+
+Rooms can be renamed, given an icon, and deleted — still without a `Room`
+entity or a schema change.
+
+- **Entry points.** In the room picker every room row has a trailing "…" menu
+  and swipe actions with **Edit** and **Delete**. Tapping the row itself still
+  picks the room. Edit opens a sheet (`RoomEditView`); a sheet rather than a
+  push because the picker is hosted in a legacy `NavigationView` (settings),
+  a path-driven `NavigationStack` (add flow) and a sheet (details), and a
+  sheet behaves the same in all three.
+- **Rename** rewrites `location` on every plant of the room (`RoomEditor`,
+  one `modifyDevice` per plant, only `location`). If the new name folds to an
+  existing *other* room, the user is asked to merge; the existing spelling
+  wins. A case-only change of the same room is a plain rename. Empty names are
+  rejected. Because all members move together, peer-witness groups are
+  unchanged.
+- **Delete** sets `location = nil` on every plant of the room after a
+  confirmation that names the number of affected plants. Plants are never
+  deleted.
+- **Icon.** `RoomIconStore` (UserDefaults, key `rooms.customIcons`, keyed by
+  the folded room name, `@Observable` so views refresh) holds an optional
+  custom SF Symbol per room. "Automatic" removes the entry and falls back to
+  the keyword mapping. `RoomCatalog.symbolName(for:icons:)` asks the store
+  first. Rename moves the entry; a merge keeps the target's icon if it has
+  one; delete removes it. Not synced and not part of the Core Data store — an
+  accepted trade-off for avoiding model version 3.
+- **Refresh.** After an edit the picker reloads its devices from the
+  repository, moves the current selection along (renamed → new name, deleted
+  → none) and calls `onRoomsChanged` so the host refreshes its own copy
+  (details: peers + own location; settings/add: device list).
+
+Testing: `RoomIconStore` and `RoomEditor` are TDD with an in-memory repository
+and an isolated `UserDefaults` suite; `RoomCatalogTests.symbols` injects an
+empty store so a developer's custom icons cannot leak in. Views untested, one
+visual pass with seeded devices.
+
 ## Out of scope
 
-- A `Room` entity (rename, empty rooms, stored icons).
+- A `Room` entity (empty rooms, fixed order, synced icons).
 - Grouping the overview list by room.
 - Changing sensor-health semantics.
