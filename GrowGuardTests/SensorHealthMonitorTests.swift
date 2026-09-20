@@ -353,3 +353,78 @@ struct SensorHealthMonitorTests {
         #expect(notifier.lowBattery.map(\.percent) == [20])
     }
 }
+
+// MARK: - Notification identifier scoping
+
+/// `cancelNotifications(for:kinds:)` runs on every wake read from the watering
+/// paths. Before the kind filter it swept *every* identifier containing the
+/// uuid, which deleted the just-delivered sensor-health alerts while their
+/// once-per-episode markers stayed set — the alert was never posted again.
+/// Pure identifier arithmetic: no UNUserNotificationCenter.
+struct NotificationScopingTests {
+
+    let pending = [
+        "watering-daily-A",
+        "watering-predictive-A",
+        "watering-daily-B"
+    ]
+    let delivered = [
+        "watering-immediate-A",
+        "sensor-battery-A",
+        "sensor-unreachable-A",
+        "sensor-battery-B"
+    ]
+
+    private func cancel(_ kinds: Set<NotificationKind>, uuid: String = "A") -> Set<String> {
+        Set(NotificationService.identifiersToCancel(
+            pending: pending,
+            delivered: delivered,
+            deviceUUID: uuid,
+            kinds: kinds
+        ))
+    }
+
+    @Test("Cancelling watering notifications leaves the sensor-health alerts in place")
+    func wateringOnlyLeavesSensorHealthAlone() {
+        let removed = cancel([.watering])
+        #expect(!removed.contains("sensor-battery-A"))
+        #expect(!removed.contains("sensor-unreachable-A"))
+    }
+
+    @Test("Watering matches the immediate, daily and predictive identifiers of that device")
+    func wateringMatchesEveryWateringIdentifier() {
+        #expect(cancel([.watering]) == [
+            "watering-daily-A",
+            "watering-predictive-A",
+            "watering-immediate-A"
+        ])
+    }
+
+    @Test("Both kinds remove watering and sensor-health identifiers")
+    func bothKindsRemoveEverythingForTheDevice() {
+        #expect(cancel([.watering, .sensorHealth]) == [
+            "watering-daily-A",
+            "watering-predictive-A",
+            "watering-immediate-A",
+            "sensor-battery-A",
+            "sensor-unreachable-A"
+        ])
+    }
+
+    @Test("Sensor health alone touches no watering identifier")
+    func sensorHealthOnly() {
+        #expect(cancel([.sensorHealth]) == ["sensor-battery-A", "sensor-unreachable-A"])
+    }
+
+    @Test("Another device's notifications are never touched")
+    func otherDeviceIsNeverTouched() {
+        let removed = cancel([.watering, .sensorHealth], uuid: "A")
+        #expect(!removed.contains("watering-daily-B"))
+        #expect(!removed.contains("sensor-battery-B"))
+    }
+
+    @Test("An empty kind set removes nothing")
+    func noKindsRemovesNothing() {
+        #expect(cancel([]).isEmpty)
+    }
+}

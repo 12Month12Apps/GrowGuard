@@ -1,6 +1,24 @@
 import Foundation
 import UserNotifications
 
+/// The families of notification the app owns, distinguished by identifier
+/// prefix. Cancelling has to be scoped to a family: the watering paths run
+/// after every wake read, and an unscoped sweep would delete the sensor-health
+/// alerts that were just delivered while their once-per-episode markers stay
+/// set — the alert would never be posted again.
+enum NotificationKind: CaseIterable {
+    case watering
+    case sensorHealth
+
+    /// Every identifier of this kind starts with this prefix.
+    var identifierPrefix: String {
+        switch self {
+        case .watering: return "watering-"
+        case .sensorHealth: return "sensor-"
+        }
+    }
+}
+
 /// Centralizes scheduling and management of user notifications used across the app.
 final class NotificationService {
     static let shared = NotificationService()
@@ -181,24 +199,37 @@ final class NotificationService {
         }
     }
 
-    /// Removes pending and delivered notifications related to a specific device.
-    func cancelNotifications(for deviceUUID: String) async {
+    /// Identifiers to sweep for one device, restricted to the given kinds.
+    /// Pure so the scoping can be tested without UNUserNotificationCenter.
+    ///
+    /// Sensor-health notifications are posted with a nil trigger, so they are
+    /// only ever delivered and never pending — both lists have to be searched.
+    static func identifiersToCancel(pending: [String],
+                                    delivered: [String],
+                                    deviceUUID: String,
+                                    kinds: Set<NotificationKind>) -> [String] {
+        let prefixes = kinds.map(\.identifierPrefix)
+        func matches(_ identifier: String) -> Bool {
+            identifier.contains(deviceUUID) && prefixes.contains { identifier.hasPrefix($0) }
+        }
+        var identifiers = Set(pending.filter(matches))
+        identifiers.formUnion(delivered.filter(matches))
+        return Array(identifiers)
+    }
+
+    /// Removes pending and delivered notifications of the given kinds for a
+    /// device. Defaults to the watering family: the callers on the watering
+    /// path must not touch sensor-health alerts.
+    func cancelNotifications(for deviceUUID: String, kinds: Set<NotificationKind> = [.watering]) async {
         let pendingRequests = await center.pendingNotificationRequests()
         let deliveredNotifications = await center.deliveredNotifications()
 
-        // Sensor-health notifications are posted with a nil trigger, so they are only
-        // ever delivered and never pending — both lists have to be swept.
-        var identifiers = Set(
-            pendingRequests
-                .filter { $0.identifier.contains(deviceUUID) }
-                .map { $0.identifier }
+        let identifiersToRemove = Self.identifiersToCancel(
+            pending: pendingRequests.map(\.identifier),
+            delivered: deliveredNotifications.map(\.request.identifier),
+            deviceUUID: deviceUUID,
+            kinds: kinds
         )
-        identifiers.formUnion(
-            deliveredNotifications
-                .map { $0.request.identifier }
-                .filter { $0.contains(deviceUUID) }
-        )
-        let identifiersToRemove = Array(identifiers)
 
         center.removeDeliveredNotifications(withIdentifiers: identifiersToRemove)
         center.removePendingNotificationRequests(withIdentifiers: identifiersToRemove)
@@ -244,7 +275,8 @@ protocol SensorHealthNotifying {
 extension NotificationService: SensorHealthNotifying {
 
     private enum SensorHealthIdentifier {
-        // Identifiers contain the UUID so cancelNotifications(for:) sweeps them
+        // `sensor-` prefix + UUID: cancelNotifications(for:kinds:) sweeps these
+        // only when `.sensorHealth` is asked for — never from a watering path
         static func unreachable(for uuid: String) -> String { "sensor-unreachable-\(uuid)" }
         static func lowBattery(for uuid: String) -> String { "sensor-battery-\(uuid)" }
     }
