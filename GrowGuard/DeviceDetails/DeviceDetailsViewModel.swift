@@ -211,8 +211,11 @@ import UIKit
         poolDeviceInfoSubscription = connection.deviceInfoPublisher.sink { [weak self] info in
             Task { @MainActor in
                 guard let self else { return }
-                // Percent, not a raw byte: a garbled read must not show 255 %
-                self.device.battery = Int16(min(max(info.battery, 0), 100))
+                // Percent, not a raw byte: a garbled read (the decoder yields a
+                // raw UInt8) is ignored, not clamped — showing 100 % for a 255
+                // would be a fiction, and the monitor drops it too.
+                guard (0...100).contains(info.battery) else { return }
+                self.device.battery = Int16(info.battery)
                 self.device.firmware = info.firmware
                 self.device.batteryUpdatedAt = Date()
             }

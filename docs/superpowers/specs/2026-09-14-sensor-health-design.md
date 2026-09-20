@@ -166,7 +166,10 @@ Responsibilities:
 
 1. **Persist battery.** On `.deviceInfo`: load the device, set `battery`,
    `firmware`, `batteryUpdatedAt = now`, save. `lastUpdate` stays untouched
-   (unchanged rule: battery reads are not measurements).
+   (unchanged rule: battery reads are not measurements). A reading outside
+   0…100 % is **rejected, not clamped** — the decoder yields a raw `UInt8`, and
+   a clamped 255 would both store a fictional 100 % and pass the new-cell check
+   that clears the low-battery marker.
 2. **Bookkeep contact.**
    - `.sensorData` / `.historicalData` → `recordSuccessfulContact(uuid)`:
      `failedContactAttempts = 0`, `lastFailedContactAt = nil`, clear the

@@ -154,6 +154,55 @@ struct SensorHealthMonitorTests {
         #expect(stored.lastUpdate == lastUpdateBefore)
     }
 
+    /// `decodeFirmwareAndBattery` reads a raw `UInt8`, so a garbled packet can
+    /// report 255. Clamping it to 100 stored a fiction *and* — because the
+    /// new-cell check compares the raw value — cleared the low-battery marker,
+    /// silencing the real alert. Out of range means "no reading": reject it.
+    @Test("A battery reading above 100 % is rejected, not clamped")
+    func batteryAbove100IsRejected() async {
+        seed("A", battery: 80)
+        let before = repository.devices["A"]!
+        defaults.set(true, forKey: "sensorHealth.lowBatteryNotified.A")
+        let monitor = makeMonitor()
+
+        await monitor.handle(.deviceInfo(uuid: "A", info: .init(battery: 255, firmware: "3.3.6")))
+
+        #expect(repository.updateCount == 0, "nothing is written for a bogus reading")
+        #expect(repository.devices["A"]!.battery == 80)
+        #expect(repository.devices["A"]!.batteryUpdatedAt == before.batteryUpdatedAt)
+        #expect(defaults.bool(forKey: "sensorHealth.lowBatteryNotified.A"),
+                "a bogus 255 must not pass for a fresh cell")
+        #expect(notifier.lowBattery.isEmpty)
+    }
+
+    @Test("A negative battery reading is rejected as well")
+    func negativeBatteryIsRejected() async {
+        seed("A", battery: 80)
+        let before = repository.devices["A"]!
+        defaults.set(true, forKey: "sensorHealth.lowBatteryNotified.A")
+        let monitor = makeMonitor()
+
+        await monitor.handle(.deviceInfo(uuid: "A", info: .init(battery: -1, firmware: "3.3.6")))
+
+        #expect(repository.updateCount == 0)
+        #expect(repository.devices["A"]!.battery == 80)
+        #expect(repository.devices["A"]!.batteryUpdatedAt == before.batteryUpdatedAt)
+        #expect(defaults.bool(forKey: "sensorHealth.lowBatteryNotified.A"))
+        #expect(notifier.lowBattery.isEmpty)
+    }
+
+    @Test("The range bounds themselves are accepted")
+    func batteryBoundsAreAccepted() async {
+        seed("A", battery: 80)
+        let monitor = makeMonitor()
+
+        await monitor.handle(.deviceInfo(uuid: "A", info: .init(battery: 100, firmware: "f")))
+        #expect(repository.devices["A"]!.battery == 100)
+
+        await monitor.handle(.deviceInfo(uuid: "A", info: .init(battery: 0, firmware: "f")))
+        #expect(repository.devices["A"]!.battery == 0)
+    }
+
     @Test("deviceInfo for an unknown device is ignored")
     func deviceInfoUnknownDevice() async {
         let monitor = makeMonitor()

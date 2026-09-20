@@ -201,10 +201,17 @@ final class SensorHealthMonitor {
 
     private func persistBattery(uuid: String, battery: Int, firmware: String) async {
         let now = self.now()
+        // The decoder hands up a raw UInt8, so a garbled read can say 255.
+        // Rejected, not clamped: a clamped 255 would be stored as a healthy
+        // 100 % *and* pass the raw new-cell check, clearing the low-battery
+        // marker and silencing the real alert. Out of range = no reading.
+        guard (0...100).contains(battery) else {
+            AppLogger.sensor.error("🔋 SensorHealthMonitor: ignoring out-of-range battery \(battery) for \(uuid)")
+            return
+        }
         do {
             guard let updated = try await repository.modifyDevice(uuid: uuid, { device in
-                // Percent, not a raw byte: a garbled read must not persist 255 %
-                device.battery = Int16(min(max(battery, 0), 100))
+                device.battery = Int16(battery)
                 device.firmware = firmware
                 device.batteryUpdatedAt = now
                 // lastUpdate untouched: a battery read is not a measurement
