@@ -17,6 +17,10 @@ struct OverviewList: View {
     @State private var showDeleteError = false
     @State private var hasRequestedDashboardLiveRefresh = false
     @State private var roomFilter: RoomFilter = .all
+    /// Measured card heights by device uuid. The list lives inside the page's
+    /// ScrollView with its own scrolling disabled, so it needs an explicit
+    /// height — a fixed per-row guess clipped the last card.
+    @State private var rowHeights: [String: CGFloat] = [:]
 
     private let initialSensorDataService = InitialSensorDataService.shared
 
@@ -214,14 +218,19 @@ struct OverviewList: View {
                                    showsMissingRoom: !catalog.rooms.isEmpty) {
                             NavigationService.shared.navigateToDeviceView(flowerDevice: device)
                         }
-                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        .background(GeometryReader { proxy in
+                            Color.clear.preference(key: DeviceRowHeightKey.self,
+                                                   value: [device.uuid: proxy.size.height])
+                        })
+                        .listRowInsets(EdgeInsets(top: Self.rowInset, leading: 16, bottom: Self.rowInset, trailing: 16))
                         .listRowBackground(Color.clear)
                     }
                     .onDelete(perform: delete)
                     .listRowSeparator(.hidden)
                 }
                 .listStyle(.plain)
-                .frame(height: CGFloat(visible.count) * 110)
+                .onPreferenceChange(DeviceRowHeightKey.self) { rowHeights = $0 }
+                .frame(height: listHeight(for: visible))
                 .scrollDisabled(true)
             }
         }
@@ -240,6 +249,17 @@ struct OverviewList: View {
         showDeleteConfirmation = true
     }
     
+    private static let rowInset: CGFloat = 6
+    /// Used until a row has reported its real height (first layout pass)
+    private static let estimatedCardHeight: CGFloat = 114
+
+    /// Sum of the measured card heights plus the row insets
+    private func listHeight(for devices: [FlowerDeviceDTO]) -> CGFloat {
+        devices.reduce(0) { total, device in
+            total + (rowHeights[device.uuid] ?? Self.estimatedCardHeight) + 2 * Self.rowInset
+        }
+    }
+
     private func confirmDelete() {
         guard let offsets = deviceToDelete else { return }
         Task {
@@ -271,6 +291,14 @@ struct OverviewList: View {
 }
 
 // MARK: - Supporting Views
+
+/// Card heights reported by the overview rows, keyed by device uuid
+private struct DeviceRowHeightKey: PreferenceKey {
+    static var defaultValue: [String: CGFloat] = [:]
+    static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) {
+        value.merge(nextValue()) { _, new in new }
+    }
+}
 
 struct SummaryCard: View {
     let device: FlowerDeviceDTO
