@@ -480,8 +480,14 @@ struct ConnectionPoolManagerTests {
         #expect(!connection.isHistoryLoading)
     }
 
-    @Test("An auto-reconnect that fell back to scanning does not connect once the flow was ended meanwhile")
-    func scanFallbackReconnectSkipsEndedFlow() async {
+    /// A history flow stalled mid-sync whose auto-reconnect fell back to
+    /// scanning, so a test can end the flow while the pool is still looking
+    /// for the sensor.
+    /// - Returns: the pool, its connection and the connect requests so far
+    private func reconnectScanForStalledFlow() async -> (pool: ConnectionPoolManager,
+                                                         sensor: FakeFlowerCarePeripheral,
+                                                         connection: DeviceConnection,
+                                                         connectRequests: Int) {
         let pool = makePool()
         let sensor = makeSensor(entries: 50)
         sensor.silentEntryIndices = Set(3..<50) // flow stays active mid-sync
@@ -502,52 +508,38 @@ struct ConnectionPoolManagerTests {
             scheduler.advance(by: 0.1)
         }
         #expect(central.isScanning, "Fast reconnect attempts failed, the pool scans")
-        let connectsBeforeDiscovery = central.connectRequests.count
+
+        return (pool, sensor, connection, central.connectRequests.count)
+    }
+
+    @Test("An auto-reconnect that fell back to scanning does not connect once the flow was ended meanwhile")
+    func scanFallbackReconnectSkipsEndedFlow() async {
+        let scan = await reconnectScanForStalledFlow()
 
         // The flow ends while scanning (e.g. the wake read finished)
-        connection.cleanupHistoryFlow()
-        central.simulateDiscovery(of: sensor.identifier)
+        scan.connection.cleanupHistoryFlow()
+        central.simulateDiscovery(of: scan.sensor.identifier)
         await pump()
 
-        #expect(central.connectRequests.count == connectsBeforeDiscovery,
+        #expect(central.connectRequests.count == scan.connectRequests,
                 "Nothing left to resume: waking the sensor would only drain its battery")
         #expect(!central.isScanning)
     }
 
     @Test("Disconnecting stops a reconnect scan that only existed to resume the ended flow")
     func disconnectStopsPendingReconnectScan() async {
-        let pool = makePool()
-        let sensor = makeSensor(entries: 50)
-        sensor.silentEntryIndices = Set(3..<50) // flow stays active mid-sync
-        let connection = pool.getConnection(for: sensor.identifier.uuidString)
-
-        pool.connect(to: sensor.identifier.uuidString)
-        for _ in 0..<20 {
-            await pump()
-            scheduler.advance(by: 0.1)
-        }
-        #expect(connection.isHistoryFlowActive)
-
-        // Sensor gone from the retrieve cache: the reconnect has to scan
-        central.peripheralsAreInRetrieveCache = false
-        central.simulateDisconnect(of: sensor.identifier)
-        for _ in 0..<25 {
-            await pump()
-            scheduler.advance(by: 0.1)
-        }
-        #expect(central.isScanning, "Fast reconnect attempts failed, the pool scans")
-        let connectsBeforeCleanup = central.connectRequests.count
+        let scan = await reconnectScanForStalledFlow()
 
         // The wake read ends its flow and drops the device
-        connection.cleanupHistoryFlow()
-        pool.disconnect(from: sensor.identifier.uuidString)
+        scan.connection.cleanupHistoryFlow()
+        scan.pool.disconnect(from: scan.sensor.identifier.uuidString)
         await pump()
 
         #expect(!central.isScanning,
                 "A scan nobody waits for keeps the radio busy until the sensor happens to advertise")
 
-        central.simulateDiscovery(of: sensor.identifier)
+        central.simulateDiscovery(of: scan.sensor.identifier)
         await pump()
-        #expect(central.connectRequests.count == connectsBeforeCleanup)
+        #expect(central.connectRequests.count == scan.connectRequests)
     }
 }
