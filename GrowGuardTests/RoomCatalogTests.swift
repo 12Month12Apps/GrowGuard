@@ -63,6 +63,35 @@ struct RoomCatalogTests {
         #expect(catalog.room(named: "Wohnzimmer")?.hasSilentSensor == false)
     }
 
+    /// `hasSilentSensor` drives a warning badge on the room chip. A plant
+    /// without a sensor has nothing to be silent about, however old its
+    /// `lastUpdate` and however many contact attempts failed — `evaluate`
+    /// returns `.ok` for it, and the badge must stay off.
+    @Test("A long-silent plant without a sensor never flags its room")
+    func silentFlagIgnoresPlantsWithoutASensor() {
+        let devices = [plant("Efeu", room: "Diele", isSensor: false, silentDays: 30, attempts: 3)]
+        let catalog = RoomCatalog(devices: devices, now: now)
+        #expect(catalog.room(named: "Diele")?.hasSilentSensor == false)
+        #expect(catalog.room(named: "Diele")?.sensorCount == 0)
+        #expect(catalog.room(named: "Diele")?.plantCount == 1)
+    }
+
+    @Test("Counts pick the singular only at one; companions pick none, one, more")
+    func countAndCompanionCopy() {
+        #expect(RoomText.plants(0) == L10n.Room.Plants.other(0))
+        #expect(RoomText.plants(1) == L10n.Room.Plants.one)
+        #expect(RoomText.plants(2) == L10n.Room.Plants.other(2))
+
+        #expect(RoomText.sensors(0) == L10n.Room.Sensors.other(0))
+        #expect(RoomText.sensors(1) == L10n.Room.Sensors.one)
+        #expect(RoomText.sensors(2) == L10n.Room.Sensors.other(2))
+
+        #expect(RoomText.companions([]) == L10n.Room.Companions.none)
+        #expect(RoomText.companions(["Basilikum"]) == L10n.Room.Companions.one("Basilikum"))
+        // The first name is spelled out, the rest counted
+        #expect(RoomText.companions(["Basilikum", "Efeu", "Ficus"]) == L10n.Room.Companions.more("Basilikum", 2))
+    }
+
     @Test("room(named:) and search ignore case and diacritics")
     func foldedLookup() {
         let catalog = RoomCatalog(devices: home + [plant("Petersilie", room: "Küche")], now: now)

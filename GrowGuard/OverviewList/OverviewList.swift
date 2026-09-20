@@ -48,17 +48,22 @@ struct OverviewList: View {
         return Double(totalMoisture) / Double(devices.count) / 100.0
     }
 
-    private var roomCatalog: RoomCatalog {
-        RoomCatalog(devices: viewModel.allSavedDevices, now: Date())
-    }
-
-    /// Devices the list shows: all of them, or one room's
+    /// Devices the list shows: all of them, or one room's. `body` derives this
+    /// from the one catalog it builds per pass; this property is for
+    /// `delete(at:)`, which runs once per delete and has no catalog at hand.
     private var visibleDevices: [FlowerDeviceDTO] {
-        let filter = roomCatalog.resolve(roomFilter)
-        return viewModel.allSavedDevices.filter(filter.includes)
+        let catalog = RoomCatalog(devices: viewModel.allSavedDevices, now: Date())
+        return viewModel.allSavedDevices.filter(catalog.resolve(roomFilter).includes)
     }
 
     var body: some View {
+        // Once per body pass. Every `roomCatalog` access used to rebuild it —
+        // the filter bar's binding, the visible-device filter, and
+        // `showsMissingRoom` once per row, which is ~2n+6 evaluations of a
+        // catalog that walks every device and evaluates every sensor's health.
+        let catalog = RoomCatalog(devices: viewModel.allSavedDevices, now: Date())
+        let visible = viewModel.allSavedDevices.filter(catalog.resolve(roomFilter).includes)
+
         ScrollView {
             VStack(spacing: 20) {
                 // Summary Cards Section
@@ -116,48 +121,7 @@ struct OverviewList: View {
                 }
                 .padding(.horizontal)
 
-                // Devices Section
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("My Plants")
-                            .font(.title2)
-                            .fontWeight(.bold)
-
-                        Spacer()
-
-                        EditButton()
-                            .buttonStyle(.bordered)
-                    }
-                    .padding(.horizontal)
-
-                    if !roomCatalog.rooms.isEmpty {
-                        RoomFilterBar(catalog: roomCatalog, selection: Binding(
-                            get: { roomCatalog.resolve(roomFilter) },
-                            set: { roomFilter = $0 }
-                        ))
-                    }
-
-                    if viewModel.allSavedDevices.isEmpty {
-                        EmptyStateView()
-                    } else {
-                        List {
-                            ForEach(visibleDevices) { device in
-                                DeviceCard(device: device,
-                                           peers: viewModel.allSavedDevices.filter { $0.uuid != device.uuid },
-                                           showsMissingRoom: !roomCatalog.rooms.isEmpty) {
-                                    NavigationService.shared.navigateToDeviceView(flowerDevice: device)
-                                }
-                                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                                .listRowBackground(Color.clear)
-                            }
-                            .onDelete(perform: delete)
-                            .listRowSeparator(.hidden)
-                        }
-                        .listStyle(.plain)
-                        .frame(height: CGFloat(visibleDevices.count) * 110)
-                        .scrollDisabled(true)
-                    }
-                }
+                devicesSection(catalog: catalog, visible: visible)
             }
             .padding(.bottom, 20)
         }
@@ -201,11 +165,69 @@ struct OverviewList: View {
         .onChange(of: viewModel.deleteError) { _, newError in
             showDeleteError = newError != nil
         }
+        // A room disappears when its last plant leaves it. Re-resolving here
+        // writes the fallback back into the state instead of leaving `.room`
+        // pointing at a name that is gone — `resolve` hides it for this pass,
+        // but a stale filter would start filtering again the moment a plant
+        // moved back into a room with that name.
+        .onChange(of: viewModel.allSavedDevices.map(\.location)) { _, _ in
+            roomFilter = RoomCatalog(devices: viewModel.allSavedDevices, now: Date()).resolve(roomFilter)
+        }
         .onDisappear {
             hasRequestedDashboardLiveRefresh = false
         }
     }
-    
+
+    // MARK: - Devices Section
+
+    /// Takes the catalog instead of rebuilding it: the filter bar's binding
+    /// and every row's `showsMissingRoom` all read the same one.
+    @ViewBuilder
+    private func devicesSection(catalog: RoomCatalog, visible: [FlowerDeviceDTO]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("My Plants")
+                    .font(.title2)
+                    .fontWeight(.bold)
+
+                Spacer()
+
+                EditButton()
+                    .buttonStyle(.bordered)
+            }
+            .padding(.horizontal)
+
+            if !catalog.rooms.isEmpty {
+                RoomFilterBar(catalog: catalog, selection: Binding(
+                    get: { catalog.resolve(roomFilter) },
+                    set: { roomFilter = $0 }
+                ))
+            }
+
+            if viewModel.allSavedDevices.isEmpty {
+                EmptyStateView()
+            } else {
+                List {
+                    ForEach(visible) { device in
+                        DeviceCard(device: device,
+                                   peers: viewModel.allSavedDevices.filter { $0.uuid != device.uuid },
+                                   showsMissingRoom: !catalog.rooms.isEmpty) {
+                            NavigationService.shared.navigateToDeviceView(flowerDevice: device)
+                        }
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        .listRowBackground(Color.clear)
+                    }
+                    .onDelete(perform: delete)
+                    .listRowSeparator(.hidden)
+                }
+                .listStyle(.plain)
+                .frame(height: CGFloat(visible.count) * 110)
+                .scrollDisabled(true)
+            }
+        }
+    }
+
+
     func delete(at visibleOffsets: IndexSet) {
         // SwiftUI indexes the rows it shows; the alert and confirmDelete both
         // index allSavedDevices, so translate here and nowhere else.

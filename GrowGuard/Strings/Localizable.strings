@@ -33,7 +33,6 @@
 "device.availableSensors" = "Available Sensors";
 "device.unknownDevice" = "Unknown Device";
 "device.name" = "Device Name";
-"device.location" = "Room";
 "device.locationFooter" = "Sensors in the same room are within Bluetooth range of each other. Two floors are two rooms.";
 "device.searchFlower" = "Search Flower";
 "device.lastUpdate" = "Last Update: ";
@@ -189,7 +188,7 @@
 "sensorHealth.notification.unreachable.bodyLocation" = "No readings from %@ for %d days. Were you near it? If so, check the battery.";
 "sensorHealth.notification.confirmed.title" = "🔋 %@ needs a new battery";
 "sensorHealth.notification.confirmed.body" = "Your other sensors respond, this one has been silent for %d days.";
-"sensorHealth.notification.confirmed.bodyLocation" = "Your other sensors at %@ respond, this one has been silent for %d days.";
+"sensorHealth.notification.confirmed.bodyLocation" = "Your other sensors in %@ respond, this one has been silent for %d days.";
 "sensorHealth.notification.lastKnown" = " Last known level %d %%.";
 "sensorHealth.notification.lowBattery.title" = "🔋 Replace the battery in %@";
 "sensorHealth.notification.lowBattery.body" = "Battery is at %d %%. Cheap coin cells drop out without warning at this level.";
@@ -201,7 +200,7 @@
 "sensorHealth.banner.confirmed.title" = "Silent for %d days · replace battery";
 "sensorHealth.banner.confirmed.line" = "Silent for %d days";
 "sensorHealth.banner.confirmed.text" = "Your other sensors respond, this one does not.";
-"sensorHealth.banner.confirmed.textLocation" = "Your other sensors at %@ respond, this one does not.";
+"sensorHealth.banner.confirmed.textLocation" = "Your other sensors in %@ respond, this one does not.";
 "sensorHealth.banner.lastKnown" = "Last known battery %d %%";
 "sensorHealth.banner.setLocation" = "Tell the app which room this sensor is in";
 
