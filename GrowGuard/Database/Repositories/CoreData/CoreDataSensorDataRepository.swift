@@ -49,6 +49,23 @@ class CoreDataSensorDataRepository: SensorDataRepository {
         }
     }
     
+    func getLatestSensorDate(for deviceUUID: String, source: SensorDataSource) async throws -> Date? {
+        return try await withCheckedThrowingContinuation { continuation in
+            context.perform {
+                do {
+                    let request = NSFetchRequest<SensorData>(entityName: "SensorData")
+                    request.predicate = NSPredicate(format: "device.uuid == %@ AND source == %@", deviceUUID, source.rawValue)
+                    request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
+                    request.fetchLimit = 1
+                    let newest = try self.context.fetch(request).first
+                    continuation.resume(returning: newest?.date)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
     func saveSensorData(_ sensorData: SensorDataDTO) async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             context.perform {

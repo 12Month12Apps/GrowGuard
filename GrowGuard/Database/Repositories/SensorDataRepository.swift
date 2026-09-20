@@ -9,4 +9,6 @@ protocol SensorDataRepository {
     func deleteAllSensorData(for deviceUUID: String) async throws
     func getAllSensorData() async throws -> [SensorDataDTO]
     func deleteInvalidSensorData() async throws -> Int
+    /// Date of the newest stored entry of one source, nil if there is none
+    func getLatestSensorDate(for deviceUUID: String, source: SensorDataSource) async throws -> Date?
 }

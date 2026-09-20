@@ -105,7 +105,10 @@ class BackgroundTaskTracker {
 
     /// Records how a BLE wake read ended. `trigger` is nil when iOS
     /// relaunched the app for the connect and the arm source was lost.
-    func recordWakeRead(trigger: BackgroundTrigger?, outcome: WakeReadOutcome, duration: TimeInterval) {
+    func recordWakeRead(trigger: BackgroundTrigger?,
+                        outcome: WakeReadOutcome,
+                        duration: TimeInterval,
+                        historyEntries: Int = 0) {
         let countKey = outcome.isSuccess ? wakeReadSuccessCountKey : wakeReadFailureCountKey
         defaults.set(defaults.integer(forKey: countKey) + 1, forKey: countKey)
         defaults.set(Date(), forKey: lastWakeReadKey)
@@ -114,7 +117,9 @@ class BackgroundTaskTracker {
             type: .bleWake,
             trigger: trigger,
             success: outcome.isSuccess,
-            detail: outcome.rawValue,
+            detail: historyEntries > 0
+                ? "\(outcome.rawValue) · \(historyEntries) history entries"
+                : outcome.rawValue,
             isSensorRead: true,
             duration: duration
         ))

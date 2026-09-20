@@ -292,6 +292,7 @@ extension DeviceConnection {
         totalEntries = 0
         currentEntryIndex = 0
         deviceBootTime = nil
+        historyStopBoundary = nil
         entryRetryCount = 0
         lastSyncSkippedEntries = skippedEntryCount
         skippedEntryCount = 0

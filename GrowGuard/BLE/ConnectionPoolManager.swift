@@ -53,6 +53,9 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
     private let scheduler: BLEScheduler
     private var connections: [String: DeviceConnection] = [:]
     private var devicesToScan: Set<String> = []
+    /// Devices scanned for by an auto-reconnect (not an explicit connect):
+    /// discovery re-checks shouldAutoReconnect before connecting
+    private var reconnectScanDevices: Set<String> = []
     private var pendingConnections: [String: Bool] = [:]
     private var isScanning: Bool = false
     private let scanningStateSubject = CurrentValueSubject<Bool, Never>(false)
@@ -155,6 +158,8 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
         // Hole oder erstelle DeviceConnection
         let connection = getConnection(for: deviceUUID)
         connection.setAutoStartHistoryFlowEnabled(autoStartHistoryFlow)
+        // An explicit connect always wants the link, even if a reconnect scan is pending
+        reconnectScanDevices.remove(deviceUUID)
 
         // Stelle sicher, dass Bluetooth bereit ist
         guard central.state == .poweredOn else {
@@ -276,6 +281,17 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
         // Cancel any pending timeouts
         cancelConnectionTimeout(for: deviceUUID)
 
+        // A reconnect scan only exists to resume a flow this disconnect ends;
+        // left running it keeps the radio busy until the sensor happens to
+        // advertise — or forever, if it is out of range
+        if reconnectScanDevices.remove(deviceUUID) != nil {
+            AppLogger.ble.info("⏹ Auto-reconnect scan cancelled for device \(deviceUUID): disconnected")
+            devicesToScan.remove(deviceUUID)
+            if devicesToScan.isEmpty {
+                stopScanning()
+            }
+        }
+
         // Hole Connection aus Dictionary
         guard let connection = connections[deviceUUID] else {
             AppLogger.ble.bleWarning("No connection found for device: \(deviceUUID)")
@@ -302,6 +318,14 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
             return
         }
 
+        // The flow may have been ended while the reconnect was pending
+        // (e.g. a wake read finished) — reconnecting then would wake the
+        // sensor for nothing
+        guard connection.shouldAutoReconnect else {
+            AppLogger.ble.info("⏹ Auto-reconnect cancelled for device \(deviceUUID): no history flow to resume")
+            return
+        }
+
         AppLogger.ble.bleConnection("🔍 Fast-reconnect retrieve attempt \(attempt)/3 for device: \(deviceUUID)")
 
         if let peripheral = central.retrievePeripherals(withIdentifiers: [uuid]).first {
@@ -318,6 +342,7 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
         } else {
             AppLogger.ble.info("📡 All fast reconnect attempts failed, falling back to scanning for device: \(deviceUUID)")
             devicesToScan.insert(deviceUUID)
+            reconnectScanDevices.insert(deviceUUID)
             startScanning()
         }
     }
@@ -525,6 +550,18 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
 
             // Hole Connection
             let connection = getConnection(for: peripheralUUID)
+
+            // Same re-check as attemptFastReconnect: the flow this scan was
+            // started for may have ended while scanning (e.g. a wake read finished)
+            if reconnectScanDevices.remove(peripheralUUID) != nil,
+               !connection.shouldAutoReconnect {
+                AppLogger.ble.info("⏹ Auto-reconnect cancelled on discovery for device \(peripheralUUID): no history flow to resume")
+                devicesToScan.remove(peripheralUUID)
+                if devicesToScan.isEmpty {
+                    stopScanning()
+                }
+                return
+            }
 
             // Setze Peripheral
             connection.setPeripheral(peripheral)

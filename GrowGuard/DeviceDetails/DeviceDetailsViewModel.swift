@@ -10,6 +10,7 @@ import CoreBluetooth
 import Combine
 import CoreData
 import ActivityKit
+import UIKit
 
 @Observable class DeviceDetailsViewModel {
     var device: FlowerDeviceDTO
@@ -26,6 +27,15 @@ import ActivityKit
     private var poolDeviceInfoSubscription: AnyCancellable?
     private var poolRSSISubscription: AnyCancellable?
     private var blinkOnAuthenticationSubscription: AnyCancellable?
+    /// Distinguishes this screen's live reads from background wake reads
+    /// on the shared pool connection
+    private var liveReadGate = LiveReadGate()
+    /// true while the history flow on the shared connection is this screen's
+    /// (user "load history" or its auto-start). Background wake reads and
+    /// BGProcessing syncs run flows on the same connection and save their
+    /// own entries — the screen must not save, show or complete those.
+    @ObservationIgnored private var ownsHistoryFlow = false
+    @ObservationIgnored private var didEnterBackgroundObserver: NSObjectProtocol?
 
     // MARK: - Historical Data Loading
     var isLoadingHistory = false
@@ -100,6 +110,30 @@ import ActivityKit
                 }
             }
         }
+
+        // From here on reads on the shared connection are background wake
+        // reads (armed on this same notification): they must be neither
+        // re-requested nor saved by the screen. A user sync already running
+        // continues in the background (auto-reconnect; arming skips a
+        // connection with an active flow), so the screen keeps owning it.
+        didEnterBackgroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.liveReadGate.release()
+                self.ownsHistoryFlow = self.deviceConnection?.isHistoryFlowActive == true
+                AppLogger.ble.info("📊 DeviceDetailsViewModel: Entered background, live claim released (owns history flow: \(self.ownsHistoryFlow))")
+            }
+        }
+    }
+
+    deinit {
+        if let didEnterBackgroundObserver {
+            NotificationCenter.default.removeObserver(didEnterBackgroundObserver)
+        }
     }
 
     // MARK: - Connection Pool Methods
@@ -116,10 +150,22 @@ import ActivityKit
             return
         }
 
+        // Every connect this screen starts wants one live sample
+        liveReadGate.claim(at: Date())
+
         // Only enable auto-start if history hasn't been loaded this session
         // This prevents the loop where history restarts after completion on reconnect
         if !historyLoadedThisSession {
             connection.setAutoStartHistoryFlowEnabled(true)
+            // A fresh auto-started flow is a full sync this screen owns; a
+            // background sync's failed attempt must not leave its boundary
+            // behind. A flow that is already active belongs to whoever started
+            // it — it keeps its boundary, and its entries are saved by its own
+            // owner, so this screen must not claim it here.
+            if !connection.isHistoryFlowActive {
+                ownsHistoryFlow = true
+                connection.setHistoryStopBoundary(nil)
+            }
             AppLogger.ble.info("📊 DeviceDetailsViewModel: Auto-start enabled (history not loaded yet)")
         } else {
             connection.setAutoStartHistoryFlowEnabled(false)
@@ -136,10 +182,14 @@ import ActivityKit
 
         // Subscribe zu Sensor-Daten vom ConnectionPool
         poolSensorDataSubscription = connection.sensorDataPublisher.sink { [weak self] (data: SensorDataTemp) in
-            print("📡 DeviceDetailsViewModel (Pool): Received new sensor data from ConnectionPool")
             Task { @MainActor in
                 guard let self = self else { return }
-                // Verarbeite Sensor-Daten
+                // Background wake reads share this connection and save
+                // their own samples — only persist what this screen asked for
+                guard self.liveReadGate.sampleReceived() else {
+                    AppLogger.ble.info("📡 DeviceDetailsViewModel: Ignoring sample this screen did not request")
+                    return
+                }
                 let success = await self.saveSensorData(data)
                 if success {
                     await self.updateDeviceLastUpdate()
@@ -167,6 +217,8 @@ import ActivityKit
             print("📅 Historical data date: \(data.date), temp: \(data.temperature)°C, moisture: \(data.moisture)%")
             Task { @MainActor in
                 guard let self = self else { return }
+                // Entries of a background flow are saved by that service
+                guard self.ownsHistoryFlow else { return }
                 await self.saveHistoricalSensorData(data)
 
                 // Check if History Flow is completed by listening to the connection
@@ -178,6 +230,8 @@ import ActivityKit
         poolHistoryProgressSubscription = connection.historyProgressPublisher.sink { [weak self] (current: Int, total: Int) in
             Task { @MainActor in
                 guard let self = self else { return }
+                // A background flow's progress is no loading state of this screen
+                guard self.ownsHistoryFlow else { return }
                 print("📊 DeviceDetailsViewModel (Pool): History progress: \(current)/\(total)")
 
                 // Detect auto-start: if we receive progress but weren't loading, history auto-started.
@@ -232,6 +286,9 @@ import ActivityKit
             guard let deviceUUID = notification.object as? String, deviceUUID == self?.device.uuid else { return }
             Task { @MainActor in
                 guard let self = self else { return }
+                // A background flow completing is not "history loaded this session"
+                guard self.ownsHistoryFlow else { return }
+                self.ownsHistoryFlow = false
                 self.isLoadingHistory = false
                 // Mark history as loaded to prevent auto-restart on reconnect
                 self.historyLoadedThisSession = true
@@ -283,10 +340,18 @@ import ActivityKit
                     }
                 }
 
-                // Bei erfolgreicher Authentication: Fordere Live-Daten an
-                if state == .authenticated {
-                    AppLogger.ble.bleConnection("DeviceDetailsViewModel (Pool): Device authenticated, requesting live data")
-                    connection.requestLiveData()
+                switch state {
+                case .authenticated:
+                    // Only for connects this screen started — a background
+                    // wake read requests its own sample
+                    if self.liveReadGate.connectionAuthenticated(at: Date()) {
+                        AppLogger.ble.bleConnection("DeviceDetailsViewModel (Pool): Device authenticated, requesting live data")
+                        connection.requestLiveData()
+                    }
+                case .disconnected, .error:
+                    self.liveReadGate.connectionLost()
+                default:
+                    break
                 }
             }
         }
@@ -566,12 +631,18 @@ import ActivityKit
             // historyLoadedThisSession (connectViaPool setzt das Flag sonst
             // konservativ) — der Flow startet nach der Authentifizierung
             deviceConnection?.setAutoStartHistoryFlowEnabled(true)
+            // "Load history" is always a full sync
+            deviceConnection?.setHistoryStopBoundary(nil)
+            ownsHistoryFlow = true
             return
         }
 
         // Connection existiert bereits - starte History Flow direkt
         // Enable auto-start for reconnection during history loading
         connection.setAutoStartHistoryFlowEnabled(true)
+        // "Load history" is always a full sync
+        connection.setHistoryStopBoundary(nil)
+        ownsHistoryFlow = true
         isLoadingHistory = true
         connection.startHistoryDataFlow()
     }
@@ -582,6 +653,7 @@ import ActivityKit
         AppLogger.ble.info("📊 DeviceDetailsViewModel: Cancelling history loading for device \(self.device.uuid)")
 
         isLoadingHistory = false
+        ownsHistoryFlow = false
         historicalDataBatchCounter = 0
 
         // End the Live Activity
