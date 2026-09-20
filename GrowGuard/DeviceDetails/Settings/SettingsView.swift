@@ -14,9 +14,10 @@ class SettingsViewModel {
     var potSize: PotSizeDTO
     var optimalRange: OptimalRangeDTO
     var deviceName: String = ""
-    var location: String = ""
-    /// Distinct locations of the other devices, for the suggestion chips
-    var existingLocations: [String] = []
+    /// The plant's room; nil = none. Saved together with the form.
+    var location: String?
+    /// Every saved device, for the room picker's counts
+    var allDevices: [FlowerDeviceDTO] = []
     var selectedFlower: VMSpecies? {
         didSet {
             if !isLoadingData {
@@ -90,14 +91,13 @@ class SettingsViewModel {
             let all = try await repositoryManager.flowerDeviceRepository.getAllDevices()
             if let device = all.first(where: { $0.uuid == deviceUUID }) {
                 self.deviceName = device.name
-                self.location = device.location ?? ""
+                self.location = device.location
                 print("  Loaded Device Name: \(device.name), location: \(device.location ?? "nil")")
             } else {
                 print("  Device not found for UUID: \(deviceUUID)")
                 self.deviceName = ""
             }
-            self.existingLocations = Array(Set(all.filter { $0.uuid != deviceUUID }.compactMap(\.location)))
-                .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+            self.allDevices = all
         } catch {
             print("❌ SettingsViewModel: Failed to load device name: \(error)")
             self.deviceName = ""
@@ -578,9 +578,7 @@ struct SettingsView: View {
                     }
                 }
 
-                if isSensor {
-                    LocationField(location: $viewModel.location, suggestions: viewModel.existingLocations)
-                }
+                RoomFormSection(location: $viewModel.location, devices: viewModel.allDevices)
 
                 Section(header: Text("Plant Selection")) {
                     if let selectedFlower = viewModel.selectedFlower {

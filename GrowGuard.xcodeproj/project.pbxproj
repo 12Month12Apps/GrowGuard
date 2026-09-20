@@ -73,7 +73,7 @@
 		568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568892072C832936000E8FAE /* SensorDataChart.swift */; };
 		56SHBI012EC7000000000001 /* BatteryIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHBI002EC7000000000001 /* BatteryIndicator.swift */; };
 		56SHBN012EC7000000000001 /* SensorHealthBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHBN002EC7000000000001 /* SensorHealthBanner.swift */; };
-		56SHLF012EC7000000000001 /* LocationField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHLF002EC7000000000001 /* LocationField.swift */; };
+		56RMPV012EC7000000000001 /* RoomPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMPV002EC7000000000001 /* RoomPickerView.swift */; };
 		5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5688920A2C84B4B9000E8FAE /* AppDelegate.swift */; };
 		569417562E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 569417542E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld */; };
 		5699C0F42E126A5C00FA9A11 /* AppSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5699C0F02E126A5C00FA9A11 /* AppSettingsView.swift */; };
@@ -255,7 +255,7 @@
 		568892072C832936000E8FAE /* SensorDataChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataChart.swift; sourceTree = "<group>"; };
 		56SHBI002EC7000000000001 /* BatteryIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryIndicator.swift; sourceTree = "<group>"; };
 		56SHBN002EC7000000000001 /* SensorHealthBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorHealthBanner.swift; sourceTree = "<group>"; };
-		56SHLF002EC7000000000001 /* LocationField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationField.swift; sourceTree = "<group>"; };
+		56RMPV002EC7000000000001 /* RoomPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomPickerView.swift; sourceTree = "<group>"; };
 		5688920A2C84B4B9000E8FAE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		569417552E0DD9C000AE7586 /* CoreDataModels.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = CoreDataModels.xcdatamodel; sourceTree = "<group>"; };
 		569417552E0DD9C000AE7587 /* CoreDataModels 2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "CoreDataModels 2.xcdatamodel"; sourceTree = "<group>"; };
@@ -594,7 +594,7 @@
 				568892072C832936000E8FAE /* SensorDataChart.swift */,
 				56SHBI002EC7000000000001 /* BatteryIndicator.swift */,
 				56SHBN002EC7000000000001 /* SensorHealthBanner.swift */,
-				56SHLF002EC7000000000001 /* LocationField.swift */,
+				56RMPV002EC7000000000001 /* RoomPickerView.swift */,
 			);
 			path = Componetns;
 			sourceTree = "<group>";
@@ -1043,7 +1043,7 @@
 				568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */,
 				56SHBI012EC7000000000001 /* BatteryIndicator.swift in Sources */,
 				56SHBN012EC7000000000001 /* SensorHealthBanner.swift in Sources */,
-				56SHLF012EC7000000000001 /* LocationField.swift in Sources */,
+				56RMPV012EC7000000000001 /* RoomPickerView.swift in Sources */,
 				5622B0D92E317710002C7E74 /* CoreDataPotSizeRepository.swift in Sources */,
 				5622B0DA2E317710002C7E74 /* RepositoryError.swift in Sources */,
 				5622B0DB2E317710002C7E74 /* PotSizeRepository.swift in Sources */,
