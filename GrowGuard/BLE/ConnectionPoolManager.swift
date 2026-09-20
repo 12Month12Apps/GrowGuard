@@ -50,6 +50,18 @@ enum DeviceEvent: Equatable {
     case historicalData(uuid: String)
     /// A connect attempt exhausted the reconnect policy without a connection
     case attemptGaveUp(uuid: String)
+
+    /// The device this event is about. Lets consumers key per-device state
+    /// (the monitor chains its handlers per uuid) without re-switching.
+    var uuid: String {
+        switch self {
+        case .deviceInfo(let uuid, _),
+             .sensorData(let uuid),
+             .historicalData(let uuid),
+             .attemptGaveUp(let uuid):
+            return uuid
+        }
+    }
 }
 
 @MainActor

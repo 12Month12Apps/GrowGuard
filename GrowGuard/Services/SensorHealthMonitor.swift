@@ -22,6 +22,13 @@ final class SensorHealthMonitor {
     static let failureRateLimit: TimeInterval = 60 * 60
     /// A battery read above this clears the low-battery marker: new cell.
     static let newCellThreshold = 40
+    /// Successful contacts closer together than this count once. A history
+    /// sync replays thousands of entries as `.historicalData` events within
+    /// seconds; each one would otherwise write the device and re-read the
+    /// whole store to evaluate every peer. The bookkeeping a success performs
+    /// — counter to 0, marker cleared — is idempotent, so collapsing a burst
+    /// into its first event loses nothing.
+    static let successCoalesceWindow: TimeInterval = 60
 
     // MARK: - Dependencies (tests inject)
 
@@ -31,12 +38,19 @@ final class SensorHealthMonitor {
     private let defaults: UserDefaults
     private let now: () -> Date
     private var subscription: AnyCancellable?
-    /// Tail of the chain of in-flight event handlers. The handlers suspend at
-    /// their `await`s and `@MainActor` does not serialize across a suspension
-    /// point, so two unchained tasks for the same uuid could both read a nil
-    /// marker and both notify. Each new task awaits its predecessor, which
-    /// also preserves arrival order.
-    private var pending: Task<Void, Never>?
+    /// Tail of the chain of in-flight event handlers, **per device**. The
+    /// handlers suspend at their `await`s and `@MainActor` does not serialize
+    /// across a suspension point, so two unchained tasks for the same uuid
+    /// could both read a nil marker and both notify. Each new task awaits its
+    /// predecessor for the same uuid, which also preserves arrival order.
+    ///
+    /// Keyed by uuid rather than global: a slow handler for one device (a
+    /// history sync hammering the store) must not block the events of every
+    /// other device behind it. Devices share no mutable state here — each
+    /// device's markers and counters are its own.
+    private var pending: [String: Task<Void, Never>] = [:]
+    /// Last recorded successful contact per device, for the coalesce window.
+    private var lastSuccessAt: [String: Date] = [:]
 
     private enum DefaultsKey {
         static func unreachableNotified(for uuid: String) -> String { "sensorHealth.unreachableNotified.\(uuid)" }
@@ -68,8 +82,9 @@ final class SensorHealthMonitor {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] event in
                 guard let self else { return }
-                let previous = self.pending
-                self.pending = Task { @MainActor [weak self] in
+                let uuid = event.uuid
+                let previous = self.pending[uuid]
+                self.pending[uuid] = Task { @MainActor [weak self] in
                     await previous?.value
                     await self?.handle(event)
                 }
@@ -81,6 +96,7 @@ final class SensorHealthMonitor {
     func forgetDevice(_ uuid: String) {
         defaults.removeObject(forKey: DefaultsKey.unreachableNotified(for: uuid))
         defaults.removeObject(forKey: DefaultsKey.lowBatteryNotified(for: uuid))
+        lastSuccessAt[uuid] = nil
     }
 
     // MARK: - Events
@@ -100,7 +116,17 @@ final class SensorHealthMonitor {
     /// Evaluates this device — a sensor coming back at 20 % is `.batteryLow`
     /// right away — and then every other sensor, because this device may be
     /// the witness that upgrades a neighbour's verdict to confirmed.
+    ///
+    /// Coalesced per `successCoalesceWindow`: the gate is checked before any
+    /// repository call so a history sync's burst costs one write, not one per
+    /// replayed entry.
     func recordSuccessfulContact(_ uuid: String) async {
+        let now = self.now()
+        if let last = lastSuccessAt[uuid], now.timeIntervalSince(last) < Self.successCoalesceWindow {
+            return
+        }
+        lastSuccessAt[uuid] = now
+
         do {
             guard try await repository.modifyDevice(uuid: uuid, { device in
                 device.failedContactAttempts = 0

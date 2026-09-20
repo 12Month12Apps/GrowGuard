@@ -133,6 +133,28 @@ struct SensorHealthMonitorTests {
         #expect(repository.devices["A"]!.failedContactAttempts == 0)
     }
 
+    /// A history sync replays thousands of entries, each one a
+    /// `.historicalData` event. Without coalescing every single one drove a
+    /// `modifyDevice` + `getAllDevices()` + an evaluation of self and every
+    /// peer — the whole store re-read ~3000× per sync.
+    @Test("Successes inside the coalesce window collapse into one write")
+    func successesWithinWindowCoalesce() async {
+        seed("A", attempts: 2)
+        let monitor = makeMonitor()
+
+        await monitor.handle(.historicalData(uuid: "A"))
+        clock.advance(10)
+        await monitor.handle(.historicalData(uuid: "A"))
+        clock.advance(10)
+        await monitor.handle(.historicalData(uuid: "A"))
+        #expect(repository.updateCount == 1)
+
+        // Past the window the next contact is recorded again
+        clock.advance(61)
+        await monitor.handle(.historicalData(uuid: "A"))
+        #expect(repository.updateCount == 2)
+    }
+
     @Test("Failures 10 min apart count once; 61 min apart count twice")
     func failureRateLimit() async {
         seed("A")
@@ -211,7 +233,10 @@ struct SensorHealthMonitorTests {
         ])
         #expect(defaults.string(forKey: "sensorHealth.unreachableNotified.A") == "confirmed")
 
-        // B delivers again → no third notification for A
+        // B delivers again → no third notification for A. Past the coalesce
+        // window, so this reading really is processed and not collapsed away.
+        clock.advance(61)
+        repository.devices["B"]!.lastUpdate = clock.now
         await monitor.handle(.sensorData(uuid: "B"))
         #expect(notifier.unreachable.count == 2)
     }
