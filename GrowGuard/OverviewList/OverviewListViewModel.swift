@@ -74,7 +74,7 @@ import CoreData
                 // watering reminder and no delivered sensor-health alert behind
                 await NotificationService.shared.cancelNotifications(for: device.uuid,
                                                                      kinds: [.watering, .sensorHealth])
-                print("Successfully deleted device: \(device.name ?? "Unknown")")
+                print("Successfully deleted device: \(device.name)")
             }
             
             // Remove from local array

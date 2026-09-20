@@ -174,7 +174,8 @@ final class SensorHealthMonitor {
         let now = self.now()
         do {
             guard let updated = try await repository.modifyDevice(uuid: uuid, { device in
-                device.battery = Int16(clamping: battery)
+                // Percent, not a raw byte: a garbled read must not persist 255 %
+                device.battery = Int16(min(max(battery, 0), 100))
                 device.firmware = firmware
                 device.batteryUpdatedAt = now
                 // lastUpdate untouched: a battery read is not a measurement

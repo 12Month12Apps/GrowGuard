@@ -319,6 +319,8 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
             }
         case .giveUp:
             AppLogger.ble.bleError("⛔️ Max retries reached for device \(deviceUUID)")
+            // Sent synchronously, while the three forwarded cases hop via
+            // DispatchQueue.main — ordering across the cases is not guaranteed
             deviceEventsSubject.send(.attemptGaveUp(uuid: deviceUUID))
             if let connection = connections[deviceUUID] {
                 connection.handleConnectionFailed(error: underlyingError ?? ConnectionError.maxRetriesExceeded)

@@ -160,7 +160,8 @@ import ActivityKit
         poolDeviceInfoSubscription = connection.deviceInfoPublisher.sink { [weak self] info in
             Task { @MainActor in
                 guard let self else { return }
-                self.device.battery = Int16(clamping: info.battery)
+                // Percent, not a raw byte: a garbled read must not show 255 %
+                self.device.battery = Int16(min(max(info.battery, 0), 100))
                 self.device.firmware = info.firmware
                 self.device.batteryUpdatedAt = Date()
             }

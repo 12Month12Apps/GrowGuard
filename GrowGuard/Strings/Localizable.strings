@@ -33,6 +33,8 @@
 "device.availableSensors" = "Available Sensors";
 "device.unknownDevice" = "Unknown Device";
 "device.name" = "Device Name";
+"device.location" = "Location";
+"device.locationFooter" = "Sensors at the same location are within Bluetooth range of each other. Two floors are two locations.";
 "device.searchFlower" = "Search Flower";
 "device.lastUpdate" = "Last Update: ";
 "device.loadHistoricalData" = "Load Historical Data";
@@ -201,5 +203,3 @@
 "sensorHealth.banner.confirmed.textLocation" = "Your other sensors at %@ respond, this one does not.";
 "sensorHealth.banner.lastKnown" = "Last known battery %d %%";
 "sensorHealth.banner.setLocation" = "Tell the app where this sensor is";
-"device.location" = "Location";
-"device.locationFooter" = "Sensors at the same location are within Bluetooth range of each other. Two floors are two locations.";

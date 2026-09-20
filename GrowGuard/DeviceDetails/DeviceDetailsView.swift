@@ -49,7 +49,9 @@ struct DeviceDetailsView: View {
                         SensorHealthBanner(device: viewModel.device,
                                            health: viewModel.health,
                                            style: .banner,
-                                           onSetLocation: viewModel.peers.isEmpty ? nil : { showSetting = true })
+                                           // Only sensors can witness each other, so the
+                                           // location hint is pointless without a peer sensor
+                                           onSetLocation: viewModel.peers.contains(where: \.isSensor) ? { showSetting = true } : nil)
                     }
 
                     // Action buttons
