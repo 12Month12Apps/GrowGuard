@@ -529,6 +529,19 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
         Task { @MainActor in
             AppLogger.ble.bleConnection("Bluetooth state changed: \(state.rawValue)")
 
+            if state != .poweredOn {
+                // iOS invalidates every pending connect when the central
+                // leaves poweredOn. Keeping the issued uuids would make
+                // hasPendingBackgroundConnect() report a connect that no
+                // longer exists, and the next background trigger would count
+                // a failed contact against a perfectly healthy sensor on
+                // every wake. Written once for all non-poweredOn states, so a
+                // future CBManagerState cannot be forgotten here.
+                // The armed set survives: the poweredOn branch below re-arms
+                // from it and re-issues the connects.
+                backgroundConnectsIssued.removeAll()
+            }
+
             switch state {
             case .poweredOn:
                 AppLogger.ble.bleConnection("Bluetooth is powered on")

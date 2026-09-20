@@ -192,6 +192,40 @@ struct BackgroundWakeServiceTests {
         #expect(recorder.failedContacts.isEmpty, "The radio was off — the sensor was never asked")
     }
 
+    /// iOS drops every pending connect when the central leaves `.poweredOn`.
+    /// If the pool keeps remembering that it issued one, the next trigger reads
+    /// a connect that no longer exists and blames the sensor for the radio.
+    @Test("A Bluetooth power cycle is not a failed contact")
+    func bluetoothPowerCycleIsNotAFailedContact() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        let uuid = sensor.identifier.uuidString
+        central.connectSucceeds = false
+        let service = makeService(pool: pool, deviceUUIDs: [uuid])
+
+        await service.armAll(source: .backgroundPush)
+        await pump()
+        #expect(central.connectRequests == [sensor.identifier], "Precondition: a connect was issued")
+
+        central.simulateStateChange(to: .poweredOff)
+        await pump()
+
+        await service.armAll(source: .backgroundPush)
+        await pump()
+        #expect(recorder.failedContacts.isEmpty,
+                "The radio went down — the pending connect died with it, not with the sensor")
+
+        // Radio back: the pool re-arms from the armed set and re-issues, so a
+        // genuinely silent sensor is counted again on the next trigger
+        central.simulateStateChange(to: .poweredOn)
+        await pump()
+        #expect(pool.hasPendingBackgroundConnect(uuid), "poweredOn re-issues the connect")
+
+        await service.armAll(source: .backgroundPush)
+        await pump()
+        #expect(recorder.failedContacts == [uuid])
+    }
+
     @Test("A wake already in progress is not counted as a failed contact")
     func wakeInProgressIsNotCountedAsFailure() async {
         let pool = makePool()
