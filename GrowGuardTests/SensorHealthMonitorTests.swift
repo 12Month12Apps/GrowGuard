@@ -599,11 +599,28 @@ struct NotificationScopingTests {
     func legacySweepSparesTheSnooze() {
         let identifiers = [
             "watering-reminder-A",          // pre-prefix one-off, must go
+            "reminder-later-A",             // pre-rename snooze, must go too
             "watering-reminder-later-A",    // the user's snooze, must stay
             "watering-daily-A",
             "watering-reminder-B"           // another device
         ]
         #expect(NotificationService.legacyReminderIdentifiers(
-            pending: identifiers, deviceUUID: "A") == ["watering-reminder-A"])
+            pending: identifiers, deviceUUID: "A") == ["watering-reminder-A", "reminder-later-A"])
+    }
+
+    /// The identifier old builds really wrote for the snooze was
+    /// `reminder-later-<uuid>`; this branch renamed it to
+    /// `watering-reminder-later-`. After an upgrade a pending old one is
+    /// still in the system, so both sweeps have to recognize it — and the
+    /// kind filter must keep it out of the sensor-health family.
+    @Test("The pre-rename remind-later identifier is swept as watering, never as sensor health")
+    func preRenameRemindLaterIsWatering() {
+        let legacy = ["reminder-later-A"]
+        #expect(NotificationService.identifiersToCancel(
+            pending: legacy, delivered: [], deviceUUID: "A", kinds: [.watering]) == legacy)
+        #expect(NotificationService.identifiersToCancel(
+            pending: legacy, delivered: [], deviceUUID: "A", kinds: [.sensorHealth]).isEmpty)
+        #expect(NotificationService.identifiersToCancel(
+            pending: ["reminder-later-B"], delivered: [], deviceUUID: "A", kinds: [.watering]).isEmpty)
     }
 }

@@ -17,6 +17,18 @@ enum NotificationKind: CaseIterable {
         case .sensorHealth: return "sensor-"
         }
     }
+
+    /// Prefixes builds before this family's naming wrote. A pending request
+    /// survives an app update, so an identifier from an older build is still
+    /// in the system afterwards and has to be swept as a member of its kind.
+    var legacyPrefixes: [String] {
+        switch self {
+        // The REMIND_LATER snooze was `reminder-later-<uuid>` before it moved
+        // inside the `watering-` family.
+        case .watering: return ["reminder-later-"]
+        case .sensorHealth: return []
+        }
+    }
 }
 
 /// Centralizes scheduling and management of user notifications used across the app.
@@ -221,10 +233,15 @@ final class NotificationService {
     /// the snooze here would silently drop it while the plant is still dry, so
     /// the user would hear nothing until the daily reminder. A new watering
     /// schedule does not supersede a snooze the user set minutes ago.
+    ///
+    /// `reminder-later-` *is* legacy: that is what old builds wrote for the
+    /// snooze, before it was renamed into the `watering-` family. Matching
+    /// only `watering-reminder` left a pending one from before the upgrade
+    /// untouched by this sweep and by the kind filter alike.
     static func legacyReminderIdentifiers(pending: [String], deviceUUID: String) -> [String] {
         pending.filter {
             $0.contains(deviceUUID)
-                && $0.contains("watering-reminder")
+                && ($0.contains("watering-reminder") || $0.hasPrefix("reminder-later-"))
                 && !$0.hasPrefix(reminderLaterPrefix)
         }
     }
@@ -238,7 +255,7 @@ final class NotificationService {
                                     delivered: [String],
                                     deviceUUID: String,
                                     kinds: Set<NotificationKind>) -> [String] {
-        let prefixes = kinds.map(\.identifierPrefix)
+        let prefixes = kinds.flatMap { [$0.identifierPrefix] + $0.legacyPrefixes }
         func matches(_ identifier: String) -> Bool {
             identifier.contains(deviceUUID) && prefixes.contains { identifier.hasPrefix($0) }
         }
