@@ -124,6 +124,15 @@ struct FlowerDeviceRepositoryModifyTests {
         #expect(reloaded?.lastFailedContactAt == lastFailedContactAt)
     }
 
+    /// The two writers of the concurrency test, each owning one field
+    private static func countOneFailedContact(_ device: inout FlowerDeviceDTO) {
+        device.failedContactAttempts += 1
+    }
+
+    private static func setBatteryTo77(_ device: inout FlowerDeviceDTO) {
+        device.battery = 77
+    }
+
     /// A BLE battery event from `SensorHealthMonitor` can land while a settings
     /// save is in flight. A fetch → mutate → save built from three separate
     /// awaits lets both sides read the same row and write it back, so whichever
@@ -139,12 +148,8 @@ struct FlowerDeviceRepositoryModifyTests {
 
         try await withThrowingTaskGroup(of: Void.self) { group in
             for _ in 0..<50 {
-                group.addTask {
-                    try await repo.modifyDevice(uuid: uuid) { $0.failedContactAttempts += 1 }
-                }
-                group.addTask {
-                    try await repo.modifyDevice(uuid: uuid) { $0.battery = 77 }
-                }
+                group.addTask { try await repo.modifyDevice(uuid: uuid, Self.countOneFailedContact) }
+                group.addTask { try await repo.modifyDevice(uuid: uuid, Self.setBatteryTo77) }
             }
             try await group.waitForAll()
         }
