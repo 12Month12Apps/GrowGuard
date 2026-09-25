@@ -1,0 +1,43 @@
+{
+  "configurations" : [
+    {
+      "id" : "F2142190-E32D-4F30-B755-A03D95752C72",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:Vattna.xcodeproj",
+      "identifier" : "56AF11142BDED05900887073",
+      "name" : "Vattna"
+    }
+  },
+  "testTargets" : [
+    {
+      "skippedTests" : [
+        "DeviceConnectionHistoryTests"
+      ],
+      "target" : {
+        "containerPath" : "container:Vattna.xcodeproj",
+        "identifier" : "56AF11272BDED05B00887073",
+        "name" : "VattnaTests"
+      }
+    },
+    {
+      "skippedTests" : [
+        "VattnaUITests",
+        "VattnaUITestsLaunchTests"
+      ],
+      "target" : {
+        "containerPath" : "container:Vattna.xcodeproj",
+        "identifier" : "56AF11312BDED05B00887073",
+        "name" : "VattnaUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

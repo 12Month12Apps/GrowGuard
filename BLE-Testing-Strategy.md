@@ -2,7 +2,7 @@
 
 Status: Executed (all 5 phases landed 2026-06-11 … 2026-06-12; kept as the
 rationale record for the BLE test architecture)
-Goal: Ship GrowGuard with high confidence that BLE communication with Xiaomi FlowerCare
+Goal: Ship Vattna with high confidence that BLE communication with Xiaomi FlowerCare
 sensors works reliably — without destabilizing the current, working implementation.
 
 > **Post-execution note:** The analysis below describes the codebase as of
@@ -57,7 +57,7 @@ behavior and must be covered (or eliminated) before launch.
 | `FlowerManagerHistoryTests` | Good pattern: `#if DEBUG` test hooks + mock subclass with `centralManager = nil`. Covers initial state, entry-count decode, cancellation. Legacy stack only. |
 | `DeviceConnectionHistoryTests` | **Hardware tests in the default test plan.** Hardcoded device UUID, expectations with 30–120 s timeouts. In CI/simulator they burn ~7–8 minutes and fail. No coverage of `DeviceConnection` logic without a physical sensor. |
 
-`GrowGuard.xctestplan` runs all of the above together — so the suite is effectively
+`Vattna.xctestplan` runs all of the above together — so the suite is effectively
 not runnable in CI, which means today there is **zero automated regression protection**
 for the BLE layer.
 

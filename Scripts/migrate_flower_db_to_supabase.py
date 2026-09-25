@@ -175,11 +175,11 @@ def migrate(sqlite_path: str, pg_dsn: str, schema: str, recreate: bool, truncate
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Migrate GrowGuard's flower.db into Supabase Postgres")
+    parser = argparse.ArgumentParser(description="Migrate Vattna's flower.db into Supabase Postgres")
     parser.add_argument(
         "--sqlite-path",
-        default="GrowGuard/flower.db",
-        help="Path to the source SQLite database (defaults to GrowGuard/flower.db)",
+        default="Vattna/flower.db",
+        help="Path to the source SQLite database (defaults to Vattna/flower.db)",
     )
     parser.add_argument(
         "--pg-dsn",

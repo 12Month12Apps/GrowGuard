@@ -1,5 +1,5 @@
-project: GrowGuard.xcodeproj
+project: Vattna.xcodeproj
 report_exclude:
 - '**/Strings+Generated.swift'
 schemes:
-- GrowGuard
+- Vattna

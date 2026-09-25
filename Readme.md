@@ -1,11 +1,11 @@
 <h1>
-  Grow Guard
-  <img src="./GrowGuard/Assets.xcassets/AppIcon.appiconset/AppIcon1.png"
+  Vattna
+  <img src="./Vattna/Assets.xcassets/AppIcon.appiconset/AppIcon1.png"
            align="right" width="128" height="128"/>
 </h1>
 
 
-Grow Guard is my take on a smart plant monitor app. It communicates with the Xiaomi FlowerCare Sensor. 
+Vattna is my take on a smart plant monitor app. It communicates with the Xiaomi FlowerCare Sensor. 
 
 ## Note:
 This project is part of my 12 Month 12 Apps challenge, build as MVP to see if there is some intresst for this product. Not the cleanest code, would not recommend to copy it to your project. It is build as quick as possible. 
@@ -22,10 +22,10 @@ This project is part of my 12 Month 12 Apps challenge, build as MVP to see if th
 - History data from the sensor is not read, but not sure if this is needed
 
 
-## GrowGuard iOS App Architecture Diagram:
+## Vattna iOS App Architecture Diagram:
 
   ┌─────────────────────────────────────────────────────────────────────┐
-  │                           GrowGuard iOS App                          │
+  │                           Vattna iOS App                          │
   ├─────────────────────────────────────────────────────────────────────┤
   │                              UI Layer                               │
   ├─────────────────────────────────────────────────────────────────────┤
@@ -147,11 +147,11 @@ This project is part of my 12 Month 12 Apps challenge, build as MVP to see if th
 
 ## Join the beta:
 
-https://github.com/12Month12Apps/GrowGuardTest
+https://github.com/12Month12Apps/VattnaTest
 
 ## Migrating `flower.db` to Supabase
 
-The bundled flower search data lives in `GrowGuard/flower.db` (SQLite). Use `Scripts/migrate_flower_db_to_supabase.py` to copy every table plus all rows into your Supabase Postgres instance.
+The bundled flower search data lives in `Vattna/flower.db` (SQLite). Use `Scripts/migrate_flower_db_to_supabase.py` to copy every table plus all rows into your Supabase Postgres instance.
 
 1. Install the only extra dependency (once per machine):
    ```bash
@@ -164,11 +164,11 @@ The bundled flower search data lives in `GrowGuard/flower.db` (SQLite). Use `Scr
 3. (Optional) pick a custom schema by setting `SUPABASE_SCHEMA`, otherwise `public` is used.
 4. Run the migration. `--recreate` drops and rebuilds all tables; use `--truncate` instead if you just want to wipe table contents before importing again.
    ```bash
-   python Scripts/migrate_flower_db_to_supabase.py --sqlite-path GrowGuard/flower.db --recreate
+   python Scripts/migrate_flower_db_to_supabase.py --sqlite-path Vattna/flower.db --recreate
    ```
 5. Verify that counts match between SQLite and Supabase for peace of mind:
    ```bash
-   sqlite3 GrowGuard/flower.db "SELECT COUNT(*) FROM flowers;"
+   sqlite3 Vattna/flower.db "SELECT COUNT(*) FROM flowers;"
    psql "$SUPABASE_DB_URL" -c 'SELECT COUNT(*) FROM public.flowers;'
    ```
 

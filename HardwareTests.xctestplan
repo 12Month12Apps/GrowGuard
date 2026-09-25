@@ -17,9 +17,9 @@
       }
     ],
     "targetForVariableExpansion" : {
-      "containerPath" : "container:GrowGuard.xcodeproj",
+      "containerPath" : "container:Vattna.xcodeproj",
       "identifier" : "56AF11142BDED05900887073",
-      "name" : "GrowGuard"
+      "name" : "Vattna"
     }
   },
   "testTargets" : [
@@ -28,9 +28,9 @@
         "DeviceConnectionHistoryTests"
       ],
       "target" : {
-        "containerPath" : "container:GrowGuard.xcodeproj",
+        "containerPath" : "container:Vattna.xcodeproj",
         "identifier" : "56AF11272BDED05B00887073",
-        "name" : "GrowGuardTests"
+        "name" : "VattnaTests"
       }
     }
   ],
