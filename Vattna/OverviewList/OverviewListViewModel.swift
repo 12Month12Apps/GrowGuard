@@ -32,31 +32,14 @@ import CoreData
     @MainActor
     private func syncLastUpdateTimestamps() async {
         for device in allSavedDevices {
-            guard let latestSensorDate = device.sensorData.first?.date else { continue }
-
-            // Only update if sensor data is newer than current lastUpdate
-            if latestSensorDate > device.lastUpdate {
-                let updatedDevice = FlowerDeviceDTO(
-                    name: device.name,
-                    uuid: device.uuid,
-                    peripheralID: device.peripheralID,
-                    battery: device.battery,
-                    firmware: device.firmware,
-                    isSensor: device.isSensor,
-                    added: device.added,
-                    lastUpdate: latestSensorDate,
-                    lastHistoryIndex: device.lastHistoryIndex,
-                    optimalRange: device.optimalRange,
-                    potSize: device.potSize,
-                    selectedFlower: device.selectedFlower,
-                    sensorData: device.sensorData
-                )
-
-                do {
-                    try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
-                } catch {
-                    print("Error updating lastUpdate for \(device.name ?? "Unknown"): \(error.localizedDescription)")
+            guard let latestSensorDate = device.sensorData.first?.date,
+                  latestSensorDate > device.lastUpdate else { continue }
+            do {
+                try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: device.uuid) {
+                    $0.lastUpdate = latestSensorDate
                 }
+            } catch {
+                print("Error updating lastUpdate for \(device.name): \(error.localizedDescription)")
             }
         }
 
@@ -82,7 +65,18 @@ import CoreData
                 
                 // Delete the device from the repository
                 try await repositoryManager.flowerDeviceRepository.deleteDevice(uuid: device.uuid)
-                print("Successfully deleted device: \(device.name ?? "Unknown")")
+
+                // Drop the sensor-health markers: a re-paired sensor keeps its
+                // peripheral UUID and would otherwise stay suppressed forever
+                // Queued behind any handler still running for this device, so a
+                // resuming handler cannot write the marker back
+                await SensorHealthMonitor.shared.enqueueForgetDevice(device.uuid)
+
+                // Both families: a deleted device must leave no scheduled
+                // watering reminder and no delivered sensor-health alert behind
+                await NotificationService.shared.cancelNotifications(for: device.uuid,
+                                                                     kinds: [.watering, .sensorHealth])
+                print("Successfully deleted device: \(device.name)")
             }
             
             // Remove from local array

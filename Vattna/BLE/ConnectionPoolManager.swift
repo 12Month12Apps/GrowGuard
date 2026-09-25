@@ -40,6 +40,18 @@ enum ConnectionError: Error {
     }
 }
 
+/// Pool-wide, UUID-tagged view of what the connections report. Consumed by
+/// SensorHealthMonitor (spec 2026-09-14-sensor-health-design.md). Payload-
+/// free cases carry only the UUID: the monitor needs "contact happened",
+/// not the reading.
+enum DeviceEvent: Equatable {
+    case deviceInfo(uuid: String, info: DeviceConnection.DeviceInfo)
+    case sensorData(uuid: String)
+    case historicalData(uuid: String)
+    /// A connect attempt exhausted the reconnect policy without a connection
+    case attemptGaveUp(uuid: String)
+}
+
 @MainActor
 class ConnectionPoolManager: NSObject, BLECentralDelegate {
 
@@ -87,6 +99,12 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
     /// Geräte mit aktivem Background-Pending-Connect. Persistiert, damit ein
     /// State-Restoration-Relaunch armed-Geräte wiedererkennt.
     private var backgroundArmedDevices: Set<String> = []
+    /// Armed devices for which a `central.connect` was actually issued — iOS
+    /// is holding the pending connect open. Armed-but-not-issued (radio off,
+    /// peripheral not in the retrieve cache) means the app never asked, which
+    /// says nothing about the sensor. Not persisted: after a relaunch the
+    /// poweredOn handler re-issues the connects and refills this.
+    private var backgroundConnectsIssued: Set<String> = []
     private let armedDevicesDefaultsKey = "ble_background_armed_devices"
     private let defaults: UserDefaults
 
@@ -95,6 +113,33 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
     private let armedConnectionSubject = PassthroughSubject<String, Never>()
     var armedConnectionPublisher: AnyPublisher<String, Never> {
         armedConnectionSubject.eraseToAnyPublisher()
+    }
+
+    // MARK: - Device events (sensor health seam)
+
+    private let deviceEventsSubject = PassthroughSubject<DeviceEvent, Never>()
+    private var deviceEventSubscriptions: [String: Set<AnyCancellable>] = [:]
+    var deviceEventsPublisher: AnyPublisher<DeviceEvent, Never> {
+        deviceEventsSubject.eraseToAnyPublisher()
+    }
+
+    /// Merges one connection's publishers into the pool-wide stream. Called
+    /// once per connection, at creation.
+    private func forwardDeviceEvents(from connection: DeviceConnection, uuid: String) {
+        var subscriptions = Set<AnyCancellable>()
+        connection.deviceInfoPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] info in self?.deviceEventsSubject.send(.deviceInfo(uuid: uuid, info: info)) }
+            .store(in: &subscriptions)
+        connection.sensorDataPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.deviceEventsSubject.send(.sensorData(uuid: uuid)) }
+            .store(in: &subscriptions)
+        connection.historicalDataPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.deviceEventsSubject.send(.historicalData(uuid: uuid)) }
+            .store(in: &subscriptions)
+        deviceEventSubscriptions[uuid] = subscriptions
     }
 
     // MARK: - Initialization
@@ -149,6 +194,7 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
         AppLogger.ble.bleConnection("Creating new connection for device: \(deviceUUID)")
         let newConnection = DeviceConnection(deviceUUID: deviceUUID, scheduler: scheduler)
         connections[deviceUUID] = newConnection
+        forwardDeviceEvents(from: newConnection, uuid: deviceUUID)
         return newConnection
     }
 
@@ -266,6 +312,9 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
             }
         case .giveUp:
             AppLogger.ble.bleError("⛔️ Max retries reached for device \(deviceUUID)")
+            // Sent synchronously, while the three forwarded cases hop via
+            // DispatchQueue.main — ordering across the cases is not guaranteed
+            deviceEventsSubject.send(.attemptGaveUp(uuid: deviceUUID))
             if let connection = connections[deviceUUID] {
                 connection.handleConnectionFailed(error: underlyingError ?? ConnectionError.maxRetriesExceeded)
             }
@@ -406,21 +455,31 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
 
         connection.setPeripheral(peripheral)
         central.connect(peripheral, options: Self.connectOptions)
+        backgroundConnectsIssued.insert(deviceUUID)
         AppLogger.ble.bleConnection("🛡 Armed background pending connect for \(deviceUUID)")
     }
 
     func disarmBackgroundConnect(for deviceUUID: String) {
         backgroundArmedDevices.remove(deviceUUID)
+        backgroundConnectsIssued.remove(deviceUUID)
         persistArmedDevices()
     }
 
     func disarmAllBackgroundConnects() {
         backgroundArmedDevices.removeAll()
+        backgroundConnectsIssued.removeAll()
         persistArmedDevices()
     }
 
     func isBackgroundArmed(_ deviceUUID: String) -> Bool {
         backgroundArmedDevices.contains(deviceUUID)
+    }
+
+    /// Armed *and* the connect request was handed to CoreBluetooth. Only this
+    /// proves the app tried: an armed device whose connect was never issued
+    /// (radio off, not in the retrieve cache) was never asked anything.
+    func hasPendingBackgroundConnect(_ deviceUUID: String) -> Bool {
+        backgroundArmedDevices.contains(deviceUUID) && backgroundConnectsIssued.contains(deviceUUID)
     }
 
     private func persistArmedDevices() {
@@ -494,6 +553,19 @@ class ConnectionPoolManager: NSObject, BLECentralDelegate {
     nonisolated func central(_ central: BLECentral, didUpdateState state: CBManagerState) {
         Task { @MainActor in
             AppLogger.ble.bleConnection("Bluetooth state changed: \(state.rawValue)")
+
+            if state != .poweredOn {
+                // iOS invalidates every pending connect when the central
+                // leaves poweredOn. Keeping the issued uuids would make
+                // hasPendingBackgroundConnect() report a connect that no
+                // longer exists, and the next background trigger would count
+                // a failed contact against a perfectly healthy sensor on
+                // every wake. Written once for all non-poweredOn states, so a
+                // future CBManagerState cannot be forgotten here.
+                // The armed set survives: the poweredOn branch below re-arms
+                // from it and re-issues the connects.
+                backgroundConnectsIssued.removeAll()
+            }
 
             switch state {
             case .poweredOn:

@@ -14,6 +14,10 @@ class SettingsViewModel {
     var potSize: PotSizeDTO
     var optimalRange: OptimalRangeDTO
     var deviceName: String = ""
+    /// The plant's room; nil = none. Saved together with the form.
+    var location: String?
+    /// Every saved device, for the room picker's counts
+    var allDevices: [FlowerDeviceDTO] = []
     var selectedFlower: VMSpecies? {
         didSet {
             if !isLoadingData {
@@ -84,19 +88,32 @@ class SettingsViewModel {
     @MainActor
     private func loadDeviceName() async {
         do {
-            if let device = try await repositoryManager.flowerDeviceRepository.getDevice(by: deviceUUID) {
+            let all = try await repositoryManager.flowerDeviceRepository.getAllDevices()
+            if let device = all.first(where: { $0.uuid == deviceUUID }) {
                 self.deviceName = device.name
-                print("  Loaded Device Name: \(device.name)")
+                self.location = device.location
+                print("  Loaded Device Name: \(device.name), location: \(device.location ?? "nil")")
             } else {
                 print("  Device not found for UUID: \(deviceUUID)")
                 self.deviceName = ""
             }
+            self.allDevices = all
         } catch {
             print("❌ SettingsViewModel: Failed to load device name: \(error)")
             self.deviceName = ""
         }
     }
-    
+
+    /// After a room was renamed or deleted in the picker: the room list is
+    /// derived from the devices, so refresh them. The form's own `location`
+    /// is moved by the picker itself.
+    @MainActor
+    func reloadDevices() async {
+        if let all = try? await repositoryManager.flowerDeviceRepository.getAllDevices() {
+            allDevices = all
+        }
+    }
+
     @MainActor
     private func loadPotSize() async {
         do {
@@ -167,39 +184,32 @@ class SettingsViewModel {
     func saveSettings() async throws {
         print("💾 SettingsViewModel: Saving settings for device \(deviceUUID)")
         
-        // Get current device first
-        guard let device = try await repositoryManager.flowerDeviceRepository.getDevice(by: deviceUUID) else {
+        // Only the fields this form owns; everything else stays as stored.
+        // The nil result is the not-found check — no separate pre-fetch needed.
+        // Runs first so a missing device aborts before PotSize/OptimalRange rows
+        // are committed for a device that does not exist.
+        // Read the form's fields into locals: the closure escapes, so capturing
+        // `self` would keep this view model alive inside the repository call.
+        let newName = deviceName
+        let newFlower = selectedFlower
+        let newLocation = FlowerDeviceDTO.normalizeLocation(location)
+        guard try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: deviceUUID, { fresh in
+            fresh.name = newName
+            fresh.selectedFlower = newFlower
+            fresh.location = newLocation
+        }) != nil else {
             print("❌ SettingsViewModel.saveSettings: Device not found")
             throw RepositoryError.deviceNotFound
         }
-        
-        // Save potSize and optimalRange separately first (these have their own entities)
+        print("🔧 Saved device name: \(deviceName), flower: \(selectedFlower?.name ?? "nil") (ID: \(selectedFlower?.id ?? 0))")
+
+        // Save potSize and optimalRange separately (these have their own entities)
         try await repositoryManager.potSizeRepository.savePotSize(potSize)
         print("  Saved PotSize - Width/Height/Volume: \(potSize.width)/\(potSize.height)/\(potSize.volume)")
-        
+
         try await repositoryManager.optimalRangeRepository.saveOptimalRange(optimalRange)
         print("  Saved OptimalRange - Min/Max Temp: \(optimalRange.minTemperature)/\(optimalRange.maxTemperature)")
-        
-        // Now update the device with the selectedFlower and name in a single operation
-        let updatedDevice = FlowerDeviceDTO(
-            id: device.id,
-            name: deviceName, // Use the updated name
-            uuid: device.uuid,
-            peripheralID: device.peripheralID,
-            battery: device.battery,
-            firmware: device.firmware,
-            isSensor: device.isSensor,
-            added: device.added,
-            lastUpdate: device.lastUpdate,
-            optimalRange: device.optimalRange, // Keep existing relationships
-            potSize: device.potSize, // Keep existing relationships
-            selectedFlower: selectedFlower, // Only update the flower
-            sensorData: device.sensorData
-        )
 
-        print("🔧 Saving device with name: \(deviceName) and flower: \(selectedFlower?.name ?? "nil") (ID: \(selectedFlower?.id ?? 0))")
-        try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
-        
         if let flower = selectedFlower {
             print("✅  Saved SelectedFlower: \(flower.name) (ID: \(flower.id))")
         } else {
@@ -582,6 +592,10 @@ struct SettingsView: View {
                         TextField("Device Name", text: $viewModel.deviceName)
                     }
                 }
+
+                RoomFormSection(location: $viewModel.location,
+                                devices: viewModel.allDevices,
+                                onRoomsChanged: { await viewModel.reloadDevices() })
 
                 Section(header: Text("Plant Selection")) {
                     if let selectedFlower = viewModel.selectedFlower {

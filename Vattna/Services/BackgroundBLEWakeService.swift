@@ -28,6 +28,8 @@ final class BackgroundBLEWakeService {
     private let saveSample: (SensorDataTemp, String, SensorDataSource) async -> Bool
     /// Dry-plant notification check for one device
     private let runStatusCheck: (String) async -> Void
+    /// Sensor health bookkeeping: a contact attempt ended without a reading
+    private let recordFailedContact: (String) async -> Void
     private let beginBackgroundTask: () -> UIBackgroundTaskIdentifier
     private let endBackgroundTask: (UIBackgroundTaskIdentifier) -> Void
     private let notificationCenter: NotificationCenter
@@ -85,6 +87,7 @@ final class BackgroundBLEWakeService {
          loadSensorDeviceUUIDs: (() async -> [String])? = nil,
          saveSample: ((SensorDataTemp, String, SensorDataSource) async -> Bool)? = nil,
          runStatusCheck: ((String) async -> Void)? = nil,
+         recordFailedContact: ((String) async -> Void)? = nil,
          beginBackgroundTask: (() -> UIBackgroundTaskIdentifier)? = nil,
          endBackgroundTask: ((UIBackgroundTaskIdentifier) -> Void)? = nil,
          notificationCenter: NotificationCenter = .default,
@@ -105,6 +108,13 @@ final class BackgroundBLEWakeService {
         self.runStatusCheck = runStatusCheck ?? { uuid in
             guard let device = try? await RepositoryManager.shared.flowerDeviceRepository.getDevice(by: uuid) else { return }
             try? await PlantMonitorService.shared.checkDeviceStatus(device: device)
+        }
+        // Chained: this runs outside the monitor's event stream, and the
+        // unchained entry point would interleave with a `.sensorData` handler
+        // evaluating the same silent sensor — both read its nil marker inside
+        // `await notifier…` and both notify.
+        self.recordFailedContact = recordFailedContact ?? { uuid in
+            await SensorHealthMonitor.shared.enqueueFailedContact(uuid)
         }
         self.beginBackgroundTask = beginBackgroundTask ?? {
             var id: UIBackgroundTaskIdentifier = .invalid
@@ -169,9 +179,31 @@ final class BackgroundBLEWakeService {
     func armAll(trigger: BackgroundTrigger) async -> Int {
         let uuids = await loadSensorDeviceUUIDs()
         AppLogger.ble.info("🛡 Background arm: \(uuids.count) sensor(s), trigger \(trigger.rawValue)")
+        // Arm every device first, do the bookkeeping afterwards: arming is the
+        // time-critical part (the didEnterBackground path has ~1 s) and must
+        // not wait on a repository write for an earlier device. Only the
+        // *reading* of the armed flag has to happen before arming —
+        // armBackgroundConnect re-inserts an already-armed device, so the flag
+        // is no longer distinguishable once the loop has passed it.
+        var silentSincePreviousTrigger: [String] = []
         for uuid in uuids {
+            // A connect iOS actually held open since the previous trigger,
+            // which never completed, is the dead-sensor signature: a dead
+            // (non-advertising) sensor produces no CoreBluetooth callback at
+            // all, and this is the only place that silence is visible. Merely
+            // *armed* is not enough — a device stays armed when the radio was
+            // off or the peripheral was not in the retrieve cache, and then
+            // the app never asked it anything.
+            if pool.hasPendingBackgroundConnect(uuid) && activeReads[uuid] == nil {
+                silentSincePreviousTrigger.append(uuid)
+            }
             armTriggers[uuid] = trigger
             pool.armBackgroundConnect(for: uuid)
+        }
+
+        for uuid in silentSincePreviousTrigger {
+            AppLogger.sensor.info("🔋 \(uuid) still armed from the previous trigger — counting a failed contact")
+            await recordFailedContact(uuid)
         }
         return uuids.count
     }
@@ -379,7 +411,31 @@ final class BackgroundBLEWakeService {
             historyEntries: read.historyEntries
         )
 
-        endBackgroundTask(read.backgroundTaskID)
         AppLogger.ble.info("🛡 BLE wake read finished for \(deviceUUID) (\(outcome.rawValue))")
+
+        guard outcome.isFailedContact else {
+            endBackgroundTask(read.backgroundTaskID)
+            return
+        }
+        // Sensor health: the sensor never delivered. Keep the background-task
+        // assertion until the failed contact is persisted; ending it first
+        // lets iOS suspend us mid-write.
+        let backgroundTaskID = read.backgroundTaskID
+        Task { @MainActor in
+            await self.recordFailedContact(deviceUUID)
+            self.endBackgroundTask(backgroundTaskID)
+        }
+    }
+}
+
+private extension WakeReadOutcome {
+    /// A contact attempt that ended without the sensor delivering anything.
+    /// A rejected sample is NOT one: the sensor answered, the app discarded
+    /// the value.
+    var isFailedContact: Bool {
+        switch self {
+        case .disconnected, .connectionError, .timedOut: return true
+        case .saved, .sampleRejected: return false
+        }
     }
 }

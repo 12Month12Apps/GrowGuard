@@ -7,6 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		56SHMO012EC7000000000001 /* SensorHealthMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHMO002EC7000000000001 /* SensorHealthMonitor.swift */; };
+		56SHMT012EC7000000000001 /* SensorHealthMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHMT002EC7000000000001 /* SensorHealthMonitorTests.swift */; };
+		56SHEA012EC7000000000001 /* SensorHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHEA002EC7000000000001 /* SensorHealth.swift */; };
+		56RMCA012EC7000000000001 /* RoomCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMCA002EC7000000000001 /* RoomCatalog.swift */; };
+		56RMCT012EC7000000000001 /* RoomCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMCT002EC7000000000001 /* RoomCatalogTests.swift */; };
+		56RMIS012EC7000000000001 /* RoomIconStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMIS002EC7000000000001 /* RoomIconStore.swift */; };
+		56RMED012EC7000000000001 /* RoomEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMED002EC7000000000001 /* RoomEditor.swift */; };
+		56RMET012EC7000000000001 /* RoomEditingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMET002EC7000000000001 /* RoomEditingTests.swift */; };
+		56SHTS012EC7000000000001 /* SensorHealthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHTS002EC7000000000001 /* SensorHealthTests.swift */; };
 		10F70A0DB6B34BF6AFFF6504 /* ReplaySessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE5968580C64DA890C5A581 /* ReplaySessionTests.swift */; };
 		1C094F5B7AE87D738830D849 /* BridgeDeviceDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37BDED0CB8CD95167A61EB78 /* BridgeDeviceDiscoveryTests.swift */; };
 		26A048DD6828B0F96B4FB336 /* BridgeBLECentralTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2A8334DB963AE5315D2B54A /* BridgeBLECentralTests.swift */; };
@@ -66,6 +75,12 @@
 		5684E2E22C0FA2EE005CD8B6 /* OverviewList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2E12C0FA2EE005CD8B6 /* OverviewList.swift */; };
 		5684E2E42C0FA2FA005CD8B6 /* OverviewListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5684E2E32C0FA2FA005CD8B6 /* OverviewListViewModel.swift */; };
 		568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568892072C832936000E8FAE /* SensorDataChart.swift */; };
+		56SHBI012EC7000000000001 /* BatteryIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHBI002EC7000000000001 /* BatteryIndicator.swift */; };
+		56SHBN012EC7000000000001 /* SensorHealthBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHBN002EC7000000000001 /* SensorHealthBanner.swift */; };
+		56RMPV012EC7000000000001 /* RoomPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMPV002EC7000000000001 /* RoomPickerView.swift */; };
+		56RMEV012EC7000000000001 /* RoomEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMEV002EC7000000000001 /* RoomEditView.swift */; };
+		56RMFB012EC7000000000001 /* RoomFilterBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMFB002EC7000000000001 /* RoomFilterBar.swift */; };
+		56RMRC012EC7000000000001 /* RoomRowCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56RMRC002EC7000000000001 /* RoomRowCard.swift */; };
 		5688920B2C84B4BD000E8FAE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5688920A2C84B4B9000E8FAE /* AppDelegate.swift */; };
 		569417562E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 569417542E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld */; };
 		5699C0F42E126A5C00FA9A11 /* AppSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5699C0F02E126A5C00FA9A11 /* AppSettingsView.swift */; };
@@ -102,6 +117,7 @@
 		56APNE012EC7000000000002 /* APNsEnvironmentDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56APNE002EC7000000000002 /* APNsEnvironmentDetectorTests.swift */; };
 		56F0F7DB2E564C0400B538AF /* MoistureAnomalyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F0F7DA2E564C0400B538AF /* MoistureAnomalyService.swift */; };
 		56F0F7DD2E564C2800B538AF /* MoistureAnomalyServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */; };
+		56SHDT012EC7000000000001 /* FlowerDeviceDTOTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56SHDT002EC7000000000001 /* FlowerDeviceDTOTests.swift */; };
 		56LRG0012EC7000000000002 /* LiveReadGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56LRG0002EC7000000000002 /* LiveReadGateTests.swift */; };
 		56BGTT012EC7000000000001 /* BackgroundTaskTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56BGTT002EC7000000000001 /* BackgroundTaskTrackerTests.swift */; };
 		56F9D1A12E5B4E0D00A1B2C3 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */; };
@@ -176,6 +192,15 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		56SHMO002EC7000000000001 /* SensorHealthMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorHealthMonitor.swift; sourceTree = "<group>"; };
+		56SHMT002EC7000000000001 /* SensorHealthMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorHealthMonitorTests.swift; sourceTree = "<group>"; };
+		56SHEA002EC7000000000001 /* SensorHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SensorHealth.swift; path = ../Core/SensorHealth.swift; sourceTree = "<group>"; };
+		56RMCA002EC7000000000001 /* RoomCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RoomCatalog.swift; path = ../Core/RoomCatalog.swift; sourceTree = "<group>"; };
+		56RMCT002EC7000000000001 /* RoomCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomCatalogTests.swift; sourceTree = "<group>"; };
+		56RMIS002EC7000000000001 /* RoomIconStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RoomIconStore.swift; path = ../Core/RoomIconStore.swift; sourceTree = "<group>"; };
+		56RMED002EC7000000000001 /* RoomEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomEditor.swift; sourceTree = "<group>"; };
+		56RMET002EC7000000000001 /* RoomEditingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomEditingTests.swift; sourceTree = "<group>"; };
+		56SHTS002EC7000000000001 /* SensorHealthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorHealthTests.swift; sourceTree = "<group>"; };
 		04F0CD25E2C043A18AB06797 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		151A0CCD48234A048293F85A /* RecordingBLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingBLETransport.swift; sourceTree = "<group>"; };
 		24F27E79B00A42959FBED19D /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
@@ -243,8 +268,15 @@
 		5684E2E12C0FA2EE005CD8B6 /* OverviewList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewList.swift; sourceTree = "<group>"; };
 		5684E2E32C0FA2FA005CD8B6 /* OverviewListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewListViewModel.swift; sourceTree = "<group>"; };
 		568892072C832936000E8FAE /* SensorDataChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataChart.swift; sourceTree = "<group>"; };
+		56SHBI002EC7000000000001 /* BatteryIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryIndicator.swift; sourceTree = "<group>"; };
+		56SHBN002EC7000000000001 /* SensorHealthBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorHealthBanner.swift; sourceTree = "<group>"; };
+		56RMPV002EC7000000000001 /* RoomPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomPickerView.swift; sourceTree = "<group>"; };
+		56RMEV002EC7000000000001 /* RoomEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomEditView.swift; sourceTree = "<group>"; };
+		56RMFB002EC7000000000001 /* RoomFilterBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomFilterBar.swift; sourceTree = "<group>"; };
+		56RMRC002EC7000000000001 /* RoomRowCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomRowCard.swift; sourceTree = "<group>"; };
 		5688920A2C84B4B9000E8FAE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		569417552E0DD9C000AE7586 /* CoreDataModels.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = CoreDataModels.xcdatamodel; sourceTree = "<group>"; };
+		569417552E0DD9C000AE7587 /* CoreDataModels 2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "CoreDataModels 2.xcdatamodel"; sourceTree = "<group>"; };
 		5699C0F02E126A5C00FA9A11 /* AppSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsView.swift; sourceTree = "<group>"; };
 		569B70EC2C10F221005B7BC9 /* DataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataService.swift; sourceTree = "<group>"; };
 		56A8C6E92D8ECF31004021C0 /* AddDeviceDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceDetails.swift; sourceTree = "<group>"; };
@@ -283,6 +315,7 @@
 		56APNE002EC7000000000002 /* APNsEnvironmentDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APNsEnvironmentDetectorTests.swift; sourceTree = "<group>"; };
 		56F0F7DA2E564C0400B538AF /* MoistureAnomalyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoistureAnomalyService.swift; sourceTree = "<group>"; };
 		56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoistureAnomalyServiceTests.swift; sourceTree = "<group>"; };
+		56SHDT002EC7000000000001 /* FlowerDeviceDTOTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowerDeviceDTOTests.swift; sourceTree = "<group>"; };
 		56LRG0002EC7000000000002 /* LiveReadGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReadGateTests.swift; sourceTree = "<group>"; };
 		56BGTT002EC7000000000001 /* BackgroundTaskTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskTrackerTests.swift; sourceTree = "<group>"; };
 		56F9D1A02E5B4E0D00A1B2C3 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationService.swift; path = ../Core/NotificationService.swift; sourceTree = "<group>"; };
@@ -558,6 +591,7 @@
 			children = (
 				5684E2E12C0FA2EE005CD8B6 /* OverviewList.swift */,
 				5684E2E32C0FA2FA005CD8B6 /* OverviewListViewModel.swift */,
+				56RMFB002EC7000000000001 /* RoomFilterBar.swift */,
 			);
 			path = OverviewList;
 			sourceTree = "<group>";
@@ -582,6 +616,11 @@
 			children = (
 				56D35EB62E2BE56C0059FEE6 /* PotView.swift */,
 				568892072C832936000E8FAE /* SensorDataChart.swift */,
+				56SHBI002EC7000000000001 /* BatteryIndicator.swift */,
+				56SHBN002EC7000000000001 /* SensorHealthBanner.swift */,
+				56RMPV002EC7000000000001 /* RoomPickerView.swift */,
+				56RMEV002EC7000000000001 /* RoomEditView.swift */,
+				56RMRC002EC7000000000001 /* RoomRowCard.swift */,
 			);
 			path = Componetns;
 			sourceTree = "<group>";
@@ -589,6 +628,11 @@
 		568EA33D2EB625CE00F6BB25 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				56SHMO002EC7000000000001 /* SensorHealthMonitor.swift */,
+				56SHEA002EC7000000000001 /* SensorHealth.swift */,
+				56RMCA002EC7000000000001 /* RoomCatalog.swift */,
+				56RMIS002EC7000000000001 /* RoomIconStore.swift */,
+				56RMED002EC7000000000001 /* RoomEditor.swift */,
 				56BGTR002EC7000000000002 /* BackgroundTaskTracker.swift */,
 				56BWKS002EC7000000000001 /* BackgroundBLEWakeService.swift */,
 				56BHSY002EC7000000000001 /* BackgroundHistorySyncService.swift */,
@@ -719,7 +763,12 @@
 		56AF112B2BDED05B00887073 /* VattnaTests */ = {
 			isa = PBXGroup;
 			children = (
+				56SHMT002EC7000000000001 /* SensorHealthMonitorTests.swift */,
+				56SHTS002EC7000000000001 /* SensorHealthTests.swift */,
+				56RMCT002EC7000000000001 /* RoomCatalogTests.swift */,
+				56RMET002EC7000000000001 /* RoomEditingTests.swift */,
 				56F0F7DC2E564C2800B538AF /* MoistureAnomalyServiceTests.swift */,
+				56SHDT002EC7000000000001 /* FlowerDeviceDTOTests.swift */,
 				56LRG0002EC7000000000002 /* LiveReadGateTests.swift */,
 				56BGTT002EC7000000000001 /* BackgroundTaskTrackerTests.swift */,
 				5654B2BF2CB46EF200EED3D3 /* BLE */,
@@ -980,6 +1029,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				56SHMO012EC7000000000001 /* SensorHealthMonitor.swift in Sources */,
+				56SHEA012EC7000000000001 /* SensorHealth.swift in Sources */,
+				56RMCA012EC7000000000001 /* RoomCatalog.swift in Sources */,
+				56RMIS012EC7000000000001 /* RoomIconStore.swift in Sources */,
+				56RMED012EC7000000000001 /* RoomEditor.swift in Sources */,
 				565058CB2E3F64F900CC6E2B /* LogExportView.swift in Sources */,
 				5663FEB52EB684620038209F /* ConnectionPoolManager.swift in Sources */,
 				56FA2DEC0DE4F1B500000004 /* BLETransport.swift in Sources */,
@@ -1023,6 +1077,12 @@
 				56B44CCC2D725C2700A6A75A /* PlantMonitorService.swift in Sources */,
 				56F9D1A12E5B4E0D00A1B2C3 /* NotificationService.swift in Sources */,
 				568892082C83293A000E8FAE /* SensorDataChart.swift in Sources */,
+				56SHBI012EC7000000000001 /* BatteryIndicator.swift in Sources */,
+				56SHBN012EC7000000000001 /* SensorHealthBanner.swift in Sources */,
+				56RMPV012EC7000000000001 /* RoomPickerView.swift in Sources */,
+				56RMEV012EC7000000000001 /* RoomEditView.swift in Sources */,
+				56RMFB012EC7000000000001 /* RoomFilterBar.swift in Sources */,
+				56RMRC012EC7000000000001 /* RoomRowCard.swift in Sources */,
 				5622B0D92E317710002C7E74 /* CoreDataPotSizeRepository.swift in Sources */,
 				5622B0DA2E317710002C7E74 /* RepositoryError.swift in Sources */,
 				5622B0DB2E317710002C7E74 /* PotSizeRepository.swift in Sources */,
@@ -1081,6 +1141,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				56SHMT012EC7000000000001 /* SensorHealthMonitorTests.swift in Sources */,
+				56SHTS012EC7000000000001 /* SensorHealthTests.swift in Sources */,
+				56RMCT012EC7000000000001 /* RoomCatalogTests.swift in Sources */,
+				56RMET012EC7000000000001 /* RoomEditingTests.swift in Sources */,
 				5654B2C12CB4739C00EED3D3 /* AddDeviceViewModelTests.swift in Sources */,
 				5654B2BB2CB45C6E00EED3D3 /* SensorDataDecoderTests.swift in Sources */,
 				56FA2DEC0DE4F1B500000002 /* FlowerCareFrameFixtures.swift in Sources */,
@@ -1101,6 +1165,7 @@
 				5654B2BD2CB46EE600EED3D3 /* OverviewListViewModelTests.swift in Sources */,
 				56AF112D2BDED05B00887073 /* VattnaTests.swift in Sources */,
 				56F0F7DD2E564C2800B538AF /* MoistureAnomalyServiceTests.swift in Sources */,
+				56SHDT012EC7000000000001 /* FlowerDeviceDTOTests.swift in Sources */,
 				56LRG0012EC7000000000002 /* LiveReadGateTests.swift in Sources */,
 				56BGTT012EC7000000000001 /* BackgroundTaskTrackerTests.swift in Sources */,
 				26A048DD6828B0F96B4FB336 /* BridgeBLECentralTests.swift in Sources */,
@@ -1579,9 +1644,10 @@
 		569417542E0DD9C000AE7586 /* CoreDataModels.xcdatamodeld */ = {
 			isa = XCVersionGroup;
 			children = (
+				569417552E0DD9C000AE7587 /* CoreDataModels 2.xcdatamodel */,
 				569417552E0DD9C000AE7586 /* CoreDataModels.xcdatamodel */,
 			);
-			currentVersion = 569417552E0DD9C000AE7586 /* CoreDataModels.xcdatamodel */;
+			currentVersion = 569417552E0DD9C000AE7587 /* CoreDataModels 2.xcdatamodel */;
 			path = CoreDataModels.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

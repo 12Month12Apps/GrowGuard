@@ -1,6 +1,36 @@
 import Foundation
 import UserNotifications
 
+/// The families of notification the app owns, distinguished by identifier
+/// prefix. Cancelling has to be scoped to a family: the watering paths run
+/// after every wake read, and an unscoped sweep would delete the sensor-health
+/// alerts that were just delivered while their once-per-episode markers stay
+/// set — the alert would never be posted again.
+enum NotificationKind: CaseIterable {
+    case watering
+    case sensorHealth
+
+    /// Every identifier of this kind starts with this prefix.
+    var identifierPrefix: String {
+        switch self {
+        case .watering: return "watering-"
+        case .sensorHealth: return "sensor-"
+        }
+    }
+
+    /// Prefixes builds before this family's naming wrote. A pending request
+    /// survives an app update, so an identifier from an older build is still
+    /// in the system afterwards and has to be swept as a member of its kind.
+    var legacyPrefixes: [String] {
+        switch self {
+        // The REMIND_LATER snooze was `reminder-later-<uuid>` before it moved
+        // inside the `watering-` family.
+        case .watering: return ["reminder-later-"]
+        case .sensorHealth: return []
+        }
+    }
+}
+
 /// Centralizes scheduling and management of user notifications used across the app.
 final class NotificationService {
     static let shared = NotificationService()
@@ -27,6 +57,17 @@ final class NotificationService {
         static func wateringDaily(for uuid: String) -> String { "watering-daily-\(uuid)" }
     }
 
+    /// Prefix of the snooze the user sets from the REMIND_LATER action.
+    static let reminderLaterPrefix = "watering-reminder-later-"
+
+    /// The snooze scheduled from the REMIND_LATER notification action. Inside
+    /// the `watering-` family so `cancelNotifications(for:kinds: [.watering])`
+    /// sweeps it when the plant is watered or the device is deleted — an
+    /// unprefixed identifier outlived both.
+    static func reminderLaterIdentifier(for uuid: String) -> String {
+        reminderLaterPrefix + uuid
+    }
+
     private enum DefaultsKey {
         static func lastImmediateNotification(for uuid: String) -> String { "notification.lastImmediate.\(uuid)" }
         static func lastMoistureAboveMin(for uuid: String) -> String { "notification.lastMoistureAboveMin.\(uuid)" }
@@ -41,9 +82,10 @@ final class NotificationService {
         let dailyIdentifier = Identifier.wateringDaily(for: device.uuid)
 
         // Remove legacy one-off reminders from older builds
-        let legacyReminderIds = pendingRequests
-            .filter { $0.identifier.contains(device.uuid) && $0.identifier.contains("watering-reminder") }
-            .map { $0.identifier }
+        let legacyReminderIds = Self.legacyReminderIdentifiers(
+            pending: pendingRequests.map(\.identifier),
+            deviceUUID: device.uuid
+        )
         if !legacyReminderIds.isEmpty {
             center.removePendingNotificationRequests(withIdentifiers: legacyReminderIds)
             print("🧹 NotificationService: Removed legacy reminders for \(device.name)")
@@ -181,13 +223,60 @@ final class NotificationService {
         }
     }
 
-    /// Removes pending and delivered notifications related to a specific device.
-    func cancelNotifications(for deviceUUID: String) async {
-        let pendingRequests = await center.pendingNotificationRequests()
+    /// One-off reminders from builds before the `watering-` prefixes existed.
+    /// Pure so the exclusion below can be tested without UNUserNotificationCenter.
+    ///
+    /// `watering-reminder-later-` is *not* legacy: it is the snooze the user
+    /// just chose from the REMIND_LATER action. Every wake read with moisture
+    /// still below the minimum calls `scheduleWateringNotifications`, and the
+    /// 24 h immediate cooldown means no replacement alert is posted — sweeping
+    /// the snooze here would silently drop it while the plant is still dry, so
+    /// the user would hear nothing until the daily reminder. A new watering
+    /// schedule does not supersede a snooze the user set minutes ago.
+    ///
+    /// `reminder-later-` *is* legacy: that is what old builds wrote for the
+    /// snooze, before it was renamed into the `watering-` family. Matching
+    /// only `watering-reminder` left a pending one from before the upgrade
+    /// untouched by this sweep and by the kind filter alike.
+    static func legacyReminderIdentifiers(pending: [String], deviceUUID: String) -> [String] {
+        pending.filter {
+            $0.contains(deviceUUID)
+                && ($0.contains("watering-reminder") || $0.hasPrefix("reminder-later-"))
+                && !$0.hasPrefix(reminderLaterPrefix)
+        }
+    }
 
-        let identifiersToRemove = pendingRequests
-            .filter { $0.identifier.contains(deviceUUID) }
-            .map { $0.identifier }
+    /// Identifiers to sweep for one device, restricted to the given kinds.
+    /// Pure so the scoping can be tested without UNUserNotificationCenter.
+    ///
+    /// Sensor-health notifications are posted with a nil trigger, so they are
+    /// only ever delivered and never pending — both lists have to be searched.
+    static func identifiersToCancel(pending: [String],
+                                    delivered: [String],
+                                    deviceUUID: String,
+                                    kinds: Set<NotificationKind>) -> [String] {
+        let prefixes = kinds.flatMap { [$0.identifierPrefix] + $0.legacyPrefixes }
+        func matches(_ identifier: String) -> Bool {
+            identifier.contains(deviceUUID) && prefixes.contains { identifier.hasPrefix($0) }
+        }
+        var identifiers = Set(pending.filter(matches))
+        identifiers.formUnion(delivered.filter(matches))
+        return Array(identifiers)
+    }
+
+    /// Removes pending and delivered notifications of the given kinds for a
+    /// device. Defaults to the watering family: the callers on the watering
+    /// path must not touch sensor-health alerts.
+    func cancelNotifications(for deviceUUID: String, kinds: Set<NotificationKind> = [.watering]) async {
+        let pendingRequests = await center.pendingNotificationRequests()
+        let deliveredNotifications = await center.deliveredNotifications()
+
+        let identifiersToRemove = Self.identifiersToCancel(
+            pending: pendingRequests.map(\.identifier),
+            delivered: deliveredNotifications.map(\.request.identifier),
+            deviceUUID: deviceUUID,
+            kinds: kinds
+        )
 
         center.removeDeliveredNotifications(withIdentifiers: identifiersToRemove)
         center.removePendingNotificationRequests(withIdentifiers: identifiersToRemove)
@@ -217,6 +306,92 @@ final class NotificationService {
             } catch {
                 print("❌ NotificationService: Failed to reschedule reminder \(request.identifier): \(error)")
             }
+        }
+    }
+}
+
+// MARK: - Sensor health (spec 2026-09-14-sensor-health-design.md)
+
+/// Seam for SensorHealthMonitor; tests record calls instead of touching
+/// UNUserNotificationCenter.
+///
+/// Both methods report whether the notification was really handed to the
+/// system: the once-per-episode markers may only be set for a submission that
+/// succeeded, otherwise a single `center.add` failure silences the alert for
+/// the whole episode.
+protocol SensorHealthNotifying {
+    /// - Returns: true when the request was submitted.
+    func notifyUnreachable(device: FlowerDeviceDTO, since: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now: Date) async -> Bool
+    /// - Returns: true when the request was submitted.
+    func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async -> Bool
+}
+
+extension NotificationService: SensorHealthNotifying {
+
+    private enum SensorHealthIdentifier {
+        // `sensor-` prefix + UUID: cancelNotifications(for:kinds:) sweeps these
+        // only when `.sensorHealth` is asked for — never from a watering path
+        static func unreachable(for uuid: String) -> String { "sensor-unreachable-\(uuid)" }
+        static func lowBattery(for uuid: String) -> String { "sensor-battery-\(uuid)" }
+    }
+
+    func notifyUnreachable(device: FlowerDeviceDTO, since: Date, lastKnownBattery: Int?, confirmedByPeer: Bool, now: Date) async -> Bool {
+        let days = SensorHealth.daysSilent(since: since, now: now)
+        let content = UNMutableNotificationContent()
+        var body: String
+        if confirmedByPeer {
+            content.title = L10n.SensorHealth.Notification.Confirmed.title(device.name)
+            body = device.location.map { L10n.SensorHealth.Notification.Confirmed.bodyLocation($0, days) }
+                ?? L10n.SensorHealth.Notification.Confirmed.body(days)
+        } else {
+            content.title = L10n.SensorHealth.Notification.Unreachable.title(device.name)
+            body = device.location.map { L10n.SensorHealth.Notification.Unreachable.bodyLocation($0, days) }
+                ?? L10n.SensorHealth.Notification.Unreachable.body(days)
+        }
+        if let lastKnownBattery {
+            body += L10n.SensorHealth.Notification.lastKnown(lastKnownBattery)
+        }
+        content.body = body
+        content.sound = .default
+        content.interruptionLevel = .active
+        content.relevanceScore = 0.8
+        content.userInfo = [
+            "deviceUUID": device.uuid,
+            "notificationType": confirmedByPeer ? "sensorUnreachableConfirmed" : "sensorUnreachable"
+        ]
+
+        let identifier = SensorHealthIdentifier.unreachable(for: device.uuid)
+        center.removeDeliveredNotifications(withIdentifiers: [identifier])
+        do {
+            try await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
+            print("📱 NotificationService: Sent unreachable notification (confirmed: \(confirmedByPeer)) for \(device.name)")
+            return true
+        } catch {
+            print("❌ NotificationService: Failed to send unreachable notification: \(error)")
+            return false
+        }
+    }
+
+    func notifyLowBattery(device: FlowerDeviceDTO, percent: Int) async -> Bool {
+        let content = UNMutableNotificationContent()
+        content.title = L10n.SensorHealth.Notification.LowBattery.title(device.name)
+        content.body = L10n.SensorHealth.Notification.LowBattery.body(percent)
+        content.sound = .default
+        content.interruptionLevel = .active
+        content.relevanceScore = 0.6
+        content.userInfo = [
+            "deviceUUID": device.uuid,
+            "notificationType": "sensorLowBattery"
+        ]
+
+        let identifier = SensorHealthIdentifier.lowBattery(for: device.uuid)
+        do {
+            try await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
+            print("📱 NotificationService: Sent low battery notification (\(percent) %) for \(device.name)")
+            return true
+        } catch {
+            print("❌ NotificationService: Failed to send low battery notification: \(error)")
+            return false
         }
     }
 }

@@ -20,6 +20,7 @@ struct BackgroundWakeServiceTests {
     final class Recorder {
         var saved: [(uuid: String, source: SensorDataSource)] = []
         var statusChecks: [String] = []
+        var failedContacts: [String] = []
         var began = 0
         var ended = 0
         var historySaved = 0
@@ -62,6 +63,7 @@ struct BackgroundWakeServiceTests {
                 return saveSucceeds
             },
             runStatusCheck: { uuid in recorder.statusChecks.append(uuid) },
+            recordFailedContact: { uuid in recorder.failedContacts.append(uuid) },
             beginBackgroundTask: { recorder.began += 1; return UIBackgroundTaskIdentifier(rawValue: 7) },
             endBackgroundTask: { _ in
                 recorder.ended += 1
@@ -393,5 +395,160 @@ struct BackgroundWakeServiceTests {
                 "Only the store can say whether the sample was persisted")
         #expect(tracker.wakeReadSuccessCount == 0)
         #expect(recorder.ended == 1)
+    }
+
+    @Test("A pending connect that never completed counts one failed contact on the next armAll")
+    func stillArmedCountsFailedContact() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        // The connect request is issued and iOS holds it open; the sensor
+        // never advertises, so no callback ever arrives. That — and only that
+        // — is the dead-sensor signature.
+        central.connectSucceeds = false
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString])
+
+        await service.armAll(trigger: .silentPush)
+        await pump()
+        #expect(recorder.failedContacts.isEmpty, "First trigger: nothing to judge yet")
+        #expect(central.connectRequests == [sensor.identifier], "Precondition: the app did try")
+
+        await service.armAll(trigger: .silentPush)
+        await pump()
+        #expect(recorder.failedContacts == [sensor.identifier.uuidString])
+        #expect(pool.isBackgroundArmed(sensor.identifier.uuidString), "Re-armed as before")
+    }
+
+    @Test("A device the app could not even ask for (not in the retrieve cache) is not a failed contact")
+    func notInRetrieveCacheIsNotAFailedContact() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        central.peripheralsAreInRetrieveCache = false   // no peripheral, so no connect is issued
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString])
+
+        await service.armAll(trigger: .silentPush)
+        await pump()
+        await service.armAll(trigger: .silentPush)
+        await pump()
+
+        #expect(central.connectRequests.isEmpty, "Precondition: the app never issued a connect")
+        #expect(recorder.failedContacts.isEmpty,
+                "Staying armed without a connect says nothing about the sensor")
+        #expect(pool.isBackgroundArmed(sensor.identifier.uuidString))
+    }
+
+    @Test("Bluetooth being off is not a failed contact")
+    func bluetoothOffIsNotAFailedContact() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString])
+        central.simulateStateChange(to: .poweredOff)
+        await pump()
+
+        await service.armAll(trigger: .silentPush)
+        await pump()
+        await service.armAll(trigger: .silentPush)
+        await pump()
+
+        #expect(central.connectRequests.isEmpty, "Precondition: the radio was off, no connect issued")
+        #expect(recorder.failedContacts.isEmpty, "The radio was off — the sensor was never asked")
+    }
+
+    /// iOS drops every pending connect when the central leaves `.poweredOn`.
+    /// If the pool keeps remembering that it issued one, the next trigger reads
+    /// a connect that no longer exists and blames the sensor for the radio.
+    @Test("A Bluetooth power cycle is not a failed contact")
+    func bluetoothPowerCycleIsNotAFailedContact() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        let uuid = sensor.identifier.uuidString
+        central.connectSucceeds = false
+        let service = makeService(pool: pool, deviceUUIDs: [uuid])
+
+        await service.armAll(trigger: .silentPush)
+        await pump()
+        #expect(central.connectRequests == [sensor.identifier], "Precondition: a connect was issued")
+
+        central.simulateStateChange(to: .poweredOff)
+        await pump()
+
+        await service.armAll(trigger: .silentPush)
+        await pump()
+        #expect(recorder.failedContacts.isEmpty,
+                "The radio went down — the pending connect died with it, not with the sensor")
+
+        // Radio back: the pool re-arms from the armed set and re-issues, so a
+        // genuinely silent sensor is counted again on the next trigger
+        central.simulateStateChange(to: .poweredOn)
+        await pump()
+        #expect(pool.hasPendingBackgroundConnect(uuid), "poweredOn re-issues the connect")
+
+        await service.armAll(trigger: .silentPush)
+        await pump()
+        #expect(recorder.failedContacts == [uuid])
+    }
+
+    @Test("A wake already in progress is not counted as a failed contact")
+    func wakeInProgressIsNotCountedAsFailure() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        central.connectSucceeds = false
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString])
+
+        await service.armAll(trigger: .silentPush)
+        await pump()
+        // Pending connect completes: the read is now open (no disconnect, no
+        // timeout), so the device is still armed *and* has an active read
+        central.simulateConnectCompletion(of: sensor.identifier)
+        await pump()
+        #expect(pool.isBackgroundArmed(sensor.identifier.uuidString),
+                "Precondition: the armed flag survives the connect completion")
+
+        await service.armAll(trigger: .silentPush)
+        await pump()
+
+        #expect(recorder.failedContacts.isEmpty, "A wake in progress is not a failed contact")
+    }
+
+    @Test("A wake read that ends without data counts one failed contact")
+    func failedWakeReadCountsFailedContact() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        central.connectSucceeds = false
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString])
+
+        await service.armAll(trigger: .refreshTask)
+        await pump()
+        central.simulateConnectCompletion(of: sensor.identifier)
+        await pump()
+        central.simulateDisconnect(of: sensor.identifier, error: nil)
+        await settle(seconds: 1.0)
+
+        #expect(recorder.failedContacts == [sensor.identifier.uuidString])
+    }
+
+    @Test("A successful wake read records no failed contact")
+    func successfulWakeReadNoFailure() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString])
+
+        await service.armAll(trigger: .silentPush)
+        await settle(seconds: 2.0)
+
+        #expect(recorder.saved.count == 1)
+        #expect(recorder.failedContacts.isEmpty)
+    }
+
+    @Test("A rejected sample is not a failed contact: the sensor answered, the app discarded the value")
+    func rejectedSampleIsNotAFailedContact() async {
+        let pool = makePool()
+        let sensor = makeSensor()
+        let service = makeService(pool: pool, deviceUUIDs: [sensor.identifier.uuidString], saveSucceeds: false)
+
+        await service.armAll(trigger: .silentPush)
+        await settle(seconds: 2.0)
+
+        #expect(tracker.executionHistory.first?.detail == WakeReadOutcome.sampleRejected.rawValue)
+        #expect(recorder.failedContacts.isEmpty)
     }
 }
