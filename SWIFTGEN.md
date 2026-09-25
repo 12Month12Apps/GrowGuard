@@ -1,4 +1,4 @@
-# SwiftGen Integration für GrowGuard
+# SwiftGen Integration für Vattna
 
 Diese App verwendet [SwiftGen](https://github.com/SwiftGen/SwiftGen) für die typsichere Generierung von lokalisierten Strings.
 
@@ -12,13 +12,13 @@ brew install swiftgen
 
 ### 2. Konfiguration
 - `swiftgen.yml` - Konfigurationsdatei im Projektroot
-- `GrowGuard/Localizable.strings` - String-Definitionen
-- `GrowGuard/Generated/Strings+Generated.swift` - Generierte Swift-Konstanten
+- `Vattna/Localizable.strings` - String-Definitionen
+- `Vattna/Generated/Strings+Generated.swift` - Generierte Swift-Konstanten
 
 ## Verwendung
 
 ### Strings hinzufügen
-1. Neue Strings in `GrowGuard/Localizable.strings` hinzufügen:
+1. Neue Strings in `Vattna/Localizable.strings` hinzufügen:
 ```
 "new.key" = "New String Value";
 ```

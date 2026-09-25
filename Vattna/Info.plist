@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>pro.veit.GrowGuard.plantMonitor</string>
+		<string>com.growguard.processing</string>
+	</array>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>IntentIntent</string>
+	</array>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Vattna sendet wichtige Benachrichtigungen über den Wasserbedarf Ihrer Pflanzen. Dringliche Benachrichtigungen stellen sicher, dass Sie kritische Pflegeerinnerungen auch im "Nicht stören"-Modus erhalten.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>processing</string>
+		<string>bluetooth-central</string>
+		<string>remote-notification</string>
+	</array>
+</dict>
+</plist>
