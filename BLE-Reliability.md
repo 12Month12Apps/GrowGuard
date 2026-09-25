@@ -3,9 +3,9 @@
 The ConnectionPool stack is the only BLE stack (legacy `FlowerCareManager`
 deleted 2026-06). This documents the reliability mechanisms that actually
 exist in code, their parameters, and how to tune them. The corresponding
-tests live in `GrowGuardTests/BLE/` and run in virtual time.
+tests live in `VattnaTests/BLE/` and run in virtual time.
 
-## Reconnect backoff — `ReconnectPolicy` (GrowGuard/BLE/ReconnectPolicy.swift)
+## Reconnect backoff — `ReconnectPolicy` (Vattna/BLE/ReconnectPolicy.swift)
 
 One pure struct replaces the previously duplicated retry blocks in
 `ConnectionPoolManager`. `attempt` counts failures so far; after
@@ -232,7 +232,7 @@ nor saved a second time by the screen.
    transport traffic (timestamps, characteristic UUIDs, hex payloads,
    error codes) — no personal data. Files flush to disk on every
    disconnect, on app-background, and when the toggle turns off.
-2. Drop the file into `GrowGuardTests/BLE/Recordings/` (bundled
+2. Drop the file into `VattnaTests/BLE/Recordings/` (bundled
    automatically via folder reference).
 3. Add one entry to `ReplayFixtures.all` in `ReplaySessionTests.swift`
    with the expected outcome (entry count / completion / error).

@@ -7,7 +7,7 @@ only this proves radio + iOS/macOS reality.
 ## 0. Automated hardware suite (run first)
 
 ```bash
-xcodebuild test -project GrowGuard.xcodeproj -scheme GrowGuard \
+xcodebuild test -project Vattna.xcodeproj -scheme Vattna \
   -testPlan HardwareTests \
   -destination 'platform=iOS,name=<your iPhone>' \
   TEST_FLOWERCARE_UUID=<peripheral-uuid> \
@@ -16,7 +16,7 @@ xcodebuild test -project GrowGuard.xcodeproj -scheme GrowGuard \
 
 The peripheral UUID is per-device (find it in the app's log export after one
 connection: "Connecting to known device: …"). On a Mac with Bluetooth, the
-`-destination 'id=<mac-device-id>'` form works too. Quit the GrowGuard app
+`-destination 'id=<mac-device-id>'` form works too. Quit the Vattna app
 first — two BLE clients fight over the sensor.
 
 ## 1. Connection & data (each release)
@@ -66,7 +66,7 @@ first — two BLE clients fight over the sensor.
 |---|---|---|
 | 5.1 | Enable "Record BLE Sessions" in the debug menu, run a full sync | Recording file appears in the list with plausible size |
 | 5.2 | Share the recording via the share sheet | Valid `*.ble-session.json` arrives (AirDrop/Mail) |
-| 5.3 | Drop the file into `GrowGuardTests/BLE/Recordings/` + register in `ReplayFixtures.all` | Replay test passes against the recording |
+| 5.3 | Drop the file into `VattnaTests/BLE/Recordings/` + register in `ReplayFixtures.all` | Replay test passes against the recording |
 | 5.4 | Disable the toggle | No new files are created on subsequent syncs |
 
 ## Verified runs
