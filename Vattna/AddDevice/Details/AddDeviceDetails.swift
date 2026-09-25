@@ -118,21 +118,9 @@ enum AddDeviceRoute: Hashable {
             )
             
             // Update flower with new data
-            flower = FlowerDeviceDTO(
-                id: flower.id,
-                name: searched.name,
-                uuid: flower.uuid,
-                peripheralID: flower.peripheralID,
-                battery: flower.battery,
-                firmware: flower.firmware,
-                isSensor: flower.isSensor,
-                added: flower.added,
-                lastUpdate: flower.lastUpdate,
-                optimalRange: optimalRange,
-                potSize: flower.potSize,
-                selectedFlower: searched, // Set the searched flower as selectedFlower
-                sensorData: flower.sensorData
-            )
+            flower.name = searched.name
+            flower.optimalRange = optimalRange
+            flower.selectedFlower = searched
         }
     }
 
@@ -184,6 +172,10 @@ enum AddDeviceRoute: Hashable {
             optimalRange: optimalRange,
             selectedFlower: flower
         )
+
+        Task {
+            await fetchSavedDevices()
+        }
     }
     
     @MainActor
@@ -209,6 +201,7 @@ enum AddDeviceRoute: Hashable {
             }
             
             do {
+                flower.location = FlowerDeviceDTO.normalizeLocation(flower.location)
                 try await repositoryManager.flowerDeviceRepository.saveDevice(flower)
                 
                 // Save optimal range if it exists
@@ -306,6 +299,12 @@ struct AddDeviceDetails:  View {
                         ))
                     }
                 }
+
+                RoomFormSection(location: Binding(
+                    get: { viewModel.flower.location },
+                    set: { viewModel.flower.location = $0 }
+                ), devices: viewModel.allSavedDevices,
+                   onRoomsChanged: { await viewModel.fetchSavedDevices() })
 
                 Section(header: Text("Pot Size")) {
                     VStack(spacing: 16) {

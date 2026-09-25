@@ -33,6 +33,7 @@
 "device.availableSensors" = "Available Sensors";
 "device.unknownDevice" = "Unknown Device";
 "device.name" = "Device Name";
+"device.locationFooter" = "Sensors in the same room are within Bluetooth range of each other. Two floors are two rooms.";
 "device.searchFlower" = "Search Flower";
 "device.lastUpdate" = "Last Update: ";
 "device.loadHistoricalData" = "Load Historical Data";
@@ -180,3 +181,68 @@
 /* Common */
 "common.error" = "error";
 "common.defaultDevice" = "Unknown Device";
+
+/* Sensor Health */
+"sensorHealth.notification.unreachable.title" = "🔋 %@ is not responding";
+"sensorHealth.notification.unreachable.body" = "No readings for %d days. Were you near it? If so, check the battery.";
+"sensorHealth.notification.unreachable.bodyLocation" = "No readings from %@ for %d days. Were you near it? If so, check the battery.";
+"sensorHealth.notification.confirmed.title" = "🔋 %@ needs a new battery";
+"sensorHealth.notification.confirmed.body" = "Your other sensors respond, this one has been silent for %d days.";
+"sensorHealth.notification.confirmed.bodyLocation" = "Your other sensors in %@ respond, this one has been silent for %d days.";
+"sensorHealth.notification.lastKnown" = " Last known level %d %%.";
+"sensorHealth.notification.lowBattery.title" = "🔋 Replace the battery in %@";
+"sensorHealth.notification.lowBattery.body" = "Battery is at %d %%. Cheap coin cells drop out without warning at this level.";
+"sensorHealth.battery.unknown" = "–";
+"sensorHealth.battery.readAgo" = "read %@";
+"sensorHealth.banner.unconfirmed.title" = "Not responding for %d days";
+"sensorHealth.banner.unconfirmed.text" = "If you are at home, check the battery.";
+"sensorHealth.banner.unconfirmed.textLocation" = "Were you near %@? If so, check the battery.";
+"sensorHealth.banner.confirmed.title" = "Silent for %d days · replace battery";
+"sensorHealth.banner.confirmed.line" = "Silent for %d days";
+"sensorHealth.banner.confirmed.text" = "Your other sensors respond, this one does not.";
+"sensorHealth.banner.confirmed.textLocation" = "Your other sensors in %@ respond, this one does not.";
+"sensorHealth.banner.lastKnown" = "Last known battery %d %%";
+"sensorHealth.banner.setLocation" = "Tell the app which room this sensor is in";
+
+/* Rooms */
+"room.title" = "Room";
+"room.noRoom" = "No room";
+"room.all" = "All";
+"room.choose" = "Choose a room";
+"room.picker.search" = "Search or add a room";
+"room.picker.yourRooms" = "Your rooms";
+"room.picker.create" = "Create “%@”";
+"room.picker.createHint" = "No room with that name yet";
+"room.picker.suggestions" = "Suggestions";
+"room.plants.one" = "1 plant";
+"room.plants.other" = "%d plants";
+"room.sensors.one" = "1 sensor";
+"room.sensors.other" = "%d sensors";
+"room.companions.alone" = "Only plant here";
+"room.companions.one" = "Together with %@";
+"room.companions.more" = "Together with %@ and %d more";
+"room.suggestion.livingRoom" = "Living room";
+"room.suggestion.kitchen" = "Kitchen";
+"room.suggestion.bedroom" = "Bedroom";
+"room.suggestion.bathroom" = "Bathroom";
+"room.suggestion.hallway" = "Hallway";
+"room.suggestion.office" = "Office";
+"room.suggestion.balcony" = "Balcony";
+"room.suggestion.terrace" = "Terrace";
+"room.suggestion.garden" = "Garden";
+"room.suggestion.basement" = "Basement";
+"room.action.edit" = "Edit";
+"room.action.more" = "More";
+"room.edit.title" = "Edit room";
+"room.edit.name" = "Name";
+"room.edit.icon" = "Icon";
+"room.edit.iconAutomatic" = "Automatic";
+"room.edit.plants" = "Plants in this room";
+"room.edit.delete" = "Delete room";
+"room.edit.deleteConfirm.title" = "Delete “%@”?";
+"room.edit.deleteConfirm.one" = "1 plant will have no room. The plant itself stays.";
+"room.edit.deleteConfirm.other" = "%d plants will have no room. The plants themselves stay.";
+"room.edit.mergeConfirm.title" = "Merge into “%@”?";
+"room.edit.mergeConfirm.message" = "A room with that name already exists. The plants of both rooms will be together.";
+"room.edit.merge" = "Merge";
+"room.edit.failed" = "The room could not be changed. Try again.";

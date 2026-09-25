@@ -10,6 +10,7 @@ import SwiftUI
 struct DeviceDetailsView: View {
     @State var viewModel: DeviceDetailsViewModel
     @State var showSetting: Bool = false
+    @State private var showRoomPicker = false
     @State private var showCopyAlert = false
     @State private var showingLoadingScreen = false
     @State private var showingBenchmark = false // Temporarily disabled until BenchmarkView is added to Xcode project
@@ -45,21 +46,17 @@ struct DeviceDetailsView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
-                    // Action buttons
                     if viewModel.device.isSensor {
+                        SensorHealthBanner(device: viewModel.device,
+                                           health: viewModel.health,
+                                           style: .banner,
+                                           // Only sensors can witness each other, so the
+                                           // location hint is pointless without a peer sensor
+                                           onSetLocation: viewModel.peers.contains(where: \.isSensor) ? { showRoomPicker = true } : nil)
+
+                        // Action buttons
                         HStack(spacing: 12) {
-                            // Battery indicator
-                            HStack(spacing: 6) {
-                                Image(systemName: "battery.75percent")
-                                    .foregroundColor(.green)
-                                Text(viewModel.device.battery, format: .percent)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Color.green.opacity(0.1))
-                            .cornerRadius(10)
+                            BatteryIndicator(device: viewModel.device, health: viewModel.health, style: .chip)
 
                             Spacer()
 
@@ -211,6 +208,12 @@ struct DeviceDetailsView: View {
                 .background(Color(.secondarySystemGroupedBackground))
                 .cornerRadius(16)
                 .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                .padding(.horizontal)
+
+                RoomRowCard(device: viewModel.device,
+                            companions: RoomCatalog.companions(of: viewModel.device, in: viewModel.peers)) {
+                    showRoomPicker = true
+                }
                 .padding(.horizontal)
 
                 // Urgent watering alert
@@ -554,6 +557,20 @@ struct DeviceDetailsView: View {
                     } catch {
                         print("❌ DeviceDetailsView: Failed to save settings: \(error)")
                         // Handle error gracefully - could show alert to user in real app
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showRoomPicker) {
+            NavigationStack {
+                RoomPickerView(selection: Binding(
+                    get: { viewModel.device.location },
+                    set: { room in Task { await viewModel.setRoom(room) } }
+                ), devices: viewModel.peers + [viewModel.device],
+                   onRoomsChanged: { await viewModel.reloadRooms() })
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(L10n.Alert.cancel) { showRoomPicker = false }
                     }
                 }
             }

@@ -28,6 +28,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // restoration), these must exist to receive the events
         _ = ConnectionPoolManager.shared
         BackgroundBLEWakeService.shared.start()
+        SensorHealthMonitor.shared.start()
 
         // SwiftUI scene lifecycle: applicationDidEnterBackground is never
         // called on the app delegate — schedule BG tasks via the
@@ -391,12 +392,17 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                     // Cancel notifications by recreating them - simplified approach
                     let center = UNUserNotificationCenter.current()
                     let pendingRequests = await center.pendingNotificationRequests()
-                    let identifiersToRemove = pendingRequests
-                        .filter {
-                            $0.identifier.contains(deviceId) &&
-                            !$0.identifier.contains("watering-daily")
-                        }
-                        .map { $0.identifier }
+                    // Scoped to the watering family: an unscoped sweep would
+                    // also drop this device's `sensor-*` alerts, whose
+                    // once-per-episode markers would stay set and never post
+                    // again. The daily reminder survives on purpose — the
+                    // snooze replaces the one-off alerts, not the schedule.
+                    let identifiersToRemove = NotificationService.identifiersToCancel(
+                        pending: pendingRequests.map(\.identifier),
+                        delivered: [],
+                        deviceUUID: deviceId,
+                        kinds: [.watering]
+                    ).filter { !$0.contains("watering-daily") }
                     center.removePendingNotificationRequests(withIdentifiers: identifiersToRemove)
                     
                     let content = UNMutableNotificationContent()
@@ -408,7 +414,11 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                     content.interruptionLevel = .timeSensitive
                     
                     let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 2 * 60 * 60, repeats: false)
-                    let request = UNNotificationRequest(identifier: "reminder-later-\(deviceId)", content: content, trigger: trigger)
+                    let request = UNNotificationRequest(
+                        identifier: NotificationService.reminderLaterIdentifier(for: deviceId),
+                        content: content,
+                        trigger: trigger
+                    )
                     
                     try await UNUserNotificationCenter.current().add(request)
                     print("⏰ AppDelegate: Scheduled reminder for device \(deviceId) in 2 hours")

@@ -16,6 +16,11 @@ struct OverviewList: View {
     @State private var showDeleteConfirmation = false
     @State private var showDeleteError = false
     @State private var hasRequestedDashboardLiveRefresh = false
+    @State private var roomFilter: RoomFilter = .all
+    /// Measured card heights by device uuid. The list lives inside the page's
+    /// ScrollView with its own scrolling disabled, so it needs an explicit
+    /// height — a fixed per-row guess clipped the last card.
+    @State private var rowHeights: [String: CGFloat] = [:]
 
     private let initialSensorDataService = InitialSensorDataService.shared
 
@@ -46,8 +51,23 @@ struct OverviewList: View {
 
         return Double(totalMoisture) / Double(devices.count) / 100.0
     }
-    
+
+    /// Devices the list shows: all of them, or one room's. `body` derives this
+    /// from the one catalog it builds per pass; this property is for
+    /// `delete(at:)`, which runs once per delete and has no catalog at hand.
+    private var visibleDevices: [FlowerDeviceDTO] {
+        let catalog = RoomCatalog(devices: viewModel.allSavedDevices, now: Date())
+        return viewModel.allSavedDevices.filter(catalog.resolve(roomFilter).includes)
+    }
+
     var body: some View {
+        // Once per body pass. Every `roomCatalog` access used to rebuild it —
+        // the filter bar's binding, the visible-device filter, and
+        // `showsMissingRoom` once per row, which is ~2n+6 evaluations of a
+        // catalog that walks every device and evaluates every sensor's health.
+        let catalog = RoomCatalog(devices: viewModel.allSavedDevices, now: Date())
+        let visible = viewModel.allSavedDevices.filter(catalog.resolve(roomFilter).includes)
+
         ScrollView {
             VStack(spacing: 20) {
                 // Summary Cards Section
@@ -105,39 +125,7 @@ struct OverviewList: View {
                 }
                 .padding(.horizontal)
 
-                // Devices Section
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("My Plants")
-                            .font(.title2)
-                            .fontWeight(.bold)
-
-                        Spacer()
-
-                        EditButton()
-                            .buttonStyle(.bordered)
-                    }
-                    .padding(.horizontal)
-
-                    if viewModel.allSavedDevices.isEmpty {
-                        EmptyStateView()
-                    } else {
-                        List {
-                            ForEach(viewModel.allSavedDevices) { device in
-                                DeviceCard(device: device) {
-                                    NavigationService.shared.showDeviceDetail(device)
-                                }
-                                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                                .listRowBackground(Color.clear)
-                            }
-                            .onDelete(perform: delete)
-                            .listRowSeparator(.hidden)
-                        }
-                        .listStyle(.plain)
-                        .frame(height: CGFloat(viewModel.allSavedDevices.count) * 110)
-                        .scrollDisabled(true)
-                    }
-                }
+                devicesSection(catalog: catalog, visible: visible)
             }
             .padding(.bottom, 20)
         }
@@ -182,16 +170,97 @@ struct OverviewList: View {
         .onChange(of: viewModel.deleteError) { _, newError in
             showDeleteError = newError != nil
         }
+        // A room disappears when its last plant leaves it. Re-resolving here
+        // writes the fallback back into the state instead of leaving `.room`
+        // pointing at a name that is gone — `resolve` hides it for this pass,
+        // but a stale filter would start filtering again the moment a plant
+        // moved back into a room with that name.
+        .onChange(of: viewModel.allSavedDevices.map(\.location)) { _, _ in
+            roomFilter = RoomCatalog(devices: viewModel.allSavedDevices, now: Date()).resolve(roomFilter)
+        }
         .onDisappear {
             hasRequestedDashboardLiveRefresh = false
         }
     }
-    
-    func delete(at offsets: IndexSet) {
+
+    // MARK: - Devices Section
+
+    /// Takes the catalog instead of rebuilding it: the filter bar's binding
+    /// and every row's `showsMissingRoom` all read the same one.
+    @ViewBuilder
+    private func devicesSection(catalog: RoomCatalog, visible: [FlowerDeviceDTO]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("My Plants")
+                    .font(.title2)
+                    .fontWeight(.bold)
+
+                Spacer()
+
+                EditButton()
+                    .buttonStyle(.bordered)
+            }
+            .padding(.horizontal)
+
+            if !catalog.rooms.isEmpty {
+                RoomFilterBar(catalog: catalog, selection: Binding(
+                    get: { catalog.resolve(roomFilter) },
+                    set: { roomFilter = $0 }
+                ))
+            }
+
+            if viewModel.allSavedDevices.isEmpty {
+                EmptyStateView()
+            } else {
+                List {
+                    ForEach(visible) { device in
+                        DeviceCard(device: device,
+                                   peers: viewModel.allSavedDevices.filter { $0.uuid != device.uuid },
+                                   showsMissingRoom: !catalog.rooms.isEmpty) {
+                            NavigationService.shared.showDeviceDetail(device)
+                        }
+                        .background(GeometryReader { proxy in
+                            Color.clear.preference(key: DeviceRowHeightKey.self,
+                                                   value: [device.uuid: proxy.size.height])
+                        })
+                        .listRowInsets(EdgeInsets(top: Self.rowInset, leading: 16, bottom: Self.rowInset, trailing: 16))
+                        .listRowBackground(Color.clear)
+                    }
+                    .onDelete(perform: delete)
+                    .listRowSeparator(.hidden)
+                }
+                .listStyle(.plain)
+                .onPreferenceChange(DeviceRowHeightKey.self) { rowHeights = $0 }
+                .frame(height: listHeight(for: visible))
+                .scrollDisabled(true)
+            }
+        }
+    }
+
+
+    func delete(at visibleOffsets: IndexSet) {
+        // SwiftUI indexes the rows it shows; the alert and confirmDelete both
+        // index allSavedDevices, so translate here and nowhere else.
+        let visible = visibleDevices
+        let offsets = IndexSet(visibleOffsets.compactMap { offset -> Int? in
+            guard visible.indices.contains(offset) else { return nil }
+            return viewModel.allSavedDevices.firstIndex { $0.uuid == visible[offset].uuid }
+        })
         deviceToDelete = offsets
         showDeleteConfirmation = true
     }
     
+    private static let rowInset: CGFloat = 6
+    /// Used until a row has reported its real height (first layout pass)
+    private static let estimatedCardHeight: CGFloat = 114
+
+    /// Sum of the measured card heights plus the row insets
+    private func listHeight(for devices: [FlowerDeviceDTO]) -> CGFloat {
+        devices.reduce(0) { total, device in
+            total + (rowHeights[device.uuid] ?? Self.estimatedCardHeight) + 2 * Self.rowInset
+        }
+    }
+
     private func confirmDelete() {
         guard let offsets = deviceToDelete else { return }
         Task {
@@ -223,6 +292,14 @@ struct OverviewList: View {
 }
 
 // MARK: - Supporting Views
+
+/// Card heights reported by the overview rows, keyed by device uuid
+private struct DeviceRowHeightKey: PreferenceKey {
+    static var defaultValue: [String: CGFloat] = [:]
+    static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) {
+        value.merge(nextValue()) { _, new in new }
+    }
+}
 
 struct SummaryCard: View {
     let device: FlowerDeviceDTO
@@ -311,6 +388,9 @@ struct SummaryCard: View {
 
 struct DeviceCard: View {
     let device: FlowerDeviceDTO
+    let peers: [FlowerDeviceDTO]
+    /// Show "No room" for plants without one (only while rooms exist at all)
+    var showsMissingRoom: Bool = false
     let action: () -> Void
 
     @ObservedObject private var activityService = HistoryLoadingActivityService.shared
@@ -326,6 +406,10 @@ struct DeviceCard: View {
 
     private var latestSensorData: SensorDataDTO? {
         device.sensorData.max(by: { $0.date < $1.date })
+    }
+
+    private var health: SensorHealth {
+        SensorHealth.evaluate(device, peers: peers, now: Date())
     }
 
     private var connectionColor: Color {
@@ -368,26 +452,33 @@ struct DeviceCard: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(device.name ?? "Unknown Plant")
+                    Text(device.name)
                         .font(.headline)
                         .foregroundColor(.primary)
+                        .lineLimit(1)
 
                     HStack(spacing: 4) {
                         Image(systemName: "clock")
                             .font(.caption2)
                         Text(device.lastUpdate, format: .relative(presentation: .named))
                             .font(.caption)
+                            .lineLimit(1)
+                        if device.location != nil || showsMissingRoom {
+                            Text("·")
+                                .font(.caption)
+                            Image(systemName: device.location == nil ? "mappin.slash" : "mappin")
+                                .font(.caption2)
+                            Text(device.location ?? L10n.Room.noRoom)
+                                .font(.caption)
+                                .lineLimit(1)
+                        }
                     }
                     .foregroundColor(.secondary)
 
                     if device.isSensor {
-                        HStack(spacing: 12) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "battery.75percent")
-                                    .font(.caption2)
-                                Text(device.battery, format: .percent)
-                                    .font(.caption)
-                            }
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                            BatteryIndicator(device: device, health: health, style: .compact)
+                                .foregroundColor(.secondary)
 
                             if isLoadingHistory {
                                 HStack(spacing: 4) {
@@ -398,6 +489,8 @@ struct DeviceCard: View {
                                         .font(.caption)
                                         .foregroundColor(.orange)
                                 }
+                            } else if health.isUnreachable {
+                                SensorHealthBanner(device: device, health: health, style: .line)
                             } else {
                                 HStack(spacing: 4) {
                                     Circle()

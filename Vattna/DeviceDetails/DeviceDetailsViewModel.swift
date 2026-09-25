@@ -14,6 +14,11 @@ import UIKit
 
 @Observable class DeviceDetailsViewModel {
     var device: FlowerDeviceDTO
+    /// Other devices; witnesses for the peer rule (loaded in init)
+    var peers: [FlowerDeviceDTO] = []
+    var health: SensorHealth {
+        SensorHealth.evaluate(device, peers: peers, now: Date())
+    }
     var groupingOption: Calendar.Component = .day
     private let repositoryManager = RepositoryManager.shared
 
@@ -84,6 +89,10 @@ import UIKit
         }
 
         Task {
+            if let all = try? await self.repositoryManager.flowerDeviceRepository.getAllDevices() {
+                let others = all.filter { $0.uuid != device.uuid }
+                await MainActor.run { self.peers = others }
+            }
             try await PlantMonitorService.shared.checkDeviceStatus(device: device)
 
             // Load current week's sensor data immediately
@@ -197,10 +206,18 @@ import UIKit
             }
         }
 
-        // Subscribe zu Geräte-Infos (Batterie/Firmware) vom ConnectionPool
+        // Batterie/Firmware: nur die Anzeige-Kopie aktualisieren. Persistiert
+        // wird pool-weit vom SensorHealthMonitor (Spec 2026-09-14).
         poolDeviceInfoSubscription = connection.deviceInfoPublisher.sink { [weak self] info in
             Task { @MainActor in
-                await self?.updateDeviceInfo(battery: info.battery, firmware: info.firmware)
+                guard let self else { return }
+                // Percent, not a raw byte: a garbled read (the decoder yields a
+                // raw UInt8) is ignored, not clamped — showing 100 % for a 255
+                // would be a fiction, and the monitor drops it too.
+                guard (0...100).contains(info.battery) else { return }
+                self.device.battery = Int16(info.battery)
+                self.device.firmware = info.firmware
+                self.device.batteryUpdatedAt = Date()
             }
         }
 
@@ -492,34 +509,6 @@ import UIKit
         }
     }
     
-    /// Aktualisiert Batterie/Firmware in der Datenbank.
-    /// `lastUpdate` bleibt unverändert — Batterie-Reads sind keine Messung.
-    @MainActor
-    private func updateDeviceInfo(battery: Int, firmware: String) async {
-        do {
-            let updatedDevice = FlowerDeviceDTO(
-                id: device.id,
-                name: device.name,
-                uuid: device.uuid,
-                peripheralID: device.peripheralID,
-                battery: Int16(battery),
-                firmware: firmware,
-                isSensor: device.isSensor,
-                added: device.added,
-                lastUpdate: device.lastUpdate,
-                optimalRange: device.optimalRange,
-                potSize: device.potSize,
-                selectedFlower: device.selectedFlower,
-                sensorData: device.sensorData
-            )
-            try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
-            self.device = updatedDevice
-            AppLogger.ble.info("🔋 Updated battery to \(battery)% / firmware \(firmware) for device \(self.device.uuid)")
-        } catch {
-            print("Error updating device battery: \(error.localizedDescription)")
-        }
-    }
-
     /// RSSI → Entfernungs-Hinweis für die UI
     private static func distanceHint(forRSSI rssi: Int) -> String {
         if rssi >= -65 {
@@ -534,23 +523,14 @@ import UIKit
     @MainActor
     private func updateDeviceLastUpdate() async {
         do {
-            let updatedDevice = FlowerDeviceDTO(
-                id: device.id,
-                name: device.name,
-                uuid: device.uuid,
-                peripheralID: device.peripheralID,
-                battery: device.battery,
-                firmware: device.firmware,
-                isSensor: device.isSensor,
-                added: device.added,
-                lastUpdate: Date(),
-                optimalRange: device.optimalRange,
-                potSize: device.potSize,
-                selectedFlower: device.selectedFlower,
-                sensorData: device.sensorData
-            )
-            try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
-            self.device = updatedDevice
+            if let updated = try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: device.uuid, { $0.lastUpdate = Date() }) {
+                // Nur das selbst geschriebene Feld zurückspiegeln: `battery`,
+                // `firmware` und `batteryUpdatedAt` hält der deviceInfo-Sink
+                // als Anzeige-Kopie, der Monitor persistiert sie asynchron.
+                self.device.lastUpdate = updated.lastUpdate
+            } else {
+                print("⚠️ DeviceDetailsViewModel: device \(device.uuid) not found while updating lastUpdate")
+            }
         } catch {
             print("Error updating device: \(error.localizedDescription)")
         }
@@ -694,39 +674,47 @@ import UIKit
         }
 
         do {
-            // Create updated device with new settings
-            let updatedDevice = FlowerDeviceDTO(
-                id: device.id,
-                name: deviceName, // Use the updated name
-                uuid: device.uuid,
-                peripheralID: device.peripheralID,
-                battery: device.battery,
-                firmware: device.firmware,
-                isSensor: device.isSensor,
-                added: device.added,
-                lastUpdate: Date(), // Update timestamp
-                optimalRange: optimalRange,
-                potSize: potSize,
-                selectedFlower: device.selectedFlower,
-                sensorData: device.sensorData
-            )
-
-            print("🗃️ DeviceDetailsViewModel: Calling repository.updateDevice...")
-            // Save to database
-            try await repositoryManager.flowerDeviceRepository.updateDevice(updatedDevice)
-            print("✅ DeviceDetailsViewModel: Repository.updateDevice completed successfully")
+            // Fetch-mutate-save: keeps battery, contact counters and location
+            // that other writers own. lastUpdate is a measurement timestamp
+            // and is deliberately NOT bumped here.
+            guard let updatedDevice = try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: device.uuid, { fresh in
+                fresh.name = deviceName
+                fresh.optimalRange = optimalRange
+                fresh.potSize = potSize
+            }) else {
+                throw RepositoryError.deviceNotFound
+            }
 
             // Update local device only after successful database save
             self.device = updatedDevice
-            print("📱 DeviceDetailsViewModel: Local device updated with name '\(self.device.name)'")
-
-            print("✅ DeviceDetailsViewModel: Settings saved successfully")
-
+            print("✅ DeviceDetailsViewModel: Settings saved successfully (name '\(self.device.name)')")
         } catch {
             print("❌ DeviceDetailsViewModel: Failed to save settings: \(error.localizedDescription)")
-            print("❌ Error details: \(error)")
-            // Don't update local device if database save fails
             throw error
+        }
+    }
+
+    /// Persists only the room; everything else on the device stays as stored.
+    @MainActor
+    func setRoom(_ room: String?) async {
+        let normalized = FlowerDeviceDTO.normalizeLocation(room)
+        do {
+            if let updated = try await repositoryManager.flowerDeviceRepository.modifyDevice(uuid: device.uuid, { $0.location = normalized }) {
+                self.device.location = updated.location
+            }
+        } catch {
+            print("❌ DeviceDetailsViewModel: Failed to save room: \(error.localizedDescription)")
+        }
+    }
+
+    /// After a room was renamed or deleted in the picker: refresh the peers and
+    /// this plant's own room from the store.
+    @MainActor
+    func reloadRooms() async {
+        guard let all = try? await repositoryManager.flowerDeviceRepository.getAllDevices() else { return }
+        peers = all.filter { $0.uuid != device.uuid }
+        if let me = all.first(where: { $0.uuid == device.uuid }) {
+            device.location = me.location
         }
     }
 
