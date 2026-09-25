@@ -1,11 +1,11 @@
-# GrowGuard — iOS Smart Plant Monitor
+# Vattna — iOS Smart Plant Monitor
 
 An iOS app that monitors plants via **Xiaomi FlowerCare BLE sensors**. It reads moisture, light, and soil data, shows charts over time, and fetches readings in the background via Siri Intents / background tasks.
 
 ## Tech Stack
 
 - **Swift / SwiftUI** — iOS 17+
-- **Xcode project** at `GrowGuard.xcodeproj` (build & run from here)
+- **Xcode project** at `Vattna.xcodeproj` (build & run from here)
 - **CoreBluetooth** — BLE communication with Xiaomi FlowerCare sensors
 - **Core Data** — persistent storage for devices, sensor readings, pot sizes
 - **SQLite** (`flower.db`) — bundled plant species lookup database
@@ -39,16 +39,16 @@ Hardware (BLE via ConnectionPoolManager + DeviceConnection)
 
 | Folder | Purpose |
 |--------|---------|
-| `GrowGuard/BLE/` | BLE logic — `ConnectionPoolManager` (multi-device orchestration), `DeviceConnection` (per-device session), `BLETransport`/`CoreBluetoothTransport` (protocol seam), `ReconnectPolicy`/`DisconnectLoopGuard` (reliability), `BLESessionRecorder`/`RecordingBLETransport` (opt-in traffic recording), `SensorDataDecoder` |
-| `GrowGuard/Database/` | Core Data models, repository interfaces + implementations, DTOs, SQLite flower search, SwiftData service |
-| `GrowGuard/Services/` | Background fetch, weekly updates, history loading, API client |
-| `GrowGuard/OverviewList/` | Main device list view + ViewModel |
-| `GrowGuard/DeviceDetails/` | Detail view, charts, settings, history, manual watering |
-| `GrowGuard/AddDevice/` | BLE scanning / device pairing flow |
-| `GrowGuard/AppSettings/` | App-wide settings UI + store |
-| `GrowGuard/Strings/` | `Localizable.strings` + SwiftGen-generated `Strings+Generated.swift` — always use `L10n.*` for UI strings |
-| `GrowGuard/Utils/` | Shared helpers, logging |
-| `GrowGuardWidgets/` | Widget extension + Live Activity |
+| `Vattna/BLE/` | BLE logic — `ConnectionPoolManager` (multi-device orchestration), `DeviceConnection` (per-device session), `BLETransport`/`CoreBluetoothTransport` (protocol seam), `ReconnectPolicy`/`DisconnectLoopGuard` (reliability), `BLESessionRecorder`/`RecordingBLETransport` (opt-in traffic recording), `SensorDataDecoder` |
+| `Vattna/Database/` | Core Data models, repository interfaces + implementations, DTOs, SQLite flower search, SwiftData service |
+| `Vattna/Services/` | Background fetch, weekly updates, history loading, API client |
+| `Vattna/OverviewList/` | Main device list view + ViewModel |
+| `Vattna/DeviceDetails/` | Detail view, charts, settings, history, manual watering |
+| `Vattna/AddDevice/` | BLE scanning / device pairing flow |
+| `Vattna/AppSettings/` | App-wide settings UI + store |
+| `Vattna/Strings/` | `Localizable.strings` + SwiftGen-generated `Strings+Generated.swift` — always use `L10n.*` for UI strings |
+| `Vattna/Utils/` | Shared helpers, logging |
+| `VattnaWidgets/` | Widget extension + Live Activity |
 
 ## Conventions
 
@@ -59,32 +59,33 @@ Hardware (BLE via ConnectionPoolManager + DeviceConnection)
 - **Combine:** BLE services emit via `PassthroughSubject` → `AnyPublisher`. ViewModels subscribe and store in `cancellables: Set<AnyCancellable>`.
 - **Background tasks:** arm-don't-fetch (spec `docs/superpowers/specs/2026-06-12-background-ble-design.md`): triggers (BGAppRefreshTask, silent push, enter-background) only arm pending connects via `ConnectionPoolManager.armBackgroundConnect`; `BackgroundBLEWakeService` does the live read + dry-plant check on the BLE wake. `BackgroundHistorySyncService` runs history sync inside BGProcessingTask windows.
 - **Sensor health:** `SensorHealthMonitor` (spec `docs/superpowers/specs/2026-09-14-sensor-health-design.md`) persists battery + counts failed contacts from the pool-wide `deviceEventsPublisher`; `SensorHealth.evaluate` is the single verdict for UI and notifications. Device writes go through `FlowerDeviceRepository.modifyDevice` — never rebuild a full DTO from a stale copy. It is a protocol requirement; the Core Data implementation runs the whole read-modify-write in one `context.perform`, so concurrent writers cannot lose each other's fields (the protocol's default get→mutate→update is not atomic and exists only for in-memory test fakes).
+- **Legacy identifiers:** The app was renamed GrowGuard → Vattna (2026-09), but the bundle ID `pro.veit.GrowGuard` and every runtime identifier in its namespace stay as they are: BG task IDs (`pro.veit.GrowGuard.plantMonitor`, `com.growguard.processing`), the CoreBluetooth restore ID, notification IDs, and the server URL `growguardserver.veit.pro`. Changing them breaks installed apps (App Store identity, APNs topic, pending BG tasks, BLE state restoration). Don't "fix" them.
 
 ## BLE Testing & Record/Replay
 
 - **One BLE stack:** `ConnectionPoolManager` + `DeviceConnection` on the `BLETransport` protocol seam. The legacy `FlowerCareManager` was deleted (2026-06); there is no feature flag anymore.
-- **Deterministic tests:** `GrowGuardTests/BLE/` has `FakeBLETransport` (TestScheduler with virtual time + scriptable `FakeFlowerCarePeripheral`). No real waits in unit tests.
-- **Record/replay:** Beta testers enable "Record BLE Sessions" in the debug menu (`LogExportView`); traffic is captured at the transport seam and exported as `*.ble-session.json` via share sheet. To turn a recording into a regression test: drop the file into `GrowGuardTests/BLE/Recordings/` (bundled automatically — folder reference) and add one entry to `ReplayFixtures.all` in `ReplaySessionTests.swift` with the expected outcome. The generic runner matches the app's outbound traffic against the recording; divergence fails the test.
+- **Deterministic tests:** `VattnaTests/BLE/` has `FakeBLETransport` (TestScheduler with virtual time + scriptable `FakeFlowerCarePeripheral`). No real waits in unit tests.
+- **Record/replay:** Beta testers enable "Record BLE Sessions" in the debug menu (`LogExportView`); traffic is captured at the transport seam and exported as `*.ble-session.json` via share sheet. To turn a recording into a regression test: drop the file into `VattnaTests/BLE/Recordings/` (bundled automatically — folder reference) and add one entry to `ReplayFixtures.all` in `ReplaySessionTests.swift` with the expected outcome. The generic runner matches the app's outbound traffic against the recording; divergence fails the test.
 - **Reliability invariants** (see `BLE-Reliability.md`): reason-aware reconnect backoff (`ReconnectPolicy`), disconnect-loop guard (5 no-progress drops / 120s → abort), per-entry response timeout 2s with ≤2 retries then skip (budget `max(20, total/20)`), history sync resumes at the exact entry index after reconnects.
 - **Performance budgets:** `BLEPerformanceTests` asserts traffic counts and virtual-time budgets derived from the protocol constants (0.02s inter-entry delay, 0.05s batch pause per 150 entries). If you change those constants, update the budgets deliberately.
 
 ## Goals — Ship to Production
 
-We're preparing GrowGuard for App Store launch. 
+We're preparing Vattna for App Store launch. 
 Any new feature or refactor should respect the existing architecture (MVVM + Repository pattern) and not break BLE stability.
 
 ## Common Commands
 
-- **Build (CI/agent):** `xcodebuild -project GrowGuard.xcodeproj -scheme GrowGuard -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' build`
-- **Unit tests (CI/agent):** `xcodebuild test -project GrowGuard.xcodeproj -scheme GrowGuard -testPlan GrowGuard -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' -test-timeouts-enabled YES -default-test-execution-time-allowance 60` — runs the unit suite; hardware-dependent BLE tests are excluded. Keep the timeout flags: some legacy tests can hang indefinitely on publisher waits without them.
-- **Hardware BLE tests:** `xcodebuild test -project GrowGuard.xcodeproj -scheme GrowGuard -testPlan HardwareTests -destination 'platform=iOS,name=<your iPhone>' TEST_FLOWERCARE_UUID=<peripheral-uuid>` — requires a real FlowerCare sensor in range; tests skip themselves if the env var is missing.
+- **Build (CI/agent):** `xcodebuild -project Vattna.xcodeproj -scheme Vattna -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' build`
+- **Unit tests (CI/agent):** `xcodebuild test -project Vattna.xcodeproj -scheme Vattna -testPlan Vattna -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' -test-timeouts-enabled YES -default-test-execution-time-allowance 60` — runs the unit suite; hardware-dependent BLE tests are excluded. Keep the timeout flags: some legacy tests can hang indefinitely on publisher waits without them.
+- **Hardware BLE tests:** `xcodebuild test -project Vattna.xcodeproj -scheme Vattna -testPlan HardwareTests -destination 'platform=iOS,name=<your iPhone>' TEST_FLOWERCARE_UUID=<peripheral-uuid>` — requires a real FlowerCare sensor in range; tests skip themselves if the env var is missing.
 - **Quick build (quiet):** add `-quiet` flag — only errors/warnings shown
 - **Clean build:** add `clean` before `build`
 - **Regenerate strings:** `swiftgen` (runs `swiftgen.yml` config)
-- **Migrate flower DB to Supabase:** `python Scripts/migrate_flower_db_to_supabase.py --sqlite-path GrowGuard/flower.db --recreate`
+- **Migrate flower DB to Supabase:** `python Scripts/migrate_flower_db_to_supabase.py --sqlite-path Vattna/flower.db --recreate`
 
 ### Build Notes
-- **Shared scheme** at `GrowGuard.xcodeproj/xcshareddata/xcschemes/GrowGuard.xcscheme` references the test plans (`GrowGuard.xctestplan` = unit tests, `HardwareTests.xctestplan` = real-sensor tests). Always use `-scheme GrowGuard`.
+- **Shared scheme** at `Vattna.xcodeproj/xcshareddata/xcschemes/Vattna.xcscheme` references the test plans (`Vattna.xctestplan` = unit tests, `HardwareTests.xctestplan` = real-sensor tests). Always use `-scheme Vattna`.
 - **No iPhone 16 simulator.** Available simulators on this machine (as of 2026-05-15): iPhone 17, iPhone 17 Pro, iPhone 17 Pro Max, iPhone 17e, iPhone Air, iPad Air 11-inch (M4), iPad Air 13-inch (M4), iPad Pro 11-inch (M5), iPad Pro 13-inch (M5), iPad mini (A17 Pro), iPad (A16). Use iPhone 17 as default.
 - Run `xcrun simctl list devices available 2>/dev/null` if simulator lineup changes.
 - **Known non-blocking warnings:** (1) Widget `CFBundleVersion` mismatch, (2) "Update Build Number" script runs every build. Do not treat these as build failures.

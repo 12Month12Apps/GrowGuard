@@ -1,4 +1,4 @@
-# GrowGuard SwiftGen Setup - Manuelle Schritte
+# Vattna SwiftGen Setup - Manuelle Schritte
 
 ## Dateien zum Xcode-Projekt hinzufügen
 
@@ -6,15 +6,15 @@ Die folgenden Dateien müssen **manuell zum Xcode-Projekt hinzugefügt werden**:
 
 ### 1. Localizable.strings
 ```
-Datei: GrowGuard/Localizable.strings
-Ziel: GrowGuard Target
+Datei: Vattna/Localizable.strings
+Ziel: Vattna Target
 Info: Enthält alle lokalisierten Strings
 ```
 
 ### 2. SwiftGen Generated Code
 ```
-Datei: GrowGuard/Generated/Strings+Generated.swift  
-Ziel: GrowGuard Target
+Datei: Vattna/Generated/Strings+Generated.swift  
+Ziel: Vattna Target
 Info: Von SwiftGen automatisch generierter Code
 ```
 
@@ -26,7 +26,7 @@ Info: Script für automatische SwiftGen-Ausführung bei jedem Build
 
 ## Xcode Build Phase hinzufügen (Optional)
 
-**Target:** GrowGuard
+**Target:** Vattna
 **Phase:** New Run Script Phase
 **Position:** Vor "Compile Sources"  
 **Name:** "SwiftGen"
@@ -40,10 +40,10 @@ fi
 ```
 
 **Input Files:**
-- `$(SRCROOT)/GrowGuard/Localizable.strings`
+- `$(SRCROOT)/Vattna/Localizable.strings`
 
 **Output Files:**  
-- `$(SRCROOT)/GrowGuard/Generated/Strings+Generated.swift`
+- `$(SRCROOT)/Vattna/Generated/Strings+Generated.swift`
 
 ## SwiftGen Verwendung
 
@@ -73,7 +73,7 @@ L10n.Watering.current(65)
 Nach Änderungen an `Localizable.strings`:
 
 ```bash
-cd /Users/veitprogl/Dev/Company/GrowGuard
+cd /Users/veitprogl/Dev/Company/Vattna
 swiftgen
 ```
 

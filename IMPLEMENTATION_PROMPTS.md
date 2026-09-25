@@ -21,7 +21,7 @@ git commit -am "Backup before ConnectionPool implementation"
 ### Prompt 1.1: DeviceConnection Klasse erstellen
 
 ```
-Erstelle eine neue Swift-Datei GrowGuard/BLE/DeviceConnection.swift mit folgenden Anforderungen:
+Erstelle eine neue Swift-Datei Vattna/BLE/DeviceConnection.swift mit folgenden Anforderungen:
 
 1. Erstelle eine Klasse DeviceConnection die NSObject und CBPeripheralDelegate erbt
 2. Die Klasse soll für GENAU EIN BLE-Gerät verantwortlich sein
@@ -63,7 +63,7 @@ NICHT implementieren:
 cmd+B
 
 # Git commit
-git add GrowGuard/BLE/DeviceConnection.swift
+git add Vattna/BLE/DeviceConnection.swift
 git commit -m "Add DeviceConnection skeleton"
 ```
 
@@ -72,7 +72,7 @@ git commit -m "Add DeviceConnection skeleton"
 ### Prompt 1.2: ConnectionPoolManager Grundgerüst
 
 ```
-Erstelle eine neue Swift-Datei GrowGuard/BLE/ConnectionPoolManager.swift mit folgenden Anforderungen:
+Erstelle eine neue Swift-Datei Vattna/BLE/ConnectionPoolManager.swift mit folgenden Anforderungen:
 
 1. Erstelle eine Klasse ConnectionPoolManager die NSObject und CBCentralManagerDelegate erbt
 2. Markiere die Klasse mit @MainActor
@@ -125,7 +125,7 @@ NOCH KEINE Implementierung der Logik, nur die Struktur!
 cmd+B
 
 # Git commit
-git add GrowGuard/BLE/ConnectionPoolManager.swift
+git add Vattna/BLE/ConnectionPoolManager.swift
 git commit -m "Add ConnectionPoolManager skeleton"
 ```
 
@@ -185,7 +185,7 @@ Beachte:
 **Test nach diesem Schritt:**
 ```bash
 cmd+B
-git add GrowGuard/BLE/ConnectionPoolManager.swift
+git add Vattna/BLE/ConnectionPoolManager.swift
 git commit -m "Implement connect/disconnect logic"
 ```
 
@@ -243,7 +243,7 @@ Beachte:
 **Test nach diesem Schritt:**
 ```bash
 cmd+B
-git add GrowGuard/BLE/ConnectionPoolManager.swift
+git add Vattna/BLE/ConnectionPoolManager.swift
 git commit -m "Implement scanning logic"
 ```
 
@@ -281,7 +281,7 @@ Beachte:
 **Test nach diesem Schritt:**
 ```bash
 cmd+B
-git add GrowGuard/BLE/ConnectionPoolManager.swift
+git add Vattna/BLE/ConnectionPoolManager.swift
 git commit -m "Implement connection callbacks"
 ```
 
@@ -334,7 +334,7 @@ NOCH KEINE Authentication implementieren, kommt im nächsten Schritt!
 **Test nach diesem Schritt:**
 ```bash
 cmd+B
-git add GrowGuard/BLE/DeviceConnection.swift
+git add Vattna/BLE/DeviceConnection.swift
 git commit -m "Implement connection handling in DeviceConnection"
 ```
 
@@ -386,7 +386,7 @@ cmd+B
 # 2. Ein Gerät verbinden
 # 3. Logs prüfen: Authentication erfolgreich?
 
-git add GrowGuard/BLE/DeviceConnection.swift
+git add Vattna/BLE/DeviceConnection.swift
 git commit -m "Implement authentication in DeviceConnection"
 ```
 
@@ -435,7 +435,7 @@ cmd+B
 # 2. Live-Daten anfordern
 # 3. Prüfen ob Daten ankommen
 
-git add GrowGuard/BLE/DeviceConnection.swift
+git add Vattna/BLE/DeviceConnection.swift
 git commit -m "Implement live sensor data in DeviceConnection"
 ```
 
@@ -478,7 +478,7 @@ HINWEIS: Dieser Schritt kann übersprungen werden wenn nur Live-Daten benötigt 
 **Test nach diesem Schritt:**
 ```bash
 cmd+B
-git add GrowGuard/BLE/DeviceConnection.swift
+git add Vattna/BLE/DeviceConnection.swift
 git commit -m "Implement historical data in DeviceConnection"
 ```
 
@@ -539,7 +539,7 @@ cmd+B
 # - App starten, Gerät verbinden
 # - Prüfen ob alles funktioniert
 
-git add GrowGuard/DeviceDetails/DeviceDetailsViewModel.swift
+git add Vattna/DeviceDetails/DeviceDetailsViewModel.swift
 git commit -m "Add ConnectionPool support to DeviceDetailsViewModel (with fallback)"
 ```
 
@@ -550,7 +550,7 @@ git commit -m "Add ConnectionPool support to DeviceDetailsViewModel (with fallba
 ```
 Implementiere Test-Funktionalität für mehrere gleichzeitige Verbindungen:
 
-1. Erstelle neue View: GrowGuard/Utils/ConnectionPoolDebugView.swift
+1. Erstelle neue View: Vattna/Utils/ConnectionPoolDebugView.swift
    - Liste alle aktiven Connections
    - Zeige Connection State pro Gerät
    - Button: "Connect All Devices"
@@ -822,7 +822,7 @@ git commit -m "Add performance optimizations"
 ```
 Erstelle Unit Tests für ConnectionPoolManager:
 
-1. Erstelle GrowGuardTests/BLE/ConnectionPoolManagerTests.swift
+1. Erstelle VattnaTests/BLE/ConnectionPoolManagerTests.swift
 
 2. Teste folgende Szenarien:
    - getConnection erstellt neue Connection beim ersten Aufruf
@@ -842,7 +842,7 @@ Erstelle Unit Tests für ConnectionPoolManager:
    - Disconnect während Connection
    - Gleichzeitige Connects
 
-Orientiere dich an GrowGuardTests/BLE/FlowerManagerHistoryTests.swift
+Orientiere dich an VattnaTests/BLE/FlowerManagerHistoryTests.swift
 ```
 
 **Akzeptanzkriterien:**
@@ -855,7 +855,7 @@ Orientiere dich an GrowGuardTests/BLE/FlowerManagerHistoryTests.swift
 # Tests ausführen
 cmd+U
 
-git add GrowGuardTests/BLE/ConnectionPoolManagerTests.swift
+git add VattnaTests/BLE/ConnectionPoolManagerTests.swift
 git commit -m "Add unit tests for ConnectionPoolManager"
 ```
 
@@ -866,7 +866,7 @@ git commit -m "Add unit tests for ConnectionPoolManager"
 ```
 Erstelle Dokumentation für die neue Architektur:
 
-1. Erstelle GrowGuard/BLE/README.md:
+1. Erstelle Vattna/BLE/README.md:
    - Übersicht über ConnectionPool-Architektur
    - Wie man verbindet: Code-Beispiele
    - Wie man disconnected
