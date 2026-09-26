@@ -26,6 +26,17 @@
         "identifier" : "56AF11272BDED05B00887073",
         "name" : "VattnaTests"
       }
+    },
+    {
+      "skippedTests" : [
+        "VattnaUITests",
+        "VattnaUITestsLaunchTests"
+      ],
+      "target" : {
+        "containerPath" : "container:Vattna.xcodeproj",
+        "identifier" : "56AF11312BDED05B00887073",
+        "name" : "VattnaUITests"
+      }
     }
   ],
   "version" : 1

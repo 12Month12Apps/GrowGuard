@@ -47,5 +47,12 @@ jobs:
           if [ $scheme = default ]; then scheme=$(cat default); fi
           if [ "`ls -A | grep -i \\.xcworkspace\$`" ]; then filetype_parameter="workspace" && file_to_build="`ls -A | grep -i \\.xcworkspace\$`"; else filetype_parameter="project" && file_to_build="`ls -A | grep -i \\.xcodeproj\$`"; fi
           file_to_build=`echo $file_to_build | awk '{$1=$1;print}'`
-          # Timeout flags are required: without them a hanging test blocks CI until the job timeout
-          xcodebuild test-without-building -scheme "$scheme" -"$filetype_parameter" "$file_to_build" -destination "platform=$platform,name=$device" -test-timeouts-enabled YES -default-test-execution-time-allowance 60 -maximum-test-execution-time-allowance 120
+          # Timeout flags are required: without them a hanging test blocks CI until the job timeout.
+          # The per-test allowance must stay well above the slowest legitimate test: the BLE
+          # integration/replay suites and the SwiftUI navigation UI tests drain the main actor and
+          # relaunch the app, which takes a few seconds locally but 60-95s on an overloaded
+          # GitHub-hosted runner (the automation-session setup alone can eat ~40s). A 60s default
+          # produced false "Time limit was exceeded" failures on slow runners; 180s clears the
+          # observed worst case (~95s) with headroom while still catching genuinely hung tests
+          # (which stall indefinitely) long before the job timeout.
+          xcodebuild test-without-building -scheme "$scheme" -"$filetype_parameter" "$file_to_build" -destination "platform=$platform,name=$device" -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 300
